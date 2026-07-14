@@ -38,6 +38,9 @@ npm run dev
 - **Sprint 2:** Planner (prompt → plano JSON + tasks)
 - **Sprint 3:** Scaffold + FileSystem (template React/Supabase em disco)
 - **Sprint 4:** Builder + Task Queue (tasks → arquivos no disco)
+- **Sprint 5:** Verify Engine (checks + relatório em `verify_reports`; Fix na Sprint 6)
+
+Fluxo: **Planner → Builder → Verify → Relatório** (Fix consome o report na próxima sprint).
 
 Defina no `.env.local`:
 

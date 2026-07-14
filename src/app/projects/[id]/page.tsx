@@ -1,8 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
-import { BuilderPanel } from "@/components/builder/BuilderPanel";
-import { PlannerPanel } from "@/components/planner/PlannerPanel";
+import { ProjectPipeline } from "@/components/projects/ProjectPipeline";
 import { ProjectFilesPanel } from "@/components/projects/ProjectFilesPanel";
 import { getLatestPlan } from "@/lib/pipeline/actions";
 import { createClient } from "@/lib/supabase/server";
@@ -58,27 +57,13 @@ export default async function ProjectDetailPage({ params }: Props) {
           <ProjectFilesPanel projectId={project.id} />
         </section>
 
-        <section className="space-y-3 border-t border-zinc-900 pt-8">
-          <h2 className="text-lg font-medium">Planner</h2>
-          <p className="text-sm text-zinc-500">
-            Prompt → plano estruturado (JSON + tasks).
-          </p>
-          <PlannerPanel
-            projectId={project.id}
-            initialPrompt={latest?.prompt}
-            initialPlan={latest?.plan ?? null}
-            initialModel={latest?.model}
-          />
-        </section>
-
-        <section className="space-y-3 border-t border-zinc-900 pt-8">
-          <h2 className="text-lg font-medium">Builder</h2>
-          <p className="text-sm text-zinc-500">
-            Tasks → FileSystem. Depois de gerar o plano, execute o Builder.
-            Atualize a árvore de arquivos para ver as mudanças.
-          </p>
-          <BuilderPanel planId={latest?.id ?? null} projectId={project.id} />
-        </section>
+        <ProjectPipeline
+          projectId={project.id}
+          planId={latest?.id ?? null}
+          initialPrompt={latest?.prompt}
+          initialPlan={latest?.plan ?? null}
+          initialModel={latest?.model}
+        />
       </div>
     </AppShell>
   );

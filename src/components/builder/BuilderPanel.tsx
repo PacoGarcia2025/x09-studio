@@ -11,9 +11,11 @@ import {
 type Props = {
   planId: string | null;
   projectId: string;
+  /** Chamado quando o Builder termina com sucesso (hook → Verify). */
+  onBuildSuccess?: () => void;
 };
 
-export function BuilderPanel({ planId, projectId }: Props) {
+export function BuilderPanel({ planId, projectId, onBuildSuccess }: Props) {
   const [state, setState] = useState<BuildState | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [running, setRunning] = useState(false);
@@ -52,6 +54,7 @@ export function BuilderPanel({ planId, projectId }: Props) {
     }
 
     let guard = 0;
+    let endedOk = false;
     while (guard < 80) {
       guard += 1;
       const tick = await tickBuildAction(planId);
@@ -60,12 +63,16 @@ export function BuilderPanel({ planId, projectId }: Props) {
         break;
       }
       await refreshState(planId);
-      if (tick.done) break;
+      if (tick.done) {
+        endedOk = !tick.failed;
+        break;
+      }
     }
 
     runningRef.current = false;
     setRunning(false);
     refresh();
+    if (endedOk) onBuildSuccess?.();
   }
 
   async function refreshState(id: string) {
@@ -177,7 +184,7 @@ export function BuilderPanel({ planId, projectId }: Props) {
 
       <p className="text-xs text-zinc-600">
         Projeto {projectId.slice(0, 8)}… — o Builder altera arquivos em disco via
-        STUDIO_PROJECTS_ROOT. Preview/Verify ficam para sprints seguintes.
+        STUDIO_PROJECTS_ROOT. Após sucesso, o Verify roda automaticamente.
       </p>
     </div>
   );
