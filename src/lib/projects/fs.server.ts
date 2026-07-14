@@ -124,3 +124,28 @@ export async function writeProjectFile(
   await fs.mkdir(path.dirname(absolute), { recursive: true });
   await fs.writeFile(absolute, content, "utf8");
 }
+
+export async function deleteProjectFile(
+  projectId: string,
+  relativePath: string,
+): Promise<void> {
+  const absolute = resolveInsideProject(projectId, relativePath);
+  const st = await fs.stat(absolute).catch(() => null);
+  if (!st) return;
+  if (!st.isFile()) {
+    throw new Error("Só é permitido excluir arquivos");
+  }
+  await fs.unlink(absolute);
+}
+
+export async function fileExists(
+  projectId: string,
+  relativePath: string,
+): Promise<boolean> {
+  try {
+    const st = await fs.stat(resolveInsideProject(projectId, relativePath));
+    return st.isFile();
+  } catch {
+    return false;
+  }
+}
