@@ -8,12 +8,22 @@ Projeto Supabase **exclusivo** (não compartilhado com o SaaS X09).
 
 1. Crie o projeto Supabase do Studio.
 2. Rode as migrations em `supabase/migrations/` (SQL Editor ou CLI).
-3. Configure o ambiente:
+3. Configure o ambiente (keys **atuais** do Supabase — publishable + secret):
 
 ```bash
 cp .env.example .env.local
-# preencha NEXT_PUBLIC_SUPABASE_*, SUPABASE_SERVICE_ROLE_KEY, GEMINI_API_KEY
 ```
+
+Variáveis usadas pelo app:
+
+| Variável | Valor |
+|----------|--------|
+| `NEXT_PUBLIC_SUPABASE_URL` | URL do projeto |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` **ou** `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | `sb_publishable_...` |
+| `SUPABASE_SERVICE_ROLE_KEY` **ou** `SUPABASE_SECRET_KEY` | `sb_secret_...` (só backend) |
+| `GEMINI_API_KEY` | chave Gemini |
+
+Não use as Legacy API Keys (JWT `anon` / `service_role`).
 
 4. Instale e rode:
 

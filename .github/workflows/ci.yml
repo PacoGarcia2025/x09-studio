@@ -27,5 +27,8 @@ jobs:
         run: npm run build
         env:
           NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: public-anon-key-for-ci
+          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_ci_dummy
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: sb_publishable_ci_dummy
+          SUPABASE_SECRET_KEY: sb_secret_ci_dummy
+          SUPABASE_SERVICE_ROLE_KEY: sb_secret_ci_dummy
           GEMINI_API_KEY: dummy-key-for-ci

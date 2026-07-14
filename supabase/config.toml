@@ -2,7 +2,7 @@
 # Linkar com: supabase link --project-ref <ref>
 # Migrations reais começam no Sprint 1.
 
-project_id = "x09-studio"
+project_id = "ytpjpcgoudjjmfeauvzk"
 
 [api]
 enabled = true
