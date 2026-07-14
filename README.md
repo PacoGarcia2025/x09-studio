@@ -32,10 +32,15 @@ npm install
 npm run dev
 ```
 
-## Sprint 1
+## Sprints
 
-- Login / signup (e-mail + senha)
-- Criar e listar projetos
-- Slug para publish futuro (`*.studio.x09.com.br`)
+- **Sprint 1:** Login / signup, criar e listar projetos
+- **Sprint 2:** Planner (prompt → plano JSON + tasks) na página do projeto
 
-Deploy VPS: `deploy/CHECKLIST.md` (após Sprint 1 + GitHub).
+Smoke do Planner (requer `GEMINI_API_KEY` no `.env.local`):
+
+```bash
+npx tsx scripts/smoke-planner.ts
+```
+
+Deploy VPS: `deploy/CHECKLIST.md`.

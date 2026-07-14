@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
+import { PlannerPanel } from "@/components/planner/PlannerPanel";
+import { getLatestPlan } from "@/lib/pipeline/actions";
 import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -32,9 +34,11 @@ export default async function ProjectDetailPage({ params }: Props) {
 
   if (!workspace || workspace.owner_id !== user.id) notFound();
 
+  const latest = await getLatestPlan(project.id);
+
   return (
     <AppShell>
-      <div className="space-y-6">
+      <div className="space-y-8">
         <div className="space-y-2">
           <Link
             href="/projects"
@@ -48,13 +52,19 @@ export default async function ProjectDetailPage({ params }: Props) {
           </p>
         </div>
 
-        <div className="rounded-xl border border-zinc-900 bg-zinc-900/40 p-6 space-y-2">
-          <p className="text-sm font-medium text-zinc-200">Próximo passo</p>
-          <p className="text-sm text-zinc-400 leading-relaxed">
-            No Sprint 2 você poderá escrever um prompt e gerar o plano do
-            sistema (Prompt → Planner). FileSystem e Builder vêm no Sprint 3+.
+        <section className="space-y-3">
+          <h2 className="text-lg font-medium">Planner</h2>
+          <p className="text-sm text-zinc-500">
+            Prompt → plano estruturado (JSON + tasks). O Builder entra no Sprint
+            4.
           </p>
-        </div>
+          <PlannerPanel
+            projectId={project.id}
+            initialPrompt={latest?.prompt}
+            initialPlan={latest?.plan ?? null}
+            initialModel={latest?.model}
+          />
+        </section>
       </div>
     </AppShell>
   );
