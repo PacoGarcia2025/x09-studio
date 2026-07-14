@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import {
   generatePlanAction,
   type GeneratePlanResult,
@@ -20,8 +21,9 @@ export function PlannerPanel({
   initialPlan = null,
   initialModel = null,
 }: Props) {
+  const router = useRouter();
   const [prompt, setPrompt] = useState(
-    initialPrompt || "Crie um CRM para imobiliária.",
+    initialPrompt || "Crie uma landing page para uma clínica.",
   );
   const [plan, setPlan] = useState<StudioPlan | null>(initialPlan);
   const [model, setModel] = useState<string | null>(initialModel);
@@ -45,6 +47,7 @@ export function PlannerPanel({
 
       setPlan(result.plan);
       setModel(result.model);
+      router.refresh();
     });
   }
 

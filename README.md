@@ -37,6 +37,7 @@ npm run dev
 - **Sprint 1:** Login / signup, criar e listar projetos
 - **Sprint 2:** Planner (prompt → plano JSON + tasks)
 - **Sprint 3:** Scaffold + FileSystem (template React/Supabase em disco)
+- **Sprint 4:** Builder + Task Queue (tasks → arquivos no disco)
 
 Defina no `.env.local`:
 
