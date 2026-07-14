@@ -1,0 +1,17 @@
+# Placeholder do projeto Supabase da plataforma X09 Studio.
+# Linkar com: supabase link --project-ref <ref>
+# Migrations reais começam no Sprint 1.
+
+project_id = "x09-studio"
+
+[api]
+enabled = true
+port = 54321
+
+[db]
+port = 54322
+major_version = 15
+
+[studio]
+enabled = true
+port = 54323
