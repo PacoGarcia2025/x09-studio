@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 import { ProjectProvider } from "@/contexts/ProjectContext";
+import { WorkbenchProvider } from "@/contexts/WorkbenchContext";
 
 export const metadata: Metadata = {
   title: "X09 Studio",
@@ -16,9 +17,17 @@ export default function RootLayout({
   return (
     <html lang="pt-BR">
       <body>
+
         <ProjectProvider>
-          {children}
+
+          <WorkbenchProvider>
+
+            {children}
+
+          </WorkbenchProvider>
+
         </ProjectProvider>
+
       </body>
     </html>
   );
