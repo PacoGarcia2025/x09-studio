@@ -45,3 +45,6 @@ next-env.d.ts
 
 # supabase cli
 supabase/.temp/
+
+# projetos gerados localmente (STUDIO_PROJECTS_ROOT em dev)
+.data/

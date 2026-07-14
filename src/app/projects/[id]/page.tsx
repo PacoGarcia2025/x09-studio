@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
 import { PlannerPanel } from "@/components/planner/PlannerPanel";
+import { ProjectFilesPanel } from "@/components/projects/ProjectFilesPanel";
 import { getLatestPlan } from "@/lib/pipeline/actions";
 import { createClient } from "@/lib/supabase/server";
 
@@ -38,7 +39,7 @@ export default async function ProjectDetailPage({ params }: Props) {
 
   return (
     <AppShell>
-      <div className="space-y-8">
+      <div className="space-y-10">
         <div className="space-y-2">
           <Link
             href="/projects"
@@ -52,7 +53,11 @@ export default async function ProjectDetailPage({ params }: Props) {
           </p>
         </div>
 
-        <section className="space-y-3">
+        <section>
+          <ProjectFilesPanel projectId={project.id} />
+        </section>
+
+        <section className="space-y-3 border-t border-zinc-900 pt-8">
           <h2 className="text-lg font-medium">Planner</h2>
           <p className="text-sm text-zinc-500">
             Prompt → plano estruturado (JSON + tasks). O Builder entra no Sprint

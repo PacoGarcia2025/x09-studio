@@ -35,9 +35,16 @@ npm run dev
 ## Sprints
 
 - **Sprint 1:** Login / signup, criar e listar projetos
-- **Sprint 2:** Planner (prompt → plano JSON + tasks) na página do projeto
+- **Sprint 2:** Planner (prompt → plano JSON + tasks)
+- **Sprint 3:** Scaffold + FileSystem (template React/Supabase em disco)
 
-Smoke do Planner (requer `GEMINI_API_KEY` no `.env.local`):
+Defina no `.env.local`:
+
+```bash
+STUDIO_PROJECTS_ROOT=C:\caminho\absoluto\para\.data\projects
+```
+
+Smoke do Planner:
 
 ```bash
 npx tsx scripts/smoke-planner.ts
