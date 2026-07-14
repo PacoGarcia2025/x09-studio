@@ -1,33 +1,57 @@
+"use client";
+
+import { Folder } from "lucide-react";
+
+import { useProjects } from "@/contexts/ProjectContext";
+import NewProjectDialog from "@/components/project/NewProjectDialog";
+
 export default function Sidebar() {
+  const { projects, currentProject, selectProject } = useProjects();
+
   return (
-    <aside className="w-72 border-r border-zinc-800 bg-zinc-950 p-6 flex flex-col">
-      <h2 className="text-lg font-semibold text-white mb-6">
-        Projetos
-      </h2>
+    <aside className="w-72 bg-zinc-950 border-r border-zinc-800 flex flex-col">
 
-      <nav className="flex flex-col gap-2">
+      <div className="p-6">
 
-        <button className="text-left rounded-lg px-3 py-2 hover:bg-zinc-900 text-zinc-300">
-          📁 X09 SaaS
-        </button>
-
-        <button className="text-left rounded-lg px-3 py-2 hover:bg-zinc-900 text-zinc-300">
-          📁 Sistema Contabilidade
-        </button>
-
-        <button className="text-left rounded-lg px-3 py-2 hover:bg-zinc-900 text-zinc-300">
-          📁 CRM Oficina
-        </button>
-
-      </nav>
-
-      <div className="mt-auto pt-6">
-
-        <button className="w-full rounded-lg bg-violet-600 hover:bg-violet-500 transition py-3 font-medium text-white">
-          ➕ Novo Projeto
-        </button>
+        <h2 className="text-xl font-bold text-white">
+          Projetos
+        </h2>
 
       </div>
+
+      <div className="flex-1 overflow-y-auto px-3">
+
+        {projects.map((project) => (
+
+          <button
+            key={project.id}
+            onClick={() => selectProject(project.id)}
+            className={`w-full flex items-center gap-3 rounded-lg px-3 py-2 mb-2 transition
+
+            ${
+              currentProject?.id === project.id
+                ? "bg-violet-600 text-white"
+                : "text-zinc-300 hover:bg-zinc-900"
+            }
+            `}
+          >
+
+            <Folder size={18} />
+
+            {project.name}
+
+          </button>
+
+        ))}
+
+      </div>
+
+      <div className="p-4">
+
+        <NewProjectDialog />
+
+      </div>
+
     </aside>
   );
 }
