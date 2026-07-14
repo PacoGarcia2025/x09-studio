@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { scaffoldProject } from "@/lib/projects/scaffold.server";
 import { isValidSlug, slugify, type Project } from "@/lib/projects/types";
 
 export type ActionResult =
@@ -124,6 +125,19 @@ export async function createProject(
         return { ok: false, error: "Já existe um projeto com este slug." };
       }
       return { ok: false, error: error.message };
+    }
+
+    try {
+      await scaffoldProject(data.id);
+    } catch (scaffoldError) {
+      await supabase.from("projects").delete().eq("id", data.id);
+      return {
+        ok: false,
+        error:
+          scaffoldError instanceof Error
+            ? `Falha ao criar arquivos do projeto: ${scaffoldError.message}`
+            : "Falha ao criar arquivos do projeto no disco",
+      };
     }
 
     revalidatePath("/projects");
