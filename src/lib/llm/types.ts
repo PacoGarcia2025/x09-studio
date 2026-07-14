@@ -1,0 +1,30 @@
+export type LlmMessage = {
+  role: "system" | "user" | "assistant";
+  content: string;
+};
+
+export type LlmCompleteInput = {
+  messages: LlmMessage[];
+  /** JSON Schema opcional — Sprint 2 usará para planos tipados */
+  responseJsonSchema?: Record<string, unknown>;
+  temperature?: number;
+  maxOutputTokens?: number;
+};
+
+export type LlmCompleteResult = {
+  text: string;
+  model: string;
+  usage?: {
+    inputTokens?: number;
+    outputTokens?: number;
+  };
+};
+
+/**
+ * Interface única de LLM. MVP só implementa Gemini.
+ * Claude/GPT/DeepSeek entram depois sem mudar callers.
+ */
+export interface LlmProvider {
+  readonly id: string;
+  complete(input: LlmCompleteInput): Promise<LlmCompleteResult>;
+}
