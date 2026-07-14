@@ -1,4 +1,17 @@
-export default function Home() {
+import Link from "next/link";
+import { redirect } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
+
+export const dynamic = "force-dynamic";
+
+export default async function Home() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (user) redirect("/projects");
+
   return (
     <main className="min-h-screen bg-zinc-950 text-zinc-100 flex items-center justify-center p-8">
       <div className="max-w-lg w-full space-y-6">
@@ -6,31 +19,26 @@ export default function Home() {
           X09 Studio
         </p>
         <h1 className="text-4xl font-semibold tracking-tight">
-          Ambiente preparado
+          Gerador de software com IA
         </h1>
         <p className="text-zinc-400 leading-relaxed">
-          Sprint 0 concluído na estrutura do produto. Next.js 15 App Router,
-          stubs de Docker, Supabase, Gemini, PM2, Nginx e CI estão no
-          repositório. O Sprint 1 começa a plataforma de verdade.
+          Plataforma interna para criar sistemas, apps e web apps com pipeline
+          Planner → Builder → Preview → Deploy.
         </p>
-        <dl className="grid grid-cols-2 gap-3 text-sm">
-          <div className="rounded-lg border border-zinc-800 bg-zinc-900/60 p-3">
-            <dt className="text-zinc-500">Runtime</dt>
-            <dd className="mt-1 font-medium">Next.js 15 · porta 3001</dd>
-          </div>
-          <div className="rounded-lg border border-zinc-800 bg-zinc-900/60 p-3">
-            <dt className="text-zinc-500">Preview</dt>
-            <dd className="mt-1 font-medium">Docker (VPS)</dd>
-          </div>
-          <div className="rounded-lg border border-zinc-800 bg-zinc-900/60 p-3">
-            <dt className="text-zinc-500">LLM MVP</dt>
-            <dd className="mt-1 font-medium">Gemini 2.5 Flash</dd>
-          </div>
-          <div className="rounded-lg border border-zinc-800 bg-zinc-900/60 p-3">
-            <dt className="text-zinc-500">Backend apps</dt>
-            <dd className="mt-1 font-medium">Supabase</dd>
-          </div>
-        </dl>
+        <div className="flex gap-3">
+          <Link
+            href="/login"
+            className="rounded-lg bg-zinc-100 px-4 py-2.5 text-sm font-medium text-zinc-900"
+          >
+            Entrar
+          </Link>
+          <Link
+            href="/signup"
+            className="rounded-lg border border-zinc-800 px-4 py-2.5 text-sm text-zinc-200 hover:border-zinc-600"
+          >
+            Criar conta
+          </Link>
+        </div>
       </div>
     </main>
   );
