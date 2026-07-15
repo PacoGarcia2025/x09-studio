@@ -53,38 +53,50 @@ export function PlannerPanel({
 
   return (
     <div className="space-y-8">
-      <form onSubmit={onSubmit} className="space-y-3">
-        <label htmlFor="prompt" className="block text-sm text-zinc-400">
-          Prompt
-        </label>
+      <form onSubmit={onSubmit} className="x09-card-soft rounded-3xl p-5">
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <label htmlFor="prompt" className="block text-sm font-medium text-zinc-200">
+            Prompt
+          </label>
+          {model ? (
+            <p className="text-xs text-zinc-500">Modelo: {model}</p>
+          ) : null}
+        </div>
         <textarea
           id="prompt"
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
-          rows={4}
-          className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none focus:border-zinc-600"
+          rows={5}
+          className="x09-input w-full resize-none rounded-3xl px-4 py-3 text-sm"
           placeholder="Crie um CRM para imobiliária."
         />
-        <button
-          type="submit"
-          disabled={pending}
-          className="rounded-lg bg-zinc-100 px-4 py-2 text-sm font-medium text-zinc-900 disabled:opacity-60"
-        >
-          {pending ? "Gerando plano…" : "Gerar plano"}
-        </button>
+        <div className="mt-4 flex flex-wrap items-center gap-3">
+          <button
+            type="submit"
+            disabled={pending}
+            className="x09-button rounded-2xl px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-60"
+          >
+            {pending ? "Gerando plano…" : "Gerar plano"}
+          </button>
+          <span className="text-xs text-zinc-600">
+            O X09 organiza módulos, banco, APIs e tasks.
+          </span>
+        </div>
         {error ? <p className="text-sm text-red-400">{error}</p> : null}
-        {model ? (
-          <p className="text-xs text-zinc-500">Modelo: {model}</p>
-        ) : null}
       </form>
 
       {plan ? (
         <>
-          <section className="space-y-2">
-            <h2 className="text-sm font-medium text-zinc-200">Resumo</h2>
-            <p className="text-sm text-zinc-400">{plan.summary}</p>
-            <p className="text-xs text-zinc-500">
-              Projeto planejado: {plan.project.name} — {plan.project.description}
+          <section className="x09-card-soft rounded-3xl p-5">
+            <p className="text-xs uppercase tracking-[0.22em] text-violet-300">
+              Resumo
+            </p>
+            <h3 className="mt-3 text-xl font-semibold text-white">
+              {plan.project.name}
+            </h3>
+            <p className="mt-3 text-sm leading-7 text-zinc-400">{plan.summary}</p>
+            <p className="mt-3 text-xs text-zinc-500">
+              {plan.project.description}
             </p>
           </section>
 
@@ -138,9 +150,9 @@ export function PlannerPanel({
             <h2 className="text-sm font-medium text-zinc-200">
               Tasks ({plan.tasks.length})
             </h2>
-            <ol className="space-y-2 list-decimal list-inside text-sm text-zinc-300">
+            <ol className="grid gap-3 text-sm text-zinc-300 lg:grid-cols-2">
               {plan.tasks.map((task) => (
-                <li key={task.id} className="rounded-lg border border-zinc-900 p-3">
+                <li key={task.id} className="x09-card-soft rounded-3xl p-4">
                   <div className="font-medium text-zinc-100">
                     [{task.type}] {task.title}
                   </div>
@@ -160,12 +172,14 @@ export function PlannerPanel({
             </ol>
           </section>
 
-          <section className="space-y-2">
-            <h2 className="text-sm font-medium text-zinc-200">JSON do plano</h2>
-            <pre className="overflow-auto rounded-lg border border-zinc-900 bg-zinc-950 p-4 text-xs text-zinc-300 max-h-[480px]">
+          <details className="x09-card-soft rounded-3xl p-5">
+            <summary className="cursor-pointer text-sm font-medium text-zinc-200">
+              JSON do plano (avançado)
+            </summary>
+            <pre className="mt-4 max-h-[480px] overflow-auto rounded-2xl border border-white/10 bg-black/30 p-4 text-xs text-zinc-300">
               {JSON.stringify(plan, null, 2)}
             </pre>
-          </section>
+          </details>
         </>
       ) : (
         <p className="text-sm text-zinc-500">
@@ -178,13 +192,17 @@ export function PlannerPanel({
 
 function PlanList({ title, items }: { title: string; items: string[] }) {
   return (
-    <div className="space-y-2">
-      <h2 className="text-sm font-medium text-zinc-200">{title}</h2>
-      <ul className="space-y-1 text-sm text-zinc-400 list-disc list-inside">
+    <details className="x09-card-soft rounded-3xl p-5" open>
+      <summary className="cursor-pointer text-sm font-medium text-zinc-200">
+        {title}
+      </summary>
+      <ul className="mt-4 space-y-2 text-sm text-zinc-400">
         {items.map((item) => (
-          <li key={item}>{item}</li>
+          <li key={item} className="rounded-2xl border border-white/8 bg-white/[0.03] p-3">
+            {item}
+          </li>
         ))}
       </ul>
-    </div>
+    </details>
   );
 }

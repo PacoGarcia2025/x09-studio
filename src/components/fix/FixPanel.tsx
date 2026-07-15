@@ -119,14 +119,14 @@ export function FixPanel({
           type="button"
           onClick={() => void runAutoFix()}
           disabled={isBusy || pending}
-          className="rounded-lg bg-violet-700/80 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+          className="x09-button rounded-2xl px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
         >
           {isBusy ? "✨ Corrigindo automaticamente..." : "Executar Auto Fix"}
         </button>
         <button
           type="button"
           onClick={() => setShowAdvanced((v) => !v)}
-          className="text-xs text-zinc-500 hover:text-zinc-300"
+          className="x09-muted-button rounded-2xl px-3 py-2 text-xs text-zinc-300"
         >
           {showAdvanced ? "Ocultar avançado" : "Painel avançado"}
         </button>
@@ -135,13 +135,24 @@ export function FixPanel({
       {error ? <p className="text-sm text-red-400">{error}</p> : null}
 
       {/* Vista pública — sem detalhes técnicos */}
-      <div className="rounded-lg border border-zinc-900 px-4 py-6 text-center space-y-3">
+      <div className="x09-card-soft overflow-hidden rounded-[2rem] px-4 py-10 text-center">
         {isBusy ? (
-          <p className="text-lg text-zinc-100">✨ Corrigindo automaticamente...</p>
+          <div className="space-y-5">
+            <div className="mx-auto h-20 w-20 rounded-full border border-violet-400/25 bg-violet-500/10 p-2">
+              <div
+                className="h-full w-full rounded-full border border-violet-300/40"
+                style={{ animation: "x09-orbit 2.8s linear infinite" }}
+              />
+            </div>
+            <p className="text-lg text-zinc-100">✨ Corrigindo automaticamente...</p>
+            <p className="text-sm text-zinc-500">
+              O X09 está aplicando correções e revalidando o projeto.
+            </p>
+          </div>
         ) : pub ? (
           <>
             <p className="text-lg text-zinc-100">{pub.message}</p>
-            <ul className="space-y-1 text-sm text-zinc-400">
+            <ul className="mt-4 space-y-1 text-sm text-zinc-400">
               {pub.verified ? <li>✔ Projeto verificado</li> : null}
               {pub.corrected || pub.status === "succeeded" ? (
                 <li>✔ Projeto corrigido</li>
@@ -163,7 +174,7 @@ export function FixPanel({
       </div>
 
       {showAdvanced && adv ? (
-        <div className="rounded-lg border border-amber-900/40 bg-zinc-950/50 p-4 space-y-3 text-xs text-zinc-400">
+        <div className="x09-card-soft rounded-[2rem] p-5 text-xs text-zinc-400">
           <h3 className="text-sm font-medium text-amber-200/90">
             Painel avançado
           </h3>

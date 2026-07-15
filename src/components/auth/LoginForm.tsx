@@ -1,13 +1,17 @@
 "use client";
 
 import { createClient } from "@/lib/supabase/client";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
 
-export function LoginForm({ mode }: { mode: "login" | "signup" }) {
+export function LoginForm({
+  mode,
+  nextPath = "/projects",
+}: {
+  mode: "login" | "signup";
+  nextPath?: string;
+}) {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const next = searchParams.get("next") || "/projects";
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -38,7 +42,7 @@ export function LoginForm({ mode }: { mode: "login" | "signup" }) {
         if (signInError) throw signInError;
       }
 
-      router.replace(next);
+      router.replace(nextPath);
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Falha na autenticação");
@@ -48,7 +52,7 @@ export function LoginForm({ mode }: { mode: "login" | "signup" }) {
   }
 
   return (
-    <form onSubmit={onSubmit} className="space-y-4 w-full max-w-sm">
+    <form onSubmit={onSubmit} className="w-full max-w-sm space-y-4">
       {mode === "signup" ? (
         <div className="space-y-1.5">
           <label htmlFor="full_name" className="text-sm text-zinc-400">
@@ -58,7 +62,7 @@ export function LoginForm({ mode }: { mode: "login" | "signup" }) {
             id="full_name"
             value={fullName}
             onChange={(e) => setFullName(e.target.value)}
-            className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-zinc-100 outline-none focus:border-zinc-600"
+            className="x09-input w-full rounded-2xl px-4 py-3 text-sm"
             placeholder="Seu nome"
           />
         </div>
@@ -75,7 +79,7 @@ export function LoginForm({ mode }: { mode: "login" | "signup" }) {
           autoComplete="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-zinc-100 outline-none focus:border-zinc-600"
+          className="x09-input w-full rounded-2xl px-4 py-3 text-sm"
           placeholder="voce@empresa.com"
         />
       </div>
@@ -92,7 +96,7 @@ export function LoginForm({ mode }: { mode: "login" | "signup" }) {
           autoComplete={mode === "signup" ? "new-password" : "current-password"}
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-zinc-100 outline-none focus:border-zinc-600"
+          className="x09-input w-full rounded-2xl px-4 py-3 text-sm"
           placeholder="••••••••"
         />
       </div>
@@ -102,7 +106,7 @@ export function LoginForm({ mode }: { mode: "login" | "signup" }) {
       <button
         type="submit"
         disabled={pending}
-        className="w-full rounded-lg bg-zinc-100 px-4 py-2.5 text-sm font-medium text-zinc-900 disabled:opacity-60"
+        className="x09-button w-full rounded-2xl px-4 py-3 text-sm font-semibold text-white disabled:opacity-60"
       >
         {pending
           ? "Aguarde…"

@@ -109,15 +109,47 @@ export function VerifyPanel({
 
   const report = state?.report;
   const issues = report?.issues ?? [];
+  const errorCount = issues.filter((i) => i.severity === "error").length;
+  const warningCount = issues.filter((i) => i.severity === "warning").length;
+  const passedChecks = report
+    ? Object.values(report.categories).filter((c) => c.status === "success")
+        .length
+    : 0;
+  const healthScore = report
+    ? Math.max(0, Math.min(100, 100 - errorCount * 16 - warningCount * 5))
+    : null;
 
   return (
     <div className="space-y-4">
+      <div className="grid gap-4 lg:grid-cols-[260px_1fr]">
+        <div className="x09-card-soft rounded-3xl p-5">
+          <p className="text-xs uppercase tracking-[0.22em] text-violet-300">
+            Health Score
+          </p>
+          <div className="mt-5 text-5xl font-semibold text-white">
+            {healthScore ?? "--"}
+          </div>
+          <p className="mt-2 text-xs text-zinc-500">
+            {passedChecks}/7 checks aprovados
+          </p>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-3">
+          <VerifyMetric label="Erros" value={String(errorCount)} tone="red" />
+          <VerifyMetric label="Warnings" value={String(warningCount)} tone="amber" />
+          <VerifyMetric
+            label="Tempo de análise"
+            value={state?.finishedAt ? "concluído" : running ? "running" : "--"}
+            tone="violet"
+          />
+        </div>
+      </div>
+
       <div className="flex flex-wrap items-center gap-3">
         <button
           type="button"
           onClick={() => void runVerify()}
           disabled={running || pending}
-          className="rounded-lg bg-emerald-700/80 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+          className="x09-button rounded-2xl px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
         >
           {running ? "Verify em execução…" : "Executar Verify"}
         </button>
@@ -125,7 +157,7 @@ export function VerifyPanel({
           type="button"
           onClick={refresh}
           disabled={pending || running}
-          className="text-xs text-zinc-400 hover:text-zinc-200"
+          className="x09-muted-button rounded-2xl px-3 py-2 text-xs text-zinc-300"
         >
           Atualizar
         </button>
@@ -140,7 +172,9 @@ export function VerifyPanel({
       {error ? <p className="text-sm text-red-400">{error}</p> : null}
 
       {state?.summary ? (
-        <p className="text-sm text-zinc-300">{state.summary}</p>
+        <p className="rounded-2xl border border-white/10 bg-white/[0.03] p-3 text-sm text-zinc-300">
+          {state.summary}
+        </p>
       ) : null}
 
       <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
@@ -159,7 +193,7 @@ export function VerifyPanel({
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <div className="rounded-lg border border-zinc-900 p-3 space-y-2 max-h-[420px] overflow-auto">
+        <div className="x09-card-soft max-h-[420px] space-y-2 overflow-auto rounded-3xl p-4">
           <h3 className="text-sm font-medium text-zinc-200">
             Issues ({issues.length})
           </h3>
@@ -178,8 +212,10 @@ export function VerifyPanel({
           )}
         </div>
 
-        <div className="rounded-lg border border-zinc-900 p-3 space-y-2 max-h-[420px] overflow-auto">
-          <h3 className="text-sm font-medium text-zinc-200">Tool traces</h3>
+        <details className="x09-card-soft max-h-[420px] overflow-auto rounded-3xl p-4">
+          <summary className="cursor-pointer text-sm font-medium text-zinc-200">
+            Tool traces
+          </summary>
           <ul className="space-y-2 font-mono text-[11px] text-zinc-500">
             {(report?.toolTraces ?? []).length === 0 ? (
               <li>Sem saída de ferramentas ainda.</li>
@@ -196,7 +232,7 @@ export function VerifyPanel({
               ))
             )}
           </ul>
-        </div>
+        </details>
       </div>
 
       <p className="text-xs text-zinc-600">
@@ -218,7 +254,7 @@ function CategoryCard({
   summary?: string;
 }) {
   return (
-    <div className="rounded-lg border border-zinc-900 px-3 py-2 space-y-1">
+    <div className="x09-card-soft space-y-1 rounded-3xl px-4 py-3">
       <div className="flex items-center justify-between gap-2">
         <span className="text-sm text-zinc-200">
           {statusIcon(status)} {VERIFY_CATEGORY_LABELS[id]}
@@ -279,7 +315,7 @@ function IssueRow({ issue }: { issue: VerifyIssue }) {
         ? "text-amber-300"
         : "text-zinc-400";
   return (
-    <li className="border-b border-zinc-900/80 pb-2">
+    <li className="rounded-2xl border border-white/8 bg-white/[0.025] p-3">
       <div className="flex flex-wrap items-baseline gap-2">
         <span className={color}>{issue.severity}</span>
         <span className="text-zinc-500">{issue.category}</span>
@@ -303,5 +339,28 @@ function IssueRow({ issue }: { issue: VerifyIssue }) {
         </p>
       ) : null}
     </li>
+  );
+}
+
+function VerifyMetric({
+  label,
+  value,
+  tone,
+}: {
+  label: string;
+  value: string;
+  tone: "red" | "amber" | "violet";
+}) {
+  const glow =
+    tone === "red"
+      ? "text-red-200"
+      : tone === "amber"
+        ? "text-amber-200"
+        : "text-violet-200";
+  return (
+    <div className="x09-card-soft rounded-3xl p-5">
+      <p className="text-xs text-zinc-500">{label}</p>
+      <p className={`mt-3 text-3xl font-semibold ${glow}`}>{value}</p>
+    </div>
   );
 }

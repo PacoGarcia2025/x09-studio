@@ -1,8 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
-import { ProjectPipeline } from "@/components/projects/ProjectPipeline";
-import { ProjectFilesPanel } from "@/components/projects/ProjectFilesPanel";
+import { ProjectWorkspace } from "@/components/projects/ProjectWorkspace";
 import { getLatestPlan } from "@/lib/pipeline/actions";
 import { createClient } from "@/lib/supabase/server";
 
@@ -39,26 +38,15 @@ export default async function ProjectDetailPage({ params }: Props) {
 
   return (
     <AppShell>
-      <div className="space-y-10">
-        <div className="space-y-2">
-          <Link
-            href="/projects"
-            className="text-sm text-zinc-500 hover:text-zinc-300"
-          >
-            ← Projetos
-          </Link>
-          <h1 className="text-2xl font-semibold">{project.name}</h1>
-          <p className="text-sm text-zinc-400">
-            {project.slug}.studio.x09.com.br · status: {project.status}
-          </p>
-        </div>
-
-        <section>
-          <ProjectFilesPanel projectId={project.id} />
-        </section>
-
-        <ProjectPipeline
-          projectId={project.id}
+      <div className="space-y-5">
+        <Link
+          href="/projects"
+          className="inline-flex text-sm text-zinc-500 transition hover:text-violet-200"
+        >
+          ← Projetos
+        </Link>
+        <ProjectWorkspace
+          project={project}
           planId={latest?.id ?? null}
           initialPrompt={latest?.prompt}
           initialPlan={latest?.plan ?? null}

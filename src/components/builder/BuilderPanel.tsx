@@ -104,6 +104,9 @@ export function BuilderPanel({ planId, projectId, onBuildSuccess }: Props) {
   }
 
   const counts = state?.counts;
+  const progress = counts?.total
+    ? Math.round((counts.done / counts.total) * 100)
+    : 0;
   const current =
     state?.tasks.find((t) => t.status === "running") ??
     state?.tasks.find((t) => t.status === "retrying") ??
@@ -112,12 +115,37 @@ export function BuilderPanel({ planId, projectId, onBuildSuccess }: Props) {
 
   return (
     <div className="space-y-4">
+      <div className="x09-card-soft rounded-3xl p-5">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <p className="text-sm font-medium text-white">
+              {current
+                ? `[${current.type}] ${current.title}`
+                : "Nenhuma task em execução"}
+            </p>
+            <p className="mt-1 text-xs text-zinc-500">
+              Task atual · arquivos, comandos e SQL são aplicados em disco.
+            </p>
+          </div>
+          <div className="text-right">
+            <p className="text-2xl font-semibold text-white">{progress}%</p>
+            <p className="text-xs text-zinc-500">progresso</p>
+          </div>
+        </div>
+        <div className="mt-5 h-2 rounded-full bg-white/7">
+          <div
+            className="h-full rounded-full bg-gradient-to-r from-violet-500 via-fuchsia-400 to-sky-300 transition-all"
+            style={{ width: `${progress}%` }}
+          />
+        </div>
+      </div>
+
       <div className="flex flex-wrap items-center gap-3">
         <button
           type="button"
           onClick={() => void runQueue()}
           disabled={running || pending}
-          className="rounded-lg bg-zinc-100 px-4 py-2 text-sm font-medium text-zinc-900 disabled:opacity-50"
+          className="x09-button rounded-2xl px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
         >
           {running ? "Builder em execução…" : "Executar Builder"}
         </button>
@@ -125,7 +153,7 @@ export function BuilderPanel({ planId, projectId, onBuildSuccess }: Props) {
           type="button"
           onClick={refresh}
           disabled={pending || running}
-          className="text-xs text-zinc-400 hover:text-zinc-200"
+          className="x09-muted-button rounded-2xl px-3 py-2 text-xs text-zinc-300"
         >
           Atualizar
         </button>
@@ -138,25 +166,16 @@ export function BuilderPanel({ planId, projectId, onBuildSuccess }: Props) {
         ) : null}
       </div>
 
-      {current ? (
-        <p className="text-sm text-zinc-300">
-          Task atual:{" "}
-          <span className="text-zinc-100">
-            [{current.type}] {current.task_key} — {current.title}
-          </span>
-        </p>
-      ) : null}
-
       {error ? <p className="text-sm text-red-400">{error}</p> : null}
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <div className="rounded-lg border border-zinc-900 p-3 space-y-2 max-h-[360px] overflow-auto">
+        <div className="x09-card-soft max-h-[420px] space-y-2 overflow-auto rounded-3xl p-4">
           <h3 className="text-sm font-medium text-zinc-200">Fila</h3>
           <ul className="space-y-1 text-xs">
             {(state?.tasks ?? []).map((task) => (
               <li
                 key={task.id}
-                className="flex items-start justify-between gap-2 border-b border-zinc-900/80 py-1.5"
+                className="flex items-start justify-between gap-2 rounded-2xl border border-white/8 bg-white/[0.025] px-3 py-2"
               >
                 <span className="text-zinc-300">
                   <span className="text-zinc-500">{task.task_key}</span>{" "}
@@ -188,8 +207,10 @@ export function BuilderPanel({ planId, projectId, onBuildSuccess }: Props) {
           </ul>
         </div>
 
-        <div className="rounded-lg border border-zinc-900 p-3 space-y-2 max-h-[360px] overflow-auto">
-          <h3 className="text-sm font-medium text-zinc-200">Logs</h3>
+        <details className="x09-card-soft max-h-[420px] overflow-auto rounded-3xl p-4">
+          <summary className="cursor-pointer text-sm font-medium text-zinc-200">
+            Logs técnicos
+          </summary>
           <ul className="space-y-1 font-mono text-[11px] text-zinc-400">
             {(state?.logs ?? []).length === 0 ? (
               <li>Sem logs ainda.</li>
@@ -208,7 +229,7 @@ export function BuilderPanel({ planId, projectId, onBuildSuccess }: Props) {
               ))
             )}
           </ul>
-        </div>
+        </details>
       </div>
 
       <p className="text-xs text-zinc-600">

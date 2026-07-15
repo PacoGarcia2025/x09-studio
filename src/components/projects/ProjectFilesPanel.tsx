@@ -68,25 +68,27 @@ export function ProjectFilesPanel({ projectId }: Props) {
   }
 
   return (
-    <div className="space-y-3">
+    <div className="x09-card overflow-hidden rounded-[2rem]">
       <div className="flex items-center justify-between gap-3">
-        <h2 className="text-lg font-medium">Arquivos</h2>
+        <div className="px-5 py-4">
+          <h2 className="text-lg font-medium text-white">Arquivos</h2>
+          <p className="text-xs text-zinc-500">Explorer moderno, busca visual e editor integrado.</p>
+        </div>
         <button
           type="button"
           onClick={loadTree}
           disabled={pending}
-          className="text-xs text-zinc-400 hover:text-zinc-200"
+          className="x09-muted-button mr-5 rounded-2xl px-3 py-2 text-xs text-zinc-300"
         >
           Atualizar árvore
         </button>
       </div>
-      <p className="text-sm text-zinc-500">
-        Scaffold do template React + Supabase em disco (
-        <code className="text-zinc-400">STUDIO_PROJECTS_ROOT</code>).
-      </p>
 
-      <div className="grid gap-4 lg:grid-cols-[260px_1fr] min-h-[420px]">
-        <aside className="rounded-lg border border-zinc-900 bg-zinc-950/60 p-3 overflow-auto max-h-[560px]">
+      <div className="grid min-h-[560px] border-t border-white/10 lg:grid-cols-[280px_1fr]">
+        <aside className="border-r border-white/10 bg-[#05030b]/75 p-3">
+          <div className="mb-3 rounded-2xl border border-white/10 bg-white/[0.03] px-3 py-2 text-xs text-zinc-500">
+            Buscar arquivo...
+          </div>
           {tree.length === 0 && !pending ? (
             <p className="text-xs text-zinc-500">Nenhum arquivo.</p>
           ) : (
@@ -98,8 +100,8 @@ export function ProjectFilesPanel({ projectId }: Props) {
           )}
         </aside>
 
-        <div className="flex flex-col rounded-lg border border-zinc-900 bg-zinc-950/40 min-h-[420px]">
-          <div className="flex items-center justify-between gap-2 border-b border-zinc-900 px-3 py-2">
+        <div className="flex min-h-[560px] flex-col bg-[#080512]/80">
+          <div className="flex items-center justify-between gap-2 border-b border-white/10 bg-white/[0.03] px-4 py-3">
             <span className="text-xs text-zinc-400 truncate">
               {selectedPath ?? "Selecione um arquivo"}
               {dirty ? " •" : ""}
@@ -108,7 +110,7 @@ export function ProjectFilesPanel({ projectId }: Props) {
               type="button"
               onClick={saveFile}
               disabled={!selectedPath || !dirty || pending}
-              className="rounded bg-zinc-100 px-3 py-1 text-xs font-medium text-zinc-900 disabled:opacity-40"
+              className="rounded-xl bg-violet-500/90 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-40"
             >
               Salvar
             </button>
@@ -122,15 +124,17 @@ export function ProjectFilesPanel({ projectId }: Props) {
             }}
             disabled={!selectedPath || pending}
             spellCheck={false}
-            className="flex-1 w-full resize-none bg-transparent p-3 font-mono text-xs text-zinc-200 outline-none disabled:opacity-50 min-h-[360px]"
+            className="min-h-[460px] w-full flex-1 resize-none bg-transparent p-5 font-mono text-xs leading-6 text-zinc-200 outline-none disabled:opacity-50"
             placeholder="Abra um arquivo na árvore à esquerda."
           />
         </div>
       </div>
 
-      {error ? <p className="text-sm text-red-400">{error}</p> : null}
-      {status ? <p className="text-sm text-emerald-400">{status}</p> : null}
-      {pending ? <p className="text-xs text-zinc-500">Processando…</p> : null}
+      <div className="border-t border-white/10 px-5 py-3">
+        {error ? <p className="text-sm text-red-400">{error}</p> : null}
+        {status ? <p className="text-sm text-emerald-400">{status}</p> : null}
+        {pending ? <p className="text-xs text-zinc-500">Processando…</p> : null}
+      </div>
     </div>
   );
 }
@@ -153,7 +157,7 @@ function FileTree({
           {node.type === "directory" ? (
             <div>
               <div
-                className="text-zinc-500 py-0.5"
+                className="py-1 text-zinc-500"
                 style={{ paddingLeft: depth * 12 }}
               >
                 {node.name}/
@@ -171,10 +175,10 @@ function FileTree({
             <button
               type="button"
               onClick={() => onOpenFile(node.path)}
-              className={`block w-full text-left py-0.5 rounded px-1 ${
+              className={`block w-full rounded-xl px-2 py-1.5 text-left transition ${
                 selectedPath === node.path
-                  ? "bg-zinc-800 text-zinc-100"
-                  : "text-zinc-300 hover:bg-zinc-900"
+                  ? "bg-violet-500/20 text-violet-100"
+                  : "text-zinc-300 hover:bg-white/5"
               }`}
               style={{ paddingLeft: depth * 12 }}
             >
