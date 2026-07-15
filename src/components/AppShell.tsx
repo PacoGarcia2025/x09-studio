@@ -44,10 +44,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
           <div className="absolute bottom-5 left-5 right-5 rounded-3xl border border-violet-400/20 bg-violet-500/10 p-4">
             <p className="text-xs uppercase tracking-[0.25em] text-violet-300/80">
-              Pipeline
+              X09 Agent
             </p>
             <div className="mt-3 space-y-2 text-xs text-zinc-400">
-              {["Planner", "Builder", "Verify", "Fix", "Preview", "Deploy"].map(
+              {["Entendendo", "Criando", "Validando", "Preparando", "Publicando"].map(
                 (step) => (
                   <div key={step} className="flex items-center gap-2">
                     <span className="h-1.5 w-1.5 rounded-full bg-violet-300 shadow-[0_0_14px_rgba(168,85,247,.8)]" />

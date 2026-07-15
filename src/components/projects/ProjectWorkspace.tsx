@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { BuilderPanel } from "@/components/builder/BuilderPanel";
+import { X09Robot } from "@/components/brand/X09Robot";
 import { FixPanel } from "@/components/fix/FixPanel";
 import { PlannerPanel } from "@/components/planner/PlannerPanel";
 import { ProjectFilesPanel } from "@/components/projects/ProjectFilesPanel";
@@ -58,28 +59,379 @@ export function ProjectWorkspace({
   const [lastVerifyReportId, setLastVerifyReportId] = useState<string | null>(
     null,
   );
+  const [developerMode, setDeveloperMode] = useState(false);
+  const [previewDevice, setPreviewDevice] = useState<"desktop" | "tablet" | "mobile">(
+    "desktop",
+  );
+  const [publishPanelOpen, setPublishPanelOpen] = useState(false);
+
+  const assistantMessages = [
+    "Estou entendendo seu projeto...",
+    "Criando a experiência visual...",
+    "Preparando páginas e componentes...",
+    "Organizando autenticação e dados...",
+    "Publicando preview em tempo real...",
+  ];
+
+  const previewWidth =
+    previewDevice === "desktop"
+      ? "w-full"
+      : previewDevice === "tablet"
+        ? "max-w-[760px]"
+        : "max-w-[390px]";
 
   return (
-    <div className="space-y-6">
-      <section className="x09-card overflow-hidden rounded-[2rem] p-6 md:p-8">
-        <div className="flex flex-col justify-between gap-6 lg:flex-row lg:items-end">
-          <div>
-            <p className="text-sm text-zinc-500">Projeto</p>
-            <h1 className="mt-2 text-4xl font-semibold tracking-[-0.04em] text-white">
+    <div className="space-y-5">
+      <section className="x09-card rounded-[2rem] p-4 md:p-5">
+        <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2 text-xs text-zinc-500">
+              <span className="rounded-full border border-violet-400/25 bg-violet-500/10 px-3 py-1 text-violet-200">
+                {project.status}
+              </span>
+              <span>IA: {initialModel ?? "X09 Router"}</span>
+              <span>Preview automático</span>
+            </div>
+            <h1 className="mt-3 truncate text-2xl font-semibold tracking-[-0.03em] text-white md:text-3xl">
               {project.name}
             </h1>
-            <p className="mt-2 text-sm text-zinc-500">
-              {project.slug}.studio.x09.com.br · status: {project.status}
+            <p className="mt-1 text-sm text-zinc-500">
+              Converse com o X09. A parte técnica fica escondida até você ativar
+              o modo desenvolvedor.
             </p>
           </div>
-          <div className="grid grid-cols-3 gap-3 text-xs">
-            <Metric label="Health" value="Aguardando" />
-            <Metric label="Preview" value="Preparado" />
-            <Metric label="Deploy" value="Pendente" />
+
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              className="x09-muted-button rounded-2xl px-4 py-2 text-sm text-zinc-300"
+            >
+              Histórico
+            </button>
+            <button
+              type="button"
+              className="x09-muted-button rounded-2xl px-4 py-2 text-sm text-zinc-300"
+            >
+              Configurações
+            </button>
+            <button
+              type="button"
+              onClick={() => setDeveloperMode((value) => !value)}
+              className={`rounded-2xl px-4 py-2 text-sm transition ${
+                developerMode
+                  ? "border border-orange-300/35 bg-orange-400/12 text-orange-100"
+                  : "x09-muted-button text-zinc-300"
+              }`}
+            >
+              Modo Desenvolvedor
+            </button>
+            <button
+              type="button"
+              onClick={() => setPublishPanelOpen((value) => !value)}
+              className="x09-button rounded-2xl px-5 py-2.5 text-sm font-semibold text-white"
+            >
+              Publicar
+            </button>
           </div>
         </div>
 
-        <div className="mt-7 flex gap-2 overflow-x-auto pb-1">
+        {publishPanelOpen ? <PublishPanel slug={project.slug} /> : null}
+      </section>
+
+      <section className="grid min-h-[720px] gap-5 xl:grid-cols-[minmax(360px,0.46fr)_minmax(520px,0.54fr)]">
+        <div className="x09-card flex min-h-[720px] flex-col overflow-hidden rounded-[2rem]">
+          <div className="border-b border-white/10 p-5">
+            <div className="flex items-center gap-4">
+              <div className="h-20 w-20 shrink-0 overflow-hidden">
+                <X09Robot compact />
+              </div>
+              <div>
+                <p className="text-xs uppercase tracking-[0.24em] text-violet-300">
+                  Robô X09
+                </p>
+                <h2 className="mt-1 text-xl font-semibold text-white">
+                  Seu desenvolvedor inteligente
+                </h2>
+                <p className="mt-1 text-sm text-zinc-500">
+                  Você descreve. O X09 planeja, cria, verifica e prepara a
+                  publicação.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex-1 space-y-4 overflow-y-auto p-5">
+            <ChatBubble
+              author="Você"
+              tone="user"
+              text={
+                initialPrompt ??
+                "Crie um site premium para um escritório de advocacia"
+              }
+            />
+            {assistantMessages.map((message, index) => (
+              <ChatBubble
+                key={message}
+                author="X09"
+                tone="assistant"
+                text={message}
+                active={index === 1}
+              />
+            ))}
+          </div>
+
+          <div className="border-t border-white/10 p-4">
+            <div className="mb-3 flex flex-wrap gap-2">
+              <AttachmentButton label="Arquivo" />
+              <AttachmentButton label="Imagem" />
+              <AttachmentButton label="Áudio em breve" muted />
+            </div>
+            <div className="flex gap-3">
+              <textarea
+                className="x09-input min-h-14 flex-1 resize-none rounded-2xl px-4 py-3 text-sm"
+                placeholder="Descreva o que deseja criar ou alterar..."
+                rows={2}
+              />
+              <button
+                type="button"
+                className="x09-button self-end rounded-2xl px-5 py-3 text-sm font-semibold text-white"
+              >
+                Enviar
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div className="x09-card flex min-h-[720px] flex-col overflow-hidden rounded-[2rem]">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 p-4">
+            <div>
+              <p className="text-xs uppercase tracking-[0.24em] text-violet-300">
+                Preview em tempo real
+              </p>
+              <p className="mt-1 text-sm text-zinc-500">
+                Atualizado automaticamente após cada alteração do chat.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {(["desktop", "tablet", "mobile"] as const).map((device) => (
+                <button
+                  key={device}
+                  type="button"
+                  onClick={() => setPreviewDevice(device)}
+                  className={`rounded-xl px-3 py-2 text-xs capitalize transition ${
+                    previewDevice === device
+                      ? "bg-violet-500/20 text-violet-100"
+                      : "x09-muted-button text-zinc-400"
+                  }`}
+                >
+                  {device}
+                </button>
+              ))}
+              <button type="button" className="x09-muted-button rounded-xl px-3 py-2 text-xs text-zinc-400">
+                Tela cheia
+              </button>
+              <button type="button" className="x09-muted-button rounded-xl px-3 py-2 text-xs text-zinc-400">
+                Nova aba
+              </button>
+              <button type="button" className="x09-muted-button rounded-xl px-3 py-2 text-xs text-zinc-400">
+                Atualizar
+              </button>
+            </div>
+          </div>
+
+          <div className="flex flex-1 items-center justify-center bg-[#030108] p-5">
+            <div
+              className={`h-full min-h-[560px] ${previewWidth} overflow-hidden rounded-[1.5rem] border border-white/10 bg-white text-zinc-950 shadow-2xl transition-all`}
+            >
+              <PreviewMock projectName={project.name} />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {developerMode ? (
+        <DeveloperConsole
+          active={active}
+          setActive={setActive}
+          project={project}
+          planId={planId}
+          initialPrompt={initialPrompt}
+          initialPlan={initialPlan}
+          initialModel={initialModel}
+          verifyToken={verifyToken}
+          setVerifyToken={setVerifyToken}
+          fixToken={fixToken}
+          setFixToken={setFixToken}
+          lastVerifyReportId={lastVerifyReportId}
+          setLastVerifyReportId={setLastVerifyReportId}
+        />
+      ) : null}
+    </div>
+  );
+}
+
+function ChatBubble({
+  author,
+  text,
+  tone,
+  active,
+}: {
+  author: string;
+  text: string;
+  tone: "user" | "assistant";
+  active?: boolean;
+}) {
+  return (
+    <div className={`flex ${tone === "user" ? "justify-end" : "justify-start"}`}>
+      <div
+        className={`max-w-[86%] rounded-3xl border p-4 ${
+          tone === "user"
+            ? "border-violet-400/25 bg-violet-500/15 text-violet-50"
+            : "border-white/10 bg-white/[0.04] text-zinc-200"
+        }`}
+      >
+        <div className="mb-2 flex items-center gap-2 text-xs text-zinc-500">
+          <span>{author}</span>
+          {active ? (
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-300 shadow-[0_0_12px_rgba(52,245,164,.8)]" />
+          ) : null}
+        </div>
+        <p className="text-sm leading-6">{text}</p>
+      </div>
+    </div>
+  );
+}
+
+function AttachmentButton({
+  label,
+  muted,
+}: {
+  label: string;
+  muted?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      className={`rounded-full border px-3 py-1.5 text-xs transition ${
+        muted
+          ? "border-white/8 bg-white/[0.02] text-zinc-600"
+          : "border-white/10 bg-white/[0.04] text-zinc-400 hover:border-violet-400/40 hover:text-violet-100"
+      }`}
+    >
+      {label}
+    </button>
+  );
+}
+
+function PublishPanel({ slug }: { slug: string }) {
+  return (
+    <div className="mt-5 rounded-3xl border border-violet-400/20 bg-violet-500/10 p-5">
+      <p className="text-sm font-medium text-white">Onde deseja publicar?</p>
+      <div className="mt-4 grid gap-3 md:grid-cols-2">
+        <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+          <p className="font-medium text-violet-100">Subdomínio X09</p>
+          <p className="mt-2 text-sm text-zinc-500">
+            {slug}.studio.x09.com.br
+          </p>
+        </div>
+        <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+          <p className="font-medium text-violet-100">Domínio próprio</p>
+          <p className="mt-2 text-sm text-zinc-500">
+            Assistente preparado: domínio, Cloudflare, DNS, SSL e publicar.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PreviewMock({ projectName }: { projectName: string }) {
+  return (
+    <div className="min-h-full bg-[#faf7ff]">
+      <div className="border-b border-zinc-200 bg-white/80 px-6 py-4 backdrop-blur">
+        <div className="flex items-center justify-between">
+          <div className="font-semibold">{projectName}</div>
+          <div className="hidden gap-5 text-sm text-zinc-500 md:flex">
+            <span>Início</span>
+            <span>Serviços</span>
+            <span>Equipe</span>
+            <span>Contato</span>
+          </div>
+        </div>
+      </div>
+      <div className="px-6 py-12 md:px-10 md:py-16">
+        <div className="max-w-3xl">
+          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-violet-600">
+            Preview gerado pelo X09
+          </p>
+          <h2 className="mt-4 text-4xl font-semibold tracking-tight text-zinc-950 md:text-6xl">
+            Uma presença digital premium em construção.
+          </h2>
+          <p className="mt-5 max-w-xl text-base leading-7 text-zinc-600">
+            O preview será conectado ao runtime real nas próximas etapas. A
+            experiência já está preparada para atualizar automaticamente a cada
+            mensagem do chat.
+          </p>
+          <button className="mt-8 rounded-2xl bg-violet-600 px-5 py-3 text-sm font-semibold text-white shadow-xl shadow-violet-600/25">
+            Solicitar proposta
+          </button>
+        </div>
+        <div className="mt-12 grid gap-4 md:grid-cols-3">
+          {["Design premium", "SEO preparado", "Publicação simples"].map((item) => (
+            <div key={item} className="rounded-3xl border border-zinc-200 bg-white p-5 shadow-sm">
+              <div className="h-2 w-12 rounded-full bg-violet-500" />
+              <p className="mt-5 font-medium text-zinc-950">{item}</p>
+              <p className="mt-2 text-sm leading-6 text-zinc-500">
+                Estrutura visual pronta para evoluir com conteúdo real.
+              </p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DeveloperConsole({
+  active,
+  setActive,
+  project,
+  planId,
+  initialPrompt,
+  initialPlan,
+  initialModel,
+  verifyToken,
+  setVerifyToken,
+  fixToken,
+  setFixToken,
+  lastVerifyReportId,
+  setLastVerifyReportId,
+}: Props & {
+  active: TabId;
+  setActive: (tab: TabId) => void;
+  verifyToken: number;
+  setVerifyToken: React.Dispatch<React.SetStateAction<number>>;
+  fixToken: number;
+  setFixToken: React.Dispatch<React.SetStateAction<number>>;
+  lastVerifyReportId: string | null;
+  setLastVerifyReportId: React.Dispatch<React.SetStateAction<string | null>>;
+}) {
+  return (
+    <section className="x09-fade-in x09-card rounded-[2rem] p-5 md:p-6">
+      <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
+        <div>
+          <p className="text-xs uppercase tracking-[0.25em] text-orange-200">
+            Modo Desenvolvedor
+          </p>
+          <h2 className="mt-2 text-2xl font-semibold text-white">
+            Painéis técnicos do pipeline
+          </h2>
+          <p className="mt-2 text-sm text-zinc-500">
+            Visível apenas para operação avançada. Usuários finais continuam no
+            chat e preview.
+          </p>
+        </div>
+        <div className="flex max-w-full gap-2 overflow-x-auto pb-1">
           {tabs.map((tab) => (
             <button
               key={tab.id}
@@ -87,7 +439,7 @@ export function ProjectWorkspace({
               onClick={() => setActive(tab.id)}
               className={`flex shrink-0 items-center gap-2 rounded-2xl px-3 py-2 text-sm transition ${
                 active === tab.id
-                  ? "bg-violet-500/20 text-violet-100 shadow-[0_0_24px_rgba(122,60,255,.18)]"
+                  ? "bg-orange-400/15 text-orange-100"
                   : "text-zinc-500 hover:bg-white/5 hover:text-zinc-200"
               }`}
             >
@@ -98,9 +450,9 @@ export function ProjectWorkspace({
             </button>
           ))}
         </div>
-      </section>
+      </div>
 
-      <section className="x09-fade-in">
+      <div className="mt-6">
         {active === "overview" ? (
           <Overview projectStatus={project.status} createdAt={project.created_at} />
         ) : null}
@@ -166,8 +518,8 @@ export function ProjectWorkspace({
         {active === "preview" ? <FuturePanel kind="Preview" /> : null}
         {active === "deploy" ? <FuturePanel kind="Deploy" /> : null}
         {active === "logs" ? <LogsPanel /> : null}
-      </section>
-    </div>
+      </div>
+    </section>
   );
 }
 
