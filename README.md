@@ -55,4 +55,10 @@ Smoke do Planner:
 npx tsx scripts/smoke-planner.ts
 ```
 
+Bootstrap do primeiro owner:
+
+```bash
+npx tsx scripts/create-owner.ts
+```
+
 Deploy VPS: `deploy/CHECKLIST.md`.
