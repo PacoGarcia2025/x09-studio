@@ -1,55 +1,64 @@
-# Checklist Sprint 0 / deploy VPS — X09 Studio
+# Deploy produção — https://studio.x09.com.br
 
-## Pré-requisitos na VPS
-- Node 20+ (recomendado 22 LTS)
-- npm ou bun
-- PM2
-- Nginx
-- Docker (obrigatório a partir do Sprint 6; instalar já no Sprint 0)
-- DNS: `studio.x09.com.br` → IP da VPS (Cloudflare)
+## 0) DNS (Cloudflare)
+- `studio.x09.com.br` → IP da VPS (proxied ou DNS only)
+- SSL/TLS mode: **Full (strict)** se usar Origin Certificate
 
-## Diretórios
+## 1) Diretórios + SSL
 ```bash
-mkdir -p /opt/x09-studio
-mkdir -p /var/lib/x09-studio/projects
-mkdir -p /var/lib/x09-studio/published
-mkdir -p /var/log/x09-studio
+sudo mkdir -p /opt/x09-studio /var/lib/x09-studio/projects /var/lib/x09-studio/published /var/log/x09-studio /etc/ssl/x09
+
+# Origin Certificate Cloudflare (mesmo padrão do x09.com.br)
+# Cole cert e key nos arquivos abaixo (ou copie da instalação do SaaS):
+sudo nano /etc/ssl/x09/cert.pem
+sudo nano /etc/ssl/x09/key.pem
+sudo chmod 600 /etc/ssl/x09/key.pem
 ```
 
-## App
+Se o SaaS já usa `/etc/ssl/x09/`, **não recrie** — o nginx do Studio aponta para os mesmos arquivos.
+
+## 2) App
 ```bash
 cd /opt/x09-studio
-git clone <REPO_URL> .
+# primeiro deploy:
+git clone <REPO_URL_X09_STUDIO> .
+
 cp .env.example .env
-# editar .env com Supabase + GEMINI_API_KEY
+nano .env   # preencher Supabase Studio + GEMINI + STUDIO_*_ROOT
+chmod 600 .env
 
 npm ci
 npm run build
 pm2 start ecosystem.config.cjs
 pm2 save
+pm2 startup   # executar o comando systemd impresso
 ```
 
-## Nginx
+## 3) Nginx + HTTPS
 ```bash
-cp deploy/nginx-studio.conf /etc/nginx/sites-available/x09-studio
-ln -sf /etc/nginx/sites-available/x09-studio /etc/nginx/sites-enabled/x09-studio
-nginx -t && systemctl reload nginx
+sudo cp /opt/x09-studio/deploy/nginx-studio.conf /etc/nginx/sites-available/x09-studio
+sudo ln -sf /etc/nginx/sites-available/x09-studio /etc/nginx/sites-enabled/x09-studio
+sudo nginx -t && sudo systemctl reload nginx
 ```
 
-## Health
+## 4) Supabase Auth (redirect)
+No projeto Supabase do Studio:
+- Site URL: `https://studio.x09.com.br`
+- Redirect URLs: `https://studio.x09.com.br/**`
+
+## 5) Validação
 ```bash
+pm2 status
+curl -sI http://127.0.0.1:3001/api/health
+curl -sI https://studio.x09.com.br/api/health
 curl -s https://studio.x09.com.br/api/health
 curl -s https://studio.x09.com.br/api/health/llm
 ```
 
-## Atualização
+No browser: abrir `https://studio.x09.com.br` → login/signup.
+
+## 6) Atualizações
 ```bash
 cd /opt/x09-studio
-git pull --ff-only
-npm ci
-npm run build
-pm2 reload x09-studio
+bash deploy/deploy.sh
 ```
-
-## Portabilidade (nova VPS)
-Só alterar DNS + valores `STUDIO_*_ROOT` no `.env`. Código permanece igual.
