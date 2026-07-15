@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import {
   getBuildState,
+  requeueBuildTaskAction,
   startBuildAction,
   tickBuildAction,
   type BuildState,
@@ -39,18 +40,20 @@ export function BuilderPanel({ planId, projectId, onBuildSuccess }: Props) {
     refresh();
   }, [refresh]);
 
-  async function runQueue() {
+  async function runQueue(options: { reset: boolean } = { reset: true }) {
     if (!planId || runningRef.current) return;
     runningRef.current = true;
     setRunning(true);
     setError(null);
 
-    const start = await startBuildAction(planId);
-    if (!start.ok) {
-      setError(start.error);
-      runningRef.current = false;
-      setRunning(false);
-      return;
+    if (options.reset) {
+      const start = await startBuildAction(planId);
+      if (!start.ok) {
+        setError(start.error);
+        runningRef.current = false;
+        setRunning(false);
+        return;
+      }
     }
 
     let guard = 0;
@@ -80,6 +83,18 @@ export function BuilderPanel({ planId, projectId, onBuildSuccess }: Props) {
     if (result.ok) setState(result.data);
   }
 
+  async function requeueTask(taskId: string) {
+    if (!planId || runningRef.current) return;
+    setError(null);
+    const result = await requeueBuildTaskAction(taskId);
+    if (!result.ok) {
+      setError(result.error);
+      return;
+    }
+    await refreshState(planId);
+    void runQueue({ reset: false });
+  }
+
   if (!planId) {
     return (
       <p className="text-sm text-zinc-500">
@@ -91,6 +106,7 @@ export function BuilderPanel({ planId, projectId, onBuildSuccess }: Props) {
   const counts = state?.counts;
   const current =
     state?.tasks.find((t) => t.status === "running") ??
+    state?.tasks.find((t) => t.status === "retrying") ??
     state?.tasks.find((t) => t.status === "queued") ??
     null;
 
@@ -116,7 +132,8 @@ export function BuilderPanel({ planId, projectId, onBuildSuccess }: Props) {
         {counts ? (
           <span className="text-xs text-zinc-500">
             {counts.done}/{counts.total} done · {counts.queued} queued ·{" "}
-            {counts.failed} failed · plano: {state?.planStatus}
+            {counts.retrying} retrying · {counts.failed} failed · plano:{" "}
+            {state?.planStatus}
           </span>
         ) : null}
       </div>
@@ -153,7 +170,19 @@ export function BuilderPanel({ planId, projectId, onBuildSuccess }: Props) {
                     </span>
                   ) : null}
                 </span>
-                <StatusBadge status={task.status} />
+                <div className="flex flex-col items-end gap-1">
+                  <StatusBadge status={task.status} />
+                  {task.status === "failed" ? (
+                    <button
+                      type="button"
+                      onClick={() => void requeueTask(task.id)}
+                      disabled={running || pending}
+                      className="text-[11px] text-sky-300 hover:text-sky-200 disabled:opacity-50"
+                    >
+                      Reexecutar task
+                    </button>
+                  ) : null}
+                </div>
               </li>
             ))}
           </ul>
@@ -196,7 +225,7 @@ function StatusBadge({ status }: { status: string }) {
       ? "text-emerald-400"
       : status === "failed"
         ? "text-red-400"
-        : status === "running"
+        : status === "running" || status === "retrying"
           ? "text-amber-300"
           : "text-zinc-500";
   return <span className={color}>{status}</span>;

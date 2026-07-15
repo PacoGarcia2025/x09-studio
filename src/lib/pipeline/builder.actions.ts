@@ -63,6 +63,7 @@ export type BuildState = {
   counts: {
     queued: number;
     running: number;
+    retrying: number;
     done: number;
     failed: number;
     total: number;
@@ -103,6 +104,7 @@ export async function getBuildState(
       counts: {
         queued: list.filter((t) => t.status === "queued").length,
         running: list.filter((t) => t.status === "running").length,
+        retrying: list.filter((t) => t.status === "retrying").length,
         done: list.filter((t) => t.status === "done").length,
         failed: list.filter((t) => t.status === "failed").length,
         total: list.length,
@@ -141,6 +143,51 @@ export async function startBuildAction(
     "id",
     gate.project.id,
   );
+
+  revalidatePath(`/projects/${gate.project.id}`);
+  return { ok: true };
+}
+
+export async function requeueBuildTaskAction(
+  taskId: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const supabase = await createClient();
+  const { data: task } = await supabase
+    .from("plan_tasks")
+    .select("id, plan_id, status")
+    .eq("id", taskId)
+    .maybeSingle();
+
+  if (!task) return { ok: false, error: "Task não encontrada" };
+
+  const gate = await assertPlanOwner(task.plan_id);
+  if (gate.error || !gate.supabase || !gate.project) {
+    return { ok: false, error: gate.error ?? "Erro" };
+  }
+
+  if (task.status !== "failed") {
+    return { ok: false, error: "Apenas tasks failed podem ser reexecutadas." };
+  }
+
+  await gate.supabase
+    .from("plan_tasks")
+    .update({
+      status: "queued",
+      error_message: null,
+      started_at: null,
+      finished_at: null,
+    })
+    .eq("id", taskId);
+
+  await gate.supabase
+    .from("plans")
+    .update({ status: "building", error_message: null })
+    .eq("id", task.plan_id);
+
+  await gate.supabase
+    .from("projects")
+    .update({ status: "generating" })
+    .eq("id", gate.project.id);
 
   revalidatePath(`/projects/${gate.project.id}`);
   return { ok: true };
