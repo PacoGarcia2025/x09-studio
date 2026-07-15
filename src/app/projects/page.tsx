@@ -6,60 +6,102 @@ export const dynamic = "force-dynamic";
 
 export default async function ProjectsPage() {
   const projects = await listProjects();
-  const pipeline = ["Planner", "Builder", "Verify", "Auto Fix", "Preview", "Deploy"];
+  const suggestions = [
+    "Site premium para escritório de advocacia",
+    "CRM para imobiliária com portal público",
+    "Landing page para consultoria B2B",
+    "Sistema de reservas com pagamento",
+    "Dashboard financeiro para empresa",
+  ];
 
   return (
     <AppShell>
       <div className="space-y-8">
-        <section className="x09-card overflow-hidden rounded-[2rem] p-8">
-          <div className="flex flex-col justify-between gap-8 lg:flex-row lg:items-end">
-            <div className="max-w-2xl space-y-4">
-              <p className="text-xs uppercase tracking-[0.28em] text-violet-300">
-                Dashboard
-              </p>
-              <h1 className="text-4xl font-semibold tracking-[-0.04em] text-white md:text-5xl">
-                Laboratório de IA
-              </h1>
-              <p className="text-sm leading-7 text-zinc-400">
-                Crie, acompanhe e publique sistemas com agentes trabalhando em
-                Planner, Builder, Verify e Auto Fix.
-              </p>
-            </div>
+        <section className="relative overflow-hidden rounded-[2.25rem] border border-white/10 bg-[radial-gradient(circle_at_50%_0%,rgba(69,200,255,.28),transparent_26%),radial-gradient(circle_at_50%_44%,rgba(255,65,180,.35),transparent_34%),linear-gradient(180deg,rgba(255,255,255,.08),rgba(255,255,255,.025))] px-5 py-14 shadow-[0_30px_100px_rgba(0,0,0,.35)] md:px-10 md:py-20">
+          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_110%,rgba(122,60,255,.45),transparent_42%)]" />
+          <div className="relative mx-auto max-w-4xl text-center">
             <Link
-              href="/projects/new"
-              className="x09-button rounded-2xl px-5 py-3 text-center text-sm font-semibold text-white"
+              href="/ecosystem"
+              className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/75 px-4 py-2 text-xs font-medium text-zinc-800 shadow-xl shadow-violet-950/10 backdrop-blur"
             >
-              Criar Projeto
+              Conecte IA, GitHub, Supabase e domínio próprio →
             </Link>
-          </div>
+            <h1 className="mt-8 text-4xl font-semibold tracking-[-0.05em] text-white md:text-6xl">
+              O que você quer construir hoje?
+            </h1>
+            <p className="mx-auto mt-4 max-w-2xl text-sm leading-7 text-violet-50/75">
+              Descreva um site, sistema ou automação. O X09 conversa com você,
+              constrói, mostra o preview e prepara a publicação.
+            </p>
 
-          <div className="mt-8 grid gap-3 md:grid-cols-6">
-            {pipeline.map((step, index) => (
-              <div key={step} className="x09-card-soft rounded-3xl p-4">
-                <div className="flex items-center justify-between">
-                  <span className="grid h-9 w-9 place-items-center rounded-2xl bg-violet-500/15 text-sm text-violet-200">
-                    {index + 1}
-                  </span>
-                  <span className="h-2 w-2 rounded-full bg-violet-300 shadow-[0_0_16px_rgba(168,85,247,.9)]" />
+            <div className="mx-auto mt-8 max-w-3xl rounded-[2rem] border border-white/20 bg-white p-3 text-left shadow-2xl shadow-violet-950/20">
+              <textarea
+                className="min-h-24 w-full resize-none rounded-3xl bg-transparent px-4 py-3 text-sm text-zinc-900 outline-none placeholder:text-zinc-400"
+                placeholder="Ex: Crie um site premium para um escritório de advocacia..."
+              />
+              <div className="flex flex-wrap items-center justify-between gap-3 border-t border-zinc-100 px-2 pt-3">
+                <div className="flex items-center gap-2">
+                  <button className="grid h-9 w-9 place-items-center rounded-full border border-zinc-200 text-zinc-500">
+                    +
+                  </button>
+                  <button className="rounded-full border border-zinc-200 px-3 py-2 text-xs text-zinc-600">
+                    Upload
+                  </button>
+                  <button className="rounded-full border border-zinc-200 px-3 py-2 text-xs text-zinc-600">
+                    Imagem
+                  </button>
                 </div>
-                <p className="mt-4 text-sm font-medium text-zinc-100">{step}</p>
-                <p className="mt-1 text-xs text-zinc-500">standby · 0ms</p>
-                <div className="mt-3 h-1.5 rounded-full bg-white/7">
-                  <div
-                    className="h-full rounded-full bg-gradient-to-r from-violet-500 to-fuchsia-400"
-                    style={{ width: `${Math.max(14, 78 - index * 9)}%` }}
-                  />
+                <div className="flex items-center gap-2">
+                  <span className="rounded-full bg-zinc-100 px-3 py-2 text-xs text-zinc-600">
+                    X09 decide a IA
+                  </span>
+                  <Link
+                    href="/projects/new"
+                    className="grid h-10 w-10 place-items-center rounded-full bg-zinc-950 text-white transition hover:scale-105"
+                  >
+                    ↑
+                  </Link>
                 </div>
               </div>
-            ))}
+            </div>
+
+            <div className="mt-5 flex flex-wrap justify-center gap-2">
+              {suggestions.map((suggestion) => (
+                <Link
+                  key={suggestion}
+                  href="/projects/new"
+                  className="rounded-full border border-white/16 bg-white/10 px-4 py-2 text-xs text-white/80 backdrop-blur transition hover:bg-white/18 hover:text-white"
+                >
+                  {suggestion}
+                </Link>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="x09-card rounded-[2rem] p-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex flex-wrap gap-2">
+              {["Search", "Meus apps", "Recentes", "Templates X09"].map((filter) => (
+                <button
+                  key={filter}
+                  className="rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-xs text-zinc-400 transition hover:bg-white/8 hover:text-white"
+                >
+                  {filter}
+                </button>
+              ))}
+            </div>
+            <Link href="/ecosystem" className="text-sm text-violet-200">
+              Configurar conectores →
+            </Link>
           </div>
         </section>
 
         <div className="flex items-center justify-between gap-4">
           <div>
-            <h2 className="text-xl font-semibold text-white">Projetos</h2>
+            <h2 className="text-xl font-semibold text-white">Seus apps</h2>
             <p className="mt-1 text-sm text-zinc-500">
-              Cards modernos com status, preview e deploy preparados.
+              Tudo que você construiu com o X09, pronto para continuar pelo chat.
             </p>
           </div>
         </div>
@@ -99,7 +141,7 @@ export default async function ProjectsPage() {
                     value={p.status === "published" ? "Ativo" : "Pendente"}
                   />
                   <Metric label="Arquivos" value="Template" />
-                  <Metric label="Modelo" value="Gemini 2.5" />
+                  <Metric label="IA" value="X09 Router" />
                   <Metric
                     label="Última alteração"
                     value={new Date(p.updated_at).toLocaleDateString("pt-BR")}
@@ -107,7 +149,7 @@ export default async function ProjectsPage() {
                 </div>
                 <div className="mt-5 flex items-center justify-between border-t border-white/10 pt-4">
                   <p className="text-xs text-zinc-500">
-                    Última execução: pipeline standby
+                    Continuar conversa com X09
                   </p>
                   <span className="text-xs text-violet-200 transition group-hover:translate-x-1">
                     Abrir →

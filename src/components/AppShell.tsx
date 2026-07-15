@@ -3,11 +3,11 @@ import { signOut } from "@/lib/projects/actions";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const nav = [
-    { href: "/projects", label: "Projetos", icon: "◆" },
-    { href: "/projects/new", label: "Criar", icon: "+" },
-    { href: "/ai", label: "IA Models", icon: "✦" },
-    { href: "#", label: "Labs", icon: "◈" },
-    { href: "#", label: "Docs", icon: "◇" },
+    { href: "/projects", label: "Início", icon: "⌂" },
+    { href: "/projects", label: "Apps", icon: "▦" },
+    { href: "/projects/new", label: "Criar app", icon: "+" },
+    { href: "/ai", label: "Agentes", icon: "✦" },
+    { href: "/ecosystem", label: "Ecossistema", icon: "◈" },
   ];
 
   return (
