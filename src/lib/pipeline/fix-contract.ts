@@ -1,11 +1,12 @@
 /**
- * Contrato Fix Engine (Sprint 6) — preparado na Sprint 5.
+ * Contrato Fix Engine (Sprint 6).
  *
- * O Fix NÃO re-descobre erros via IA.
- * Ele consome o VerifyReport mais recente e atua sobre `issues` com `fixTarget`.
+ * O Fix NÃO re-descobre erros via IA nem analisa o projeto.
+ * Consome exclusivamente o VerifyReport e atua sobre `issues` com `fixTarget`.
  *
- * Fluxo futuro:
- *   Planner → Builder → Verify → Fix(report) → (re-)Verify
+ * Fluxo:
+ *   Builder → Verify → Fix(report) → Verify → (Fix…) até 0 erros ou max attempts
+ * Preview (Sprint 7) usa projects.preview_ready via preview-gate.ts
  */
 
 import type {
@@ -14,6 +15,7 @@ import type {
   VerifyReport,
   VerifyReportStatus,
 } from "@/lib/pipeline/verify-schema";
+import { isVerifyClean } from "@/lib/pipeline/fix-schema";
 
 export type FixInput = {
   projectId: string;
@@ -64,4 +66,18 @@ export function buildFixInput(input: {
 
 export function isReportReadyForFix(status: VerifyReportStatus): boolean {
   return status === "failed" || status === "warning" || status === "passed";
+}
+
+/** True se o loop Fix deve iniciar (há erros ou ainda não elegível a preview). */
+export function shouldAutoFix(report: VerifyReport): boolean {
+  if (!isVerifyClean(report)) return true;
+  return false;
+}
+
+export function draftsFromFixInput(input: FixInput): FixActionDraft[] {
+  return input.actionableIssues.map((issue, index) => ({
+    issueId: issue.id,
+    target: issue.fixTarget!,
+    priority: index,
+  }));
 }
