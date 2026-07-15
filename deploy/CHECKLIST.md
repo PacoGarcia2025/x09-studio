@@ -28,7 +28,16 @@ nano .env   # preencher Supabase Studio + GEMINI + STUDIO_*_ROOT
 chmod 600 .env
 
 npm ci
+rm -rf .next
 npm run build
+test -f .next/standalone/server.js
+mkdir -p .next/standalone/.next
+rm -rf .next/standalone/.next/static
+cp -R .next/static .next/standalone/.next/static
+if [ -d public ]; then
+  rm -rf .next/standalone/public
+  cp -R public .next/standalone/public
+fi
 pm2 start ecosystem.config.cjs
 pm2 save
 pm2 startup   # executar o comando systemd impresso
@@ -61,4 +70,13 @@ No browser: abrir `https://studio.x09.com.br` → login/signup.
 ```bash
 cd /opt/x09-studio
 bash deploy/deploy.sh
+```
+
+Se o PM2 ainda estiver com o comando antigo (`next start`), force uma vez:
+
+```bash
+cd /opt/x09-studio
+pm2 delete x09-studio || true
+bash deploy/deploy.sh
+pm2 logs x09-studio --lines 80 --nostream
 ```

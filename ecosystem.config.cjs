@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
 const fs = require("fs");
 const path = require("path");
 
@@ -41,8 +42,8 @@ module.exports = {
     {
       name: "x09-studio",
       cwd: APP_ROOT,
-      script: "node_modules/next/dist/bin/next",
-      args: "start",
+      script: "node",
+      args: ".next/standalone/server.js",
       instances: 1,
       exec_mode: "fork",
       env: {

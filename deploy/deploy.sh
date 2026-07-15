@@ -8,13 +8,22 @@ cd "$APP_DIR"
 
 git pull --ff-only
 npm ci
+rm -rf .next
 npm run build
 
-if pm2 describe x09-studio >/dev/null 2>&1; then
-  pm2 reload ecosystem.config.cjs --update-env
-else
-  pm2 start ecosystem.config.cjs
+test -f .next/standalone/server.js
+mkdir -p .next/standalone/.next
+rm -rf .next/standalone/.next/static
+cp -R .next/static .next/standalone/.next/static
+if [ -d public ]; then
+  rm -rf .next/standalone/public
+  cp -R public .next/standalone/public
 fi
+
+if pm2 describe x09-studio >/dev/null 2>&1; then
+  pm2 delete x09-studio
+fi
+pm2 start ecosystem.config.cjs --update-env
 
 pm2 save
 curl -sf "http://127.0.0.1:3001/api/health" | head -c 200
