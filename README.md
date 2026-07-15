@@ -39,8 +39,9 @@ npm run dev
 - **Sprint 3:** Scaffold + FileSystem (template React/Supabase em disco)
 - **Sprint 4:** Builder + Task Queue (tasks → arquivos no disco)
 - **Sprint 5:** Verify Engine (checks + relatório em `verify_reports`; Fix na Sprint 6)
+- **Sprint 6:** Auto Fix Engine (consome Verify Report → corrige → re-verify; Preview gate)
 
-Fluxo: **Planner → Builder → Verify → Relatório** (Fix consome o report na próxima sprint).
+Fluxo: **Planner → Builder → Verify → Fix → Verify… → Preview (próxima sprint)**
 
 Defina no `.env.local`:
 

@@ -20,9 +20,16 @@ type Props = {
   projectId: string;
   /** Quando true, inicia Verify automaticamente (após Builder OK). */
   autoStartToken?: number;
+  /** Chamado quando o Verify termina (sucesso ou falha com relatório). */
+  onVerifyComplete?: (state: VerifyState) => void;
 };
 
-export function VerifyPanel({ planId, projectId, autoStartToken = 0 }: Props) {
+export function VerifyPanel({
+  planId,
+  projectId,
+  autoStartToken = 0,
+  onVerifyComplete,
+}: Props) {
   const [state, setState] = useState<VerifyState | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [running, setRunning] = useState(false);
@@ -62,6 +69,7 @@ export function VerifyPanel({ planId, projectId, autoStartToken = 0 }: Props) {
 
     let guard = 0;
     let reportId = start.reportId;
+    let last: VerifyState | null = null;
     while (guard < 20) {
       guard += 1;
       const tick = await tickVerifyAction(reportId);
@@ -70,12 +78,16 @@ export function VerifyPanel({ planId, projectId, autoStartToken = 0 }: Props) {
         break;
       }
       setState(tick.data);
+      last = tick.data;
       reportId = tick.data.reportId;
       if (tick.done) break;
     }
 
     runningRef.current = false;
     setRunning(false);
+    if (last && last.status !== "running") {
+      onVerifyComplete?.(last);
+    }
     refresh();
   }
 
