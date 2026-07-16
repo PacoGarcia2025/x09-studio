@@ -1,4 +1,4 @@
-import { Code2, GitBranch, Rocket, Share2, Terminal, Monitor } from "lucide-react";
+import { GitBranch, Rocket, Share2, Terminal } from "lucide-react";
 import type { ReactNode } from "react";
 import { ChatPanel } from "@/components/chat/ChatPanel";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -9,6 +9,8 @@ import {
   ResizablePanelGroup,
 } from "@/components/ui/resizable";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { CodeEditor } from "@/components/workspace/CodeEditor";
+import { PreviewRender } from "@/components/workspace/PreviewRender";
 
 export default function App() {
   return (
@@ -70,21 +72,13 @@ function WorkspacePanel() {
         </div>
       </div>
 
-      <TabsContent value="preview" className="flex flex-1 items-center justify-center">
-        <WorkspacePlaceholder
-          icon={<Monitor className="h-10 w-10" />}
-          title="Preview em tempo real"
-          description="Aqui o Sandpack renderizará o app gerado conforme os arquivos virtuais mudarem."
-        />
+      <TabsContent value="preview" className="min-h-0 flex-1">
+        <PreviewRender />
       </TabsContent>
-      <TabsContent value="code" className="flex flex-1 items-center justify-center">
-        <WorkspacePlaceholder
-          icon={<Code2 className="h-10 w-10" />}
-          title="Editor de código"
-          description="A próxima etapa adiciona File Explorer e Monaco Editor sincronizados ao Zustand."
-        />
+      <TabsContent value="code" className="min-h-0 flex-1">
+        <CodeEditor />
       </TabsContent>
-      <TabsContent value="console" className="flex flex-1 items-center justify-center">
+      <TabsContent value="console" className="flex min-h-0 flex-1 items-center justify-center">
         <WorkspacePlaceholder
           icon={<Terminal className="h-10 w-10" />}
           title="Console"
