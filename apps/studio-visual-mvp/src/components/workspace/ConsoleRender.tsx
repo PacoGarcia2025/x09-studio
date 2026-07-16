@@ -1,16 +1,14 @@
-import {
-  SandpackLayout,
-  SandpackPreview,
-} from "@codesandbox/sandpack-react";
+import { SandpackConsole, SandpackLayout } from "@codesandbox/sandpack-react";
 
-export function PreviewRender() {
+export function ConsoleRender() {
   return (
     <div className="h-full min-h-0 bg-background p-4">
       <SandpackLayout className="!h-full !overflow-hidden !rounded-2xl !border !border-border">
-        <SandpackPreview
-          showNavigator={false}
-          showOpenInCodeSandbox={false}
+        <SandpackConsole
           className="!h-full !w-full"
+          showHeader
+          showResetConsoleButton
+          resetOnPreviewRestart={false}
         />
       </SandpackLayout>
     </div>

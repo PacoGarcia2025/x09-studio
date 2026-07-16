@@ -6,15 +6,25 @@ export type ChatMessage = {
   content: string;
 };
 
+export type StudioVersion = {
+  id: string;
+  prompt: string;
+  timestamp: number;
+  files: Record<string, string>;
+};
+
 type StudioState = {
   messages: ChatMessage[];
   isGenerating: boolean;
   files: Record<string, string>;
   activeFile: string;
+  versions: StudioVersion[];
+  activeVersionId: string | null;
   addMessage: (message: ChatMessage) => void;
   sendMessage: (prompt: string) => Promise<void>;
   updateFile: (path: string, content: string) => void;
   setActiveFile: (path: string) => void;
+  revertToVersion: (versionId: string) => void;
 };
 
 const initialApp = `export default function App() {
@@ -91,6 +101,8 @@ export const useStudioStore = create<StudioState>((set) => ({
     "/package.json": initialPackageJson,
   },
   activeFile: "/App.tsx",
+  versions: [],
+  activeVersionId: null,
   addMessage: (message) =>
     set((state) => ({
       messages: [...state.messages, message],
@@ -118,14 +130,37 @@ export const useStudioStore = create<StudioState>((set) => ({
       content:
         "Entendido! Gerando o código para a sua solicitação e preparando o preview em tempo real...",
     };
+    const generatedVersionId = crypto.randomUUID();
 
     set((state) => ({
+      versions: [
+        ...(state.versions.length === 0
+          ? [
+              {
+                id: "initial",
+                prompt: "Estado inicial",
+                timestamp: Date.now(),
+                files: { ...state.files },
+              },
+            ]
+          : state.versions),
+        {
+          id: generatedVersionId,
+          prompt: content.slice(0, 60),
+          timestamp: Date.now(),
+          files: {
+            ...state.files,
+            "/App.tsx": generatedApp,
+          },
+        },
+      ],
       messages: [...state.messages, aiMessage],
       files: {
         ...state.files,
         "/App.tsx": generatedApp,
       },
       activeFile: "/App.tsx",
+      activeVersionId: generatedVersionId,
       isGenerating: false,
     }));
   },
@@ -137,4 +172,15 @@ export const useStudioStore = create<StudioState>((set) => ({
       },
     })),
   setActiveFile: (path) => set({ activeFile: path }),
+  revertToVersion: (versionId) =>
+    set((state) => {
+      const version = state.versions.find((item) => item.id === versionId);
+      if (!version) return state;
+
+      return {
+        files: { ...version.files },
+        activeFile: version.files[state.activeFile] ? state.activeFile : "/App.tsx",
+        activeVersionId: version.id,
+      };
+    }),
 }));

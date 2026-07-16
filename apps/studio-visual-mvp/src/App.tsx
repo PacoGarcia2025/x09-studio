@@ -1,5 +1,6 @@
-import { GitBranch, Rocket, Share2, Terminal } from "lucide-react";
-import type { ReactNode } from "react";
+import { SandpackProvider } from "@codesandbox/sandpack-react";
+import { GitBranch, Rocket, Share2 } from "lucide-react";
+import { useMemo } from "react";
 import { ChatPanel } from "@/components/chat/ChatPanel";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -10,7 +11,11 @@ import {
 } from "@/components/ui/resizable";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CodeEditor } from "@/components/workspace/CodeEditor";
+import { ConsoleRender } from "@/components/workspace/ConsoleRender";
 import { PreviewRender } from "@/components/workspace/PreviewRender";
+import { toSandpackFiles } from "@/components/workspace/sandpack-files";
+import { Timeline } from "@/components/workspace/Timeline";
+import { useStudioStore } from "@/store/studio-store";
 
 export default function App() {
   return (
@@ -47,6 +52,9 @@ export default function App() {
 }
 
 function WorkspacePanel() {
+  const files = useStudioStore((state) => state.files);
+  const sandpackFiles = useMemo(() => toSandpackFiles(files), [files]);
+
   return (
     <Tabs defaultValue="preview" className="flex h-full flex-col bg-background">
       <div className="flex h-14 items-center justify-between border-b border-border bg-background px-4">
@@ -72,39 +80,29 @@ function WorkspacePanel() {
         </div>
       </div>
 
-      <TabsContent value="preview" className="min-h-0 flex-1">
-        <PreviewRender />
-      </TabsContent>
-      <TabsContent value="code" className="min-h-0 flex-1">
-        <CodeEditor />
-      </TabsContent>
-      <TabsContent value="console" className="flex min-h-0 flex-1 items-center justify-center">
-        <WorkspacePlaceholder
-          icon={<Terminal className="h-10 w-10" />}
-          title="Console"
-          description="Logs de build, preview e geração aparecerão aqui sem expor complexidade ao usuário final."
-        />
-      </TabsContent>
-    </Tabs>
-  );
-}
+      <SandpackProvider
+        template="react-ts"
+        theme="dark"
+        files={sandpackFiles}
+        options={{
+          activeFile: "/App.tsx",
+          visibleFiles: ["/App.tsx"],
+        }}
+      >
+        <div className="min-h-0 flex-1">
+          <TabsContent value="preview" className="h-full min-h-0">
+            <PreviewRender />
+          </TabsContent>
+          <TabsContent value="code" className="h-full min-h-0">
+            <CodeEditor />
+          </TabsContent>
+          <TabsContent value="console" className="h-full min-h-0">
+            <ConsoleRender />
+          </TabsContent>
+        </div>
+      </SandpackProvider>
 
-function WorkspacePlaceholder({
-  icon,
-  title,
-  description,
-}: {
-  icon: ReactNode;
-  title: string;
-  description: string;
-}) {
-  return (
-    <div className="max-w-md rounded-2xl border border-border bg-surface p-8 text-center shadow-glow">
-      <div className="mx-auto grid h-16 w-16 place-items-center rounded-2xl border border-border bg-background text-accent">
-        {icon}
-      </div>
-      <h2 className="mt-5 text-xl font-semibold text-primary">{title}</h2>
-      <p className="mt-3 text-sm leading-6 text-secondary">{description}</p>
-    </div>
+      <Timeline />
+    </Tabs>
   );
 }
