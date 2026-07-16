@@ -11,6 +11,8 @@ const config: Config = {
         surface: "var(--bg-secondary)",
         foreground: "var(--text-primary)",
         muted: "var(--text-secondary)",
+        primary: "var(--text-primary)",
+        secondary: "var(--text-secondary)",
         accent: {
           DEFAULT: "var(--accent-primary)",
           hover: "var(--accent-hover)",

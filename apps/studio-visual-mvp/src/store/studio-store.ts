@@ -5,9 +5,19 @@ export type VirtualFile = {
   content: string;
 };
 
+export type ChatMessage = {
+  id: string;
+  role: "user" | "ai";
+  content: string;
+};
+
 type StudioState = {
+  messages: ChatMessage[];
+  isGenerating: boolean;
   files: Record<string, VirtualFile>;
   selectedFilePath: string;
+  addMessage: (message: ChatMessage) => void;
+  sendMessage: (prompt: string) => Promise<void>;
   setSelectedFilePath: (path: string) => void;
   upsertFile: (file: VirtualFile) => void;
 };
@@ -25,6 +35,15 @@ const initialApp = `export default function App() {
 `;
 
 export const useStudioStore = create<StudioState>((set) => ({
+  messages: [
+    {
+      id: "welcome",
+      role: "ai",
+      content:
+        "Olá, eu sou o X09. Descreva o sistema que você quer construir e eu preparo a primeira versão.",
+    },
+  ],
+  isGenerating: false,
   files: {
     "/src/App.tsx": {
       path: "/src/App.tsx",
@@ -32,6 +51,39 @@ export const useStudioStore = create<StudioState>((set) => ({
     },
   },
   selectedFilePath: "/src/App.tsx",
+  addMessage: (message) =>
+    set((state) => ({
+      messages: [...state.messages, message],
+    })),
+  sendMessage: async (prompt) => {
+    const content = prompt.trim();
+    if (!content) return;
+
+    const userMessage: ChatMessage = {
+      id: crypto.randomUUID(),
+      role: "user",
+      content,
+    };
+
+    set((state) => ({
+      messages: [...state.messages, userMessage],
+      isGenerating: true,
+    }));
+
+    await new Promise((resolve) => window.setTimeout(resolve, 2000));
+
+    const aiMessage: ChatMessage = {
+      id: crypto.randomUUID(),
+      role: "ai",
+      content:
+        "Entendido! Gerando o código para a sua solicitação e preparando o preview em tempo real...",
+    };
+
+    set((state) => ({
+      messages: [...state.messages, aiMessage],
+      isGenerating: false,
+    }));
+  },
   setSelectedFilePath: (path) => set({ selectedFilePath: path }),
   upsertFile: (file) =>
     set((state) => ({
