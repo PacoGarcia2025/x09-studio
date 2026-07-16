@@ -42,3 +42,71 @@ body {
 * {
   box-sizing: border-box;
 }
+
+/* Sandpack: altura só DENTRO do preview — nunca no Provider global (evita cobrir o chat) */
+.sandpack-preview-host {
+  height: 100% !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  overflow: hidden !important;
+}
+
+.sandpack-preview-host .sp-wrapper,
+.sandpack-preview-host .sp-layout,
+.sandpack-preview-host .sp-stack,
+.sandpack-preview-host .sp-preview-container,
+.sandpack-preview-host .sp-preview {
+  height: 100% !important;
+  max-height: 100% !important;
+  max-width: 100% !important;
+  min-height: 0 !important;
+  min-width: 0 !important;
+}
+
+.sandpack-preview-host .sp-wrapper {
+  display: flex !important;
+  flex-direction: column !important;
+  width: 100% !important;
+}
+
+.sandpack-preview-host .sp-layout {
+  flex: 1 1 auto !important;
+  display: flex !important;
+  border: none !important;
+  width: 100% !important;
+}
+
+.sandpack-preview-host .sp-stack {
+  flex: 1 1 auto !important;
+}
+
+.sandpack-preview-host .sp-preview-container,
+.sandpack-preview-host .sp-preview {
+  flex: 1 1 auto !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+.sandpack-preview-host .sp-preview-iframe {
+  flex: 1 1 auto !important;
+  height: 100% !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  min-height: 0 !important;
+  border: 0 !important;
+}
+
+/* Painéis redimensionáveis: nunca deixar conteúdo estourar o flex item */
+[data-panel] {
+  min-width: 0 !important;
+  overflow: hidden !important;
+}
+
+[data-group] {
+  min-width: 0 !important;
+  overflow: hidden !important;
+}
+
+
+

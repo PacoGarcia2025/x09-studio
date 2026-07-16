@@ -1,16 +1,17 @@
-import {
-  SandpackLayout,
-  SandpackPreview,
-} from "@codesandbox/sandpack-react";
+import { SandpackLayout, SandpackPreview } from "@codesandbox/sandpack-react";
+
+/** Re-export: deps do Sandpack (framer-motion, lucide, etc.) — usadas no SandpackProvider em App.tsx */
+export { sandpackCustomSetup } from "./sandpack-setup";
 
 export function PreviewRender() {
   return (
-    <div className="h-full min-h-0 bg-background p-4">
-      <SandpackLayout className="!h-full !overflow-hidden !rounded-2xl !border !border-border">
+    <div className="sandpack-preview-host h-full w-full">
+      <SandpackLayout style={{ height: "100%", border: "none" }}>
         <SandpackPreview
           showNavigator={false}
           showOpenInCodeSandbox={false}
-          className="!h-full !w-full"
+          showRefreshButton
+          style={{ height: "100%" }}
         />
       </SandpackLayout>
     </div>

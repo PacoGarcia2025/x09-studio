@@ -1,8 +1,11 @@
-import { ArrowUp, Bot, Paperclip, Square, User } from "lucide-react";
+import { ArrowUp, Bot, Loader2, Paperclip, Square, User } from "lucide-react";
 import { FormEvent, useEffect, useRef, useState } from "react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
+import { hasVisibleChatProse, stripCodeFencesForChat } from "@/lib/chat-display";
 import { cn } from "@/lib/utils";
 import { useStudioStore, type ChatMessage } from "@/store/studio-store";
 
@@ -15,7 +18,7 @@ export function ChatPanel() {
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  }, [messages, isGenerating]);
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -27,7 +30,7 @@ export function ChatPanel() {
   }
 
   return (
-    <aside className="flex h-full flex-col bg-surface">
+    <aside className="relative z-10 flex h-full min-w-0 max-w-full flex-col overflow-hidden bg-surface">
       <div className="border-b border-border px-4 py-4">
         <p className="text-xs uppercase tracking-[0.24em] text-secondary">
           AI Chat
@@ -37,8 +40,8 @@ export function ChatPanel() {
         </h2>
       </div>
 
-      <ScrollArea className="flex-1">
-        <div className="space-y-5 p-4">
+      <ScrollArea className="min-w-0 flex-1">
+        <div className="min-w-0 space-y-5 overflow-x-hidden p-4">
           {messages.map((message) => (
             <MessageBubble
               key={message.id}
@@ -61,6 +64,7 @@ export function ChatPanel() {
             onChange={(event) => setPrompt(event.target.value)}
             placeholder="Peça para o X09 criar ou alterar algo..."
             className="min-h-24 border-0 bg-transparent p-2 shadow-none focus-visible:ring-0"
+            disabled={isGenerating}
           />
           <div className="flex items-center justify-between pt-2">
             <Button type="button" variant="ghost" size="icon" aria-label="Anexar arquivo">
@@ -92,32 +96,91 @@ function MessageBubble({
   isStreaming?: boolean;
 }) {
   const isUser = message.role === "user";
+  const prose = isUser ? message.content : stripCodeFencesForChat(message.content);
+  const showActivity = isStreaming && !hasVisibleChatProse(message.content);
+  const showWorkingBadge = isStreaming && hasVisibleChatProse(message.content);
 
   return (
-    <div className={cn("flex gap-3", isUser && "justify-end")}>
+    <div className={cn("flex min-w-0 gap-3", isUser && "justify-end")}>
       {!isUser ? (
         <div className="mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-border bg-background text-accent">
           <Bot className="h-4 w-4" />
         </div>
       ) : null}
+
       <div
         className={cn(
-          "max-w-[82%] break-words rounded-2xl px-4 py-3 text-sm leading-6 whitespace-pre-wrap",
+          "min-w-0 max-w-[82%] rounded-2xl px-4 py-3 text-sm leading-6",
           isUser
             ? "bg-accent text-white"
             : "border border-border bg-background text-primary",
         )}
       >
-        {message.content || (isStreaming ? "▍" : null)}
-        {isStreaming && message.content ? (
-          <span className="ml-0.5 inline-block h-4 w-1 animate-pulse bg-accent align-middle" />
-        ) : null}
+        <div className="min-w-0 break-words whitespace-pre-wrap">
+          {isUser ? (
+            prose
+          ) : showActivity ? (
+            <GeneratingStatus />
+          ) : prose ? (
+            <>
+              <ReactMarkdown
+                remarkPlugins={[remarkGfm]}
+                components={{
+                  p: ({ children }) => (
+                    <p className="mb-2 break-words last:mb-0">{children}</p>
+                  ),
+                  // Código nunca aparece no chat — só texto
+                  pre: () => null,
+                  code: ({ children }) => (
+                    <span className="font-medium text-accent">{children}</span>
+                  ),
+                }}
+              >
+                {prose}
+              </ReactMarkdown>
+              {showWorkingBadge ? <GeneratingStatus compact /> : null}
+            </>
+          ) : isStreaming ? (
+            <GeneratingStatus />
+          ) : (
+            "Pronto. Confira o resultado no Preview."
+          )}
+        </div>
       </div>
+
       {isUser ? (
         <div className="mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent text-white">
           <User className="h-4 w-4" />
         </div>
       ) : null}
+    </div>
+  );
+}
+
+function GeneratingStatus({ compact = false }: { compact?: boolean }) {
+  return (
+    <div
+      className={cn(
+        "flex items-center gap-2 text-secondary",
+        compact ? "mt-3 border-t border-border pt-3" : "",
+      )}
+    >
+      <Loader2 className="h-4 w-4 shrink-0 animate-spin text-accent" />
+      <div className="min-w-0">
+        <p className="text-sm text-primary">
+          {compact ? "Gerando a interface…" : "Criando sua experiência…"}
+        </p>
+        {!compact ? (
+          <p className="text-xs text-secondary">
+            Montando layout, tipografia e animações no Preview.
+          </p>
+        ) : null}
+      </div>
+      <span className="ml-auto flex gap-1" aria-hidden>
+        <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-accent" />
+        <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-accent [animation-delay:150ms]" />
+        <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-accent [animation-delay:300ms]" />
+      </span>
     </div>
   );
 }

@@ -8,7 +8,7 @@ export function Timeline() {
   const revertToVersion = useStudioStore((state) => state.revertToVersion);
 
   return (
-    <footer className="flex h-12 items-center gap-3 border-t border-border bg-surface px-4">
+    <footer className="flex h-12 shrink-0 items-center gap-3 border-t border-border bg-surface px-4">
       <div className="flex shrink-0 items-center gap-2 text-xs font-medium text-secondary">
         <GitCommitHorizontal className="h-4 w-4 text-accent" />
         Timeline
