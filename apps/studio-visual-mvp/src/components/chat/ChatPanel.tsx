@@ -1,5 +1,5 @@
 import { ArrowUp, Bot, Paperclip, Square, User } from "lucide-react";
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
@@ -8,9 +8,14 @@ import { useStudioStore, type ChatMessage } from "@/store/studio-store";
 
 export function ChatPanel() {
   const [prompt, setPrompt] = useState("");
+  const messagesEndRef = useRef<HTMLDivElement>(null);
   const messages = useStudioStore((state) => state.messages);
   const isGenerating = useStudioStore((state) => state.isGenerating);
   const sendMessage = useStudioStore((state) => state.sendMessage);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -35,9 +40,17 @@ export function ChatPanel() {
       <ScrollArea className="flex-1">
         <div className="space-y-5 p-4">
           {messages.map((message) => (
-            <MessageBubble key={message.id} message={message} />
+            <MessageBubble
+              key={message.id}
+              message={message}
+              isStreaming={
+                isGenerating &&
+                message.role === "ai" &&
+                message.id === messages[messages.length - 1]?.id
+              }
+            />
           ))}
-          {isGenerating ? <ThinkingBubble /> : null}
+          <div ref={messagesEndRef} />
         </div>
       </ScrollArea>
 
@@ -71,7 +84,13 @@ export function ChatPanel() {
   );
 }
 
-function MessageBubble({ message }: { message: ChatMessage }) {
+function MessageBubble({
+  message,
+  isStreaming = false,
+}: {
+  message: ChatMessage;
+  isStreaming?: boolean;
+}) {
   const isUser = message.role === "user";
 
   return (
@@ -83,37 +102,22 @@ function MessageBubble({ message }: { message: ChatMessage }) {
       ) : null}
       <div
         className={cn(
-          "max-w-[82%] rounded-2xl px-4 py-3 text-sm leading-6",
+          "max-w-[82%] break-words rounded-2xl px-4 py-3 text-sm leading-6 whitespace-pre-wrap",
           isUser
             ? "bg-accent text-white"
             : "border border-border bg-background text-primary",
         )}
       >
-        {message.content}
+        {message.content || (isStreaming ? "▍" : null)}
+        {isStreaming && message.content ? (
+          <span className="ml-0.5 inline-block h-4 w-1 animate-pulse bg-accent align-middle" />
+        ) : null}
       </div>
       {isUser ? (
         <div className="mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent text-white">
           <User className="h-4 w-4" />
         </div>
       ) : null}
-    </div>
-  );
-}
-
-function ThinkingBubble() {
-  return (
-    <div className="flex gap-3">
-      <div className="mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-border bg-background text-accent">
-        <Bot className="h-4 w-4" />
-      </div>
-      <div className="rounded-2xl border border-border bg-background px-4 py-3 text-sm text-secondary">
-        <span className="mr-2">X09 pensando</span>
-        <span className="inline-flex gap-1 align-middle">
-          <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-accent [animation-delay:-0.2s]" />
-          <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-accent [animation-delay:-0.1s]" />
-          <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-accent" />
-        </span>
-      </div>
     </div>
   );
 }
