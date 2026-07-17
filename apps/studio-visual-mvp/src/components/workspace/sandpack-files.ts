@@ -1,4 +1,5 @@
 import type { SandpackFiles } from "@codesandbox/sandpack-react";
+import { DESIGN_TOKENS } from "@/lib/design-tokens";
 
 /**
  * Template `react-ts` do Sandpack lê `/public/index.html` (não `/index.html`).
@@ -90,8 +91,17 @@ export function toSandpackFiles(files: Record<string, string>): SandpackFiles {
 
   return {
     ...withMissingImportStubs(mappedFiles),
+    "/design-tokens.ts": {
+      code: designTokensModuleSource(),
+      hidden: true,
+    },
     "/public/index.html": { code: virtualIndexHtml },
   };
+}
+
+/** Espelha src/lib/design-tokens.ts no Preview para a IA importar com ./design-tokens. */
+function designTokensModuleSource(): string {
+  return `export const DESIGN_TOKENS = ${JSON.stringify(DESIGN_TOKENS, null, 2)} as const;\n`;
 }
 
 function normalizeVirtualPath(path: string): string {
