@@ -67,7 +67,10 @@ export function toSandpackFiles(files: Record<string, string>): SandpackFiles {
     if (SANDBOX_SKIP.has(path)) continue;
 
     mappedFiles[path] = {
-      code: path === "/App.tsx" || path === "/App.jsx" ? ensureAppDefaultExport(code) : code,
+      code:
+        path === "/App.tsx" || path === "/App.jsx"
+          ? ensureAppDefaultExport(sanitizeSandpackCode(code))
+          : sanitizeSandpackCode(code),
     };
   }
 
@@ -94,6 +97,24 @@ export function toSandpackFiles(files: Record<string, string>): SandpackFiles {
 function normalizeVirtualPath(path: string): string {
   const trimmed = path.trim();
   return trimmed.startsWith("/") ? trimmed : `/${trimmed}`;
+}
+
+/**
+ * Corrige padrões comuns da IA que quebram o Sandpack:
+ * - import de tailwindcss (Tailwind já vem via CDN no index.html)
+ * - imports de CSS locais inexistentes
+ */
+export function sanitizeSandpackCode(code: string): string {
+  return code
+    .replace(
+      /^\s*import\s+['"]tailwindcss(?:\/[^'"]*)?['"]\s*;?\s*$/gm,
+      "",
+    )
+    .replace(
+      /^\s*import\s+['"]\.\/(?:index|styles|globals|app)\.css['"]\s*;?\s*$/gm,
+      "",
+    )
+    .replace(/\n{3,}/g, "\n\n");
 }
 
 /**

@@ -18,7 +18,8 @@ PACOTES DISPONÍVEIS (USE DE VERDADE)
 - framer-motion (OBRIGATÓRIO): motion, AnimatePresence, useScroll, useTransform, useSpring, staggerChildren, whileInView, whileHover, whileTap.
 - lucide-react (OBRIGATÓRIO): ícones em TODOS os cards, CTAs, lista de features, contatos. Só ícones que existem (Sparkles, Zap, Shield, Rocket, ArrowUpRight, Play, Check, Globe, Cpu, Layers, Hexagon…).
 - recharts: use em pelo menos UMA seção (sparkline, barras ou área) quando o produto for SaaS/tech/dados.
-- React + Tailwind CDN apenas. Sem next/, shadcn, @/, react-router, three.js.
+- React + Tailwind via CDN (já injetado no preview). NUNCA faça `import 'tailwindcss'` nem `import 'tailwindcss/tailwind.css'` — isso quebra o Sandpack.
+- Sem next/, shadcn, @/, react-router, three.js.
 
 ═══════════════════════════════════════
 LISTA NEGRA (PROIBIDO — design amador)
@@ -101,8 +102,9 @@ CÓDIGO / SANDPACK
 3. Componentes internos (Nav, Hero, Bento, Footer) no MESMO arquivo.
 4. import { motion, useScroll, useTransform } from "framer-motion"
 5. import { ... } from "lucide-react"
-6. No chat: 2–3 frases em pt-BR dizendo o conceito visual; depois SÓ o bloco de código.
-7. Se o resultado parecer template genérico, você falhou — entregue algo que cause "uau".`;
+6. PROIBIDO: import de tailwindcss, .css locais, next/image, @/
+7. No chat: 2–3 frases em pt-BR dizendo o conceito visual; depois SÓ o bloco de código.
+8. Se o resultado parecer template genérico, você falhou — entregue algo que cause "uau".`;
 
 function mapToOpenRouterRole(
   role: ApiChatMessage["role"],
@@ -171,7 +173,7 @@ export async function streamAIResponse(
         "2) PROIBIDO: loremflickr, unsplash inventado, grid 3 cards iguais, gradiente purple-pink de IA, página sem motion.\n" +
         "3) OBRIGATÓRIO: Hero cinematográfico (título enorme), orbs/glow, bento assimétrico, whileInView + stagger, CTAs rounded-full, ícones lucide em todos os cards, mock 3D com perspective/rotate.\n" +
         "4) Pelo menos 1 uso de useScroll/useTransform OU float infinito no Hero.\n" +
-        '5) Resposta: 2–3 frases + único bloco ```tsx path="/App.tsx"```.\n' +
+        '5) Resposta: 2–3 frases + único bloco ```tsx path="/App.tsx"```. NUNCA importar tailwindcss — Tailwind já está no CDN.\n' +
         "6) Dados REAIS DO CLIENTE no Header/Footer/Contato quando existirem.\n" +
         "7) O site deve parecer produto de R$30k — se parecer amador, você falhou.";
     }

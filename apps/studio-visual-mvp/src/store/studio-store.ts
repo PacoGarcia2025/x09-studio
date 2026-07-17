@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { streamAIResponse } from "@/lib/api";
 import { stripCodeFencesForChat } from "@/lib/chat-display";
 import { parseAIResponse } from "@/lib/parser";
+import { sanitizeSandpackCode } from "@/components/workspace/sandpack-files";
 
 export type ChatMessage = {
   id: string;
@@ -156,11 +157,18 @@ export const useStudioStore = create<StudioState>((set, get) => ({
           const generatedVersionId = crypto.randomUUID();
 
           set((state) => {
+            const sanitizedParsed = Object.fromEntries(
+              Object.entries(parsedFiles).map(([path, fileContent]) => [
+                path,
+                sanitizeSandpackCode(fileContent),
+              ]),
+            );
+
             const nextFiles =
               paths.length > 0
                 ? {
                     ...state.files,
-                    ...parsedFiles,
+                    ...sanitizedParsed,
                   }
                 : state.files;
 
