@@ -6,6 +6,77 @@ export type ApiChatMessage = {
 };
 
 /**
+ * Preferência do usuário no UI.
+ * - "auto"    → o X09 escolhe (edit/fast/premium) pelo comando
+ * - "premium" → força Claude Sonnet
+ */
+export type GenerationPreference = "auto" | "premium";
+
+/** Modo efetivo após o roteador. */
+export type ResolvedMode = "edit" | "fast" | "premium";
+
+export type RouteContext = {
+  preference: GenerationPreference;
+  /** Já existe App.tsx gerado (não só o placeholder inicial). */
+  hasExistingApp: boolean;
+  /** Código atual de /App.tsx — injetado no modo edit. */
+  currentAppCode?: string;
+};
+
+export const MODE_LABELS: Record<ResolvedMode, string> = {
+  edit: "Groq · edição rápida",
+  fast: "Gemini · rápido",
+  premium: "Claude · premium",
+};
+
+/** Modelos OpenRouter (fast / premium). */
+export const OPENROUTER_MODEL: Record<"fast" | "premium", string> = {
+  fast: "google/gemini-2.5-flash",
+  premium: "anthropic/claude-sonnet-4.5",
+};
+
+/** Modelo Groq (OpenAI-compatible). */
+export const GROQ_MODEL = "llama-3.3-70b-versatile";
+
+const EDIT_HINTS =
+  /\b(troca|trocar|muda|mudar|altera|alterar|ajusta|ajustar|corrige|corrigir|renomeia|renomear|adiciona|adicionar|remove|remover|tira|tirar|coloca|colocar|atualiza|atualizar|substitu[ií]|whatsapp|instagram|email|e-mail|logo|cor|cores|texto|t[ií]tulo|bot[aã]o|fonte|espa[cç]o|padding|margin|tamanho|icone|ícone)\b/i;
+
+const PREMIUM_HINTS =
+  /\b(premium|ag[eê]ncia|refaz(er)?\s+(com\s+)?qualidade|melhor\s+qualidade|vers[aã]o\s+final|cinematogr[aá]fico|nível\s+stripe|nível\s+linear)\b/i;
+
+const CREATE_HINTS =
+  /\b(cria|criar|gere|gerar|fa[cç]a|fazer|monte|montar|landing|p[aá]gina|site|home|homepage|from\s+scratch|do\s+zero)\b/i;
+
+/**
+ * O X09 escolhe o provedor pelo comando:
+ * - edição curta em app existente → Groq
+ * - intenção premium → Claude
+ * - criação / restante → Gemini Flash
+ */
+export function resolveGenerationMode(
+  prompt: string,
+  ctx: Pick<RouteContext, "preference" | "hasExistingApp">,
+): ResolvedMode {
+  if (ctx.preference === "premium") return "premium";
+
+  const text = prompt.trim();
+  const short = text.length < 220;
+
+  if (PREMIUM_HINTS.test(text)) return "premium";
+
+  if (
+    ctx.hasExistingApp &&
+    short &&
+    EDIT_HINTS.test(text) &&
+    !CREATE_HINTS.test(text)
+  ) {
+    return "edit";
+  }
+
+  return "fast";
+}
+
+/**
  * Direção de arte 2026 — o produto só sobrevive se a saída parecer agência top.
  * Anti-amador: lista negra explícita + receitas concretas + motion obrigatório.
  */
@@ -137,83 +208,103 @@ Você DEVE utilizar as informações abaixo sempre que for criar um Header, Foot
 Se a URL da Logo for fornecida, use-a na tag <img> do Header no lugar de um texto ou ícone genérico.`;
 }
 
-/**
- * Streaming real via OpenRouter (GPT-4o).
- */
-export async function streamAIResponse(
-  onChunk: (text: string) => void,
-  onFinish: (text: string) => void,
-  messages: ApiChatMessage[],
-): Promise<void> {
-  const apiKey = import.meta.env.VITE_OPENROUTER_API_KEY as string | undefined;
+const EDIT_SYSTEM_PROMPT = `Você é o X09 Studio em modo EDIÇÃO RÁPIDA.
+Tarefa: aplicar APENAS a alteração pedida no App.tsx existente.
+Regras:
+1. Preserve layout, design system, motion e estrutura — mude só o necessário.
+2. Resposta: 1–2 frases em pt-BR + único bloco \`\`\`tsx path="/App.tsx"\`\`\` com o arquivo COMPLETO atualizado.
+3. NUNCA importar tailwindcss. Use framer-motion e lucide-react se já estiverem no arquivo.
+4. Não redesenhe a página do zero.`;
 
-  if (!apiKey || apiKey.includes("sua-chave-aqui")) {
-    const errorText =
-      "Configure `VITE_OPENROUTER_API_KEY` no arquivo `.env.local` e reinicie o `npm run dev`.";
-    onChunk(errorText);
-    onFinish(errorText);
-    return;
+const ART_QA =
+  "\n\n[QA DE ARTE — FALHA = REFAZER]\n" +
+  "1) pt-BR em todo o UI.\n" +
+  "2) PROIBIDO: loremflickr, unsplash inventado, grid 3 cards iguais, gradiente purple-pink de IA, página sem motion.\n" +
+  "3) OBRIGATÓRIO: Hero cinematográfico (título enorme), orbs/glow, bento assimétrico, whileInView + stagger, CTAs rounded-full, ícones lucide em todos os cards, mock 3D com perspective/rotate.\n" +
+  "4) Pelo menos 1 uso de useScroll/useTransform OU float infinito no Hero.\n" +
+  '5) Resposta: 2–3 frases + único bloco ```tsx path="/App.tsx"```. NUNCA importar tailwindcss — Tailwind já está no CDN.\n' +
+  "6) Dados REAIS DO CLIENTE no Header/Footer/Contato quando existirem.\n" +
+  "7) O site deve parecer produto de R$30k — se parecer amador, você falhou.";
+
+function prepareMessages(
+  messages: ApiChatMessage[],
+  mode: ResolvedMode,
+  currentAppCode?: string,
+): { system: string; messages: Array<{ role: "system" | "user" | "assistant"; content: string }> } {
+  const userContext = buildUserContext();
+  const system =
+    mode === "edit"
+      ? EDIT_SYSTEM_PROMPT + userContext
+      : SYSTEM_PROMPT + userContext;
+
+  const formatted = messages
+    .filter((message) => message.content.trim().length > 0)
+    .map((msg) => ({ ...msg }));
+
+  const lastIndex = formatted.length - 1;
+  if (lastIndex >= 0 && formatted[lastIndex]!.role === "user") {
+    if (mode === "edit" && currentAppCode?.trim()) {
+      formatted[lastIndex]!.content +=
+        `\n\n=== App.tsx ATUAL (edite este arquivo) ===\n\`\`\`tsx\n${currentAppCode}\n\`\`\`\n` +
+        "Aplique só a alteração pedida e devolva o arquivo completo.";
+    } else {
+      formatted[lastIndex]!.content += ART_QA;
+    }
   }
 
-  let accumulated = "";
-
-  try {
-    const userContext = buildUserContext();
-    const systemPromptWithProfile = SYSTEM_PROMPT + userContext;
-
-    const formattedMessages = messages
-      .filter((message) => message.content.trim().length > 0)
-      .map((msg) => ({ ...msg }));
-    const lastIndex = formattedMessages.length - 1;
-
-    if (lastIndex >= 0 && formattedMessages[lastIndex]!.role === "user") {
-      formattedMessages[lastIndex]!.content +=
-        "\n\n[QA DE ARTE — FALHA = REFAZER]\n" +
-        "1) pt-BR em todo o UI.\n" +
-        "2) PROIBIDO: loremflickr, unsplash inventado, grid 3 cards iguais, gradiente purple-pink de IA, página sem motion.\n" +
-        "3) OBRIGATÓRIO: Hero cinematográfico (título enorme), orbs/glow, bento assimétrico, whileInView + stagger, CTAs rounded-full, ícones lucide em todos os cards, mock 3D com perspective/rotate.\n" +
-        "4) Pelo menos 1 uso de useScroll/useTransform OU float infinito no Hero.\n" +
-        '5) Resposta: 2–3 frases + único bloco ```tsx path="/App.tsx"```. NUNCA importar tailwindcss — Tailwind já está no CDN.\n' +
-        "6) Dados REAIS DO CLIENTE no Header/Footer/Contato quando existirem.\n" +
-        "7) O site deve parecer produto de R$30k — se parecer amador, você falhou.";
-    }
-
-    const payloadMessages = [
-      { role: "system" as const, content: systemPromptWithProfile },
-      ...formattedMessages.map((message) => ({
+  return {
+    system,
+    messages: [
+      { role: "system", content: system },
+      ...formatted.map((message) => ({
         role: mapToOpenRouterRole(message.role),
         content: message.content,
       })),
-    ];
+    ],
+  };
+}
 
-    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+async function streamOpenAICompatible(options: {
+  url: string;
+  apiKey: string;
+  model: string;
+  messages: Array<{ role: string; content: string }>;
+  temperature: number;
+  extraHeaders?: Record<string, string>;
+  providerLabel: string;
+  onChunk: (text: string) => void;
+  onFinish: (text: string) => void;
+}): Promise<void> {
+  let accumulated = "";
+
+  try {
+    const response = await fetch(options.url, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-        "HTTP-Referer": "http://localhost:5173",
-        "X-Title": "x09 Studio",
+        Authorization: `Bearer ${options.apiKey}`,
+        ...options.extraHeaders,
       },
       body: JSON.stringify({
-        model: "openai/gpt-4o",
+        model: options.model,
         stream: true,
-        temperature: 0.85,
-        messages: payloadMessages,
+        temperature: options.temperature,
+        messages: options.messages,
       }),
     });
 
     if (!response.ok) {
       const errorBody = await response.text();
-      const errorText = `Erro OpenRouter (${response.status}): ${errorBody || response.statusText}`;
-      onChunk(errorText);
-      onFinish(errorText);
+      const errorText = `Erro ${options.providerLabel} (${response.status}): ${errorBody || response.statusText}`;
+      options.onChunk(errorText);
+      options.onFinish(errorText);
       return;
     }
 
     if (!response.body) {
-      const errorText = "A resposta da OpenRouter não incluiu um corpo com stream.";
-      onChunk(errorText);
-      onFinish(errorText);
+      const errorText = `A resposta de ${options.providerLabel} não incluiu um corpo com stream.`;
+      options.onChunk(errorText);
+      options.onFinish(errorText);
       return;
     }
 
@@ -244,19 +335,89 @@ export async function streamAIResponse(
           if (!delta) continue;
 
           accumulated += delta;
-          onChunk(accumulated);
+          options.onChunk(accumulated);
         } catch {
           // Ignora chunks SSE incompletos/inválidos
         }
       }
     }
 
-    onFinish(accumulated);
+    options.onFinish(accumulated);
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Falha desconhecida no streaming.";
-    const errorText = `Falha ao conectar na OpenRouter: ${message}`;
-    onChunk(accumulated || errorText);
-    onFinish(accumulated || errorText);
+    const errorText = `Falha ao conectar em ${options.providerLabel}: ${message}`;
+    options.onChunk(accumulated || errorText);
+    options.onFinish(accumulated || errorText);
   }
+}
+
+/**
+ * Streaming com roteamento automático:
+ * - edit    → Groq (direto), fallback Gemini via OpenRouter
+ * - fast    → Gemini Flash (OpenRouter)
+ * - premium → Claude Sonnet (OpenRouter)
+ *
+ * Retorna o modo efetivo usado (útil para UI).
+ */
+export async function streamAIResponse(
+  onChunk: (text: string) => void,
+  onFinish: (text: string) => void,
+  messages: ApiChatMessage[],
+  route: RouteContext,
+): Promise<ResolvedMode> {
+  const lastUser = [...messages].reverse().find((m) => m.role === "user");
+  const mode = resolveGenerationMode(lastUser?.content ?? "", route);
+  const prepared = prepareMessages(messages, mode, route.currentAppCode);
+
+  if (mode === "edit") {
+    const groqKey = import.meta.env.VITE_GROQ_API_KEY as string | undefined;
+    if (groqKey && !groqKey.includes("sua-chave")) {
+      await streamOpenAICompatible({
+        url: "https://api.groq.com/openai/v1/chat/completions",
+        apiKey: groqKey,
+        model: GROQ_MODEL,
+        messages: prepared.messages,
+        temperature: 0.4,
+        providerLabel: "Groq",
+        onChunk,
+        onFinish,
+      });
+      return mode;
+    }
+    // Sem chave Groq → cai no Gemini (ainda é "edit" no prompt)
+  }
+
+  const openRouterKey = import.meta.env.VITE_OPENROUTER_API_KEY as
+    | string
+    | undefined;
+
+  if (!openRouterKey || openRouterKey.includes("sua-chave-aqui")) {
+    const errorText =
+      mode === "edit"
+        ? "Configure `VITE_GROQ_API_KEY` (edições) ou `VITE_OPENROUTER_API_KEY` no `.env.local` e reinicie o `npm run dev`."
+        : "Configure `VITE_OPENROUTER_API_KEY` no arquivo `.env.local` e reinicie o `npm run dev`.";
+    onChunk(errorText);
+    onFinish(errorText);
+    return mode;
+  }
+
+  const openRouterMode = mode === "premium" ? "premium" : "fast";
+
+  await streamOpenAICompatible({
+    url: "https://openrouter.ai/api/v1/chat/completions",
+    apiKey: openRouterKey,
+    model: OPENROUTER_MODEL[openRouterMode],
+    messages: prepared.messages,
+    temperature: mode === "edit" ? 0.4 : 0.85,
+    extraHeaders: {
+      "HTTP-Referer": "http://localhost:5173",
+      "X-Title": "x09 Studio",
+    },
+    providerLabel: "OpenRouter",
+    onChunk,
+    onFinish,
+  });
+
+  return mode;
 }

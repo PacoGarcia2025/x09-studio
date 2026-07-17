@@ -1,10 +1,11 @@
-import { ArrowUp, Bot, Loader2, Paperclip, Square, User } from "lucide-react";
+import { ArrowUp, Bot, Loader2, Paperclip, Sparkles, Square, User, Wand2 } from "lucide-react";
 import { FormEvent, useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
+import { MODE_LABELS } from "@/lib/api";
 import { hasVisibleChatProse, stripCodeFencesForChat } from "@/lib/chat-display";
 import { cn } from "@/lib/utils";
 import { useStudioStore, type ChatMessage } from "@/store/studio-store";
@@ -15,6 +16,13 @@ export function ChatPanel() {
   const messages = useStudioStore((state) => state.messages);
   const isGenerating = useStudioStore((state) => state.isGenerating);
   const sendMessage = useStudioStore((state) => state.sendMessage);
+  const generationPreference = useStudioStore(
+    (state) => state.generationPreference,
+  );
+  const setGenerationPreference = useStudioStore(
+    (state) => state.setGenerationPreference,
+  );
+  const lastResolvedMode = useStudioStore((state) => state.lastResolvedMode);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -38,6 +46,11 @@ export function ChatPanel() {
         <h2 className="mt-1 text-lg font-semibold text-primary">
           Construa conversando
         </h2>
+        {lastResolvedMode ? (
+          <p className="mt-1 text-xs text-secondary">
+            Último roteamento: {MODE_LABELS[lastResolvedMode]}
+          </p>
+        ) : null}
       </div>
 
       <ScrollArea className="min-w-0 flex-1">
@@ -67,9 +80,45 @@ export function ChatPanel() {
             disabled={isGenerating}
           />
           <div className="flex items-center justify-between pt-2">
-            <Button type="button" variant="ghost" size="icon" aria-label="Anexar arquivo">
-              <Paperclip className="h-4 w-4" />
-            </Button>
+            <div className="flex items-center gap-1">
+              <Button type="button" variant="ghost" size="icon" aria-label="Anexar arquivo">
+                <Paperclip className="h-4 w-4" />
+              </Button>
+              <div className="flex items-center rounded-full border border-border bg-surface p-0.5">
+                <button
+                  type="button"
+                  onClick={() => setGenerationPreference("auto")}
+                  disabled={isGenerating}
+                  aria-pressed={generationPreference === "auto"}
+                  title="X09 escolhe: Groq (edição), Gemini (criação) ou Claude (premium)"
+                  className={cn(
+                    "flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium transition-colors disabled:opacity-50",
+                    generationPreference === "auto"
+                      ? "bg-primary/10 text-primary"
+                      : "text-secondary hover:text-primary",
+                  )}
+                >
+                  <Wand2 className="h-3 w-3" />
+                  Auto
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setGenerationPreference("premium")}
+                  disabled={isGenerating}
+                  aria-pressed={generationPreference === "premium"}
+                  title="Força Claude Sonnet"
+                  className={cn(
+                    "flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium transition-colors disabled:opacity-50",
+                    generationPreference === "premium"
+                      ? "bg-primary/10 text-primary"
+                      : "text-secondary hover:text-primary",
+                  )}
+                >
+                  <Sparkles className="h-3 w-3" />
+                  Premium
+                </button>
+              </div>
+            </div>
             <Button
               type={isGenerating ? "button" : "submit"}
               size="icon"

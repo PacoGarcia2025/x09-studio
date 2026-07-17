@@ -1,5 +1,10 @@
 import { create } from "zustand";
-import { streamAIResponse } from "@/lib/api";
+import {
+  resolveGenerationMode,
+  streamAIResponse,
+  type GenerationPreference,
+  type ResolvedMode,
+} from "@/lib/api";
 import { stripCodeFencesForChat } from "@/lib/chat-display";
 import { parseAIResponse } from "@/lib/parser";
 import { sanitizeSandpackCode } from "@/components/workspace/sandpack-files";
@@ -27,11 +32,14 @@ const welcomeMessage: ChatMessage = {
 type StudioState = {
   messages: ChatMessage[];
   isGenerating: boolean;
+  generationPreference: GenerationPreference;
+  lastResolvedMode: ResolvedMode | null;
   files: Record<string, string>;
   activeFile: string;
   versions: StudioVersion[];
   activeVersionId: string | null;
   addMessage: (message: ChatMessage) => void;
+  setGenerationPreference: (preference: GenerationPreference) => void;
   sendMessage: (prompt: string) => Promise<void>;
   updateFile: (path: string, content: string) => void;
   setActiveFile: (path: string) => void;
@@ -80,6 +88,8 @@ const initialPackageJson = `{
 export const useStudioStore = create<StudioState>((set, get) => ({
   messages: [welcomeMessage],
   isGenerating: false,
+  generationPreference: "auto",
+  lastResolvedMode: null,
   files: {
     "/App.tsx": initialApp,
     "/package.json": initialPackageJson,
@@ -91,6 +101,8 @@ export const useStudioStore = create<StudioState>((set, get) => ({
     set((state) => ({
       messages: [...state.messages, message],
     })),
+  setGenerationPreference: (preference) =>
+    set({ generationPreference: preference }),
   sendMessage: async (prompt) => {
     const content = prompt.trim();
     if (!content || get().isGenerating) return;
@@ -137,10 +149,20 @@ export const useStudioStore = create<StudioState>((set, get) => ({
             : message.content,
       }));
 
-    // Passo C: streaming real (OpenRouter)
+    const currentApp = get().files["/App.tsx"] ?? "";
+    const hasExistingApp =
+      get().versions.some((v) => v.id !== "initial") ||
+      currentApp.trim() !== initialApp.trim();
+
+    const preference = get().generationPreference;
+    const previewMode = resolveGenerationMode(content, {
+      preference,
+      hasExistingApp,
+    });
+    set({ lastResolvedMode: previewMode });
+
     try {
-      await streamAIResponse(
-        // Passo D: atualiza só o chat em tempo real (arquivos no finish — evita imports incompletos)
+      const resolved = await streamAIResponse(
         (accumulated) => {
           set((state) => ({
             messages: state.messages.map((message) =>
@@ -150,7 +172,6 @@ export const useStudioStore = create<StudioState>((set, get) => ({
             ),
           }));
         },
-        // Passo E: aplica arquivos + versiona
         (finalText) => {
           const parsedFiles = parseAIResponse(finalText);
           const paths = Object.keys(parsedFiles);
@@ -192,7 +213,14 @@ export const useStudioStore = create<StudioState>((set, get) => ({
           });
         },
         history,
+        {
+          preference,
+          hasExistingApp,
+          currentAppCode: currentApp,
+        },
       );
+
+      set({ lastResolvedMode: resolved });
     } catch (error) {
       const errorText =
         error instanceof Error
@@ -231,6 +259,7 @@ export const useStudioStore = create<StudioState>((set, get) => ({
     set({
       messages: [{ ...welcomeMessage, id: crypto.randomUUID() }],
       isGenerating: false,
+      lastResolvedMode: null,
       files: {
         "/App.tsx": initialApp,
         "/package.json": initialPackageJson,
@@ -253,6 +282,7 @@ export const useStudioStore = create<StudioState>((set, get) => ({
       versions: [],
       activeVersionId: null,
       isGenerating: false,
+      lastResolvedMode: null,
     });
   },
 }));
