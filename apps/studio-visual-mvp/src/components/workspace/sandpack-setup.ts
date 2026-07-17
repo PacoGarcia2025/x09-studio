@@ -5,6 +5,7 @@ export const sandpackCustomSetup: SandpackProviderProps["customSetup"] = {
   dependencies: {
     "lucide-react": "latest",
     recharts: "latest",
+    "react-is": "latest",
     clsx: "latest",
     "tailwind-merge": "latest",
     "framer-motion": "latest",
