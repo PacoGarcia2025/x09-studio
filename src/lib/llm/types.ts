@@ -20,11 +20,20 @@ export type LlmCompleteResult = {
   };
 };
 
+export type LlmStreamInput = LlmCompleteInput & {
+  signal?: AbortSignal;
+  onDelta: (delta: string, accumulated: string) => void;
+};
+
+export type LlmStreamResult = LlmCompleteResult;
+
 /**
- * Interface única de LLM. MVP só implementa Gemini.
- * Claude/GPT/DeepSeek entram depois sem mudar callers.
+ * Interface única de LLM. complete + stream opcional.
  */
 export interface LlmProvider {
   readonly id: string;
   complete(input: LlmCompleteInput): Promise<LlmCompleteResult>;
+  stream?(input: LlmStreamInput): Promise<LlmStreamResult>;
 }
+
+export type GenerationMode = "edit" | "fast" | "premium" | "repair" | "plan";

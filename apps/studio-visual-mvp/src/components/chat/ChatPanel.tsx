@@ -23,10 +23,13 @@ export function ChatPanel() {
     (state) => state.setGenerationPreference,
   );
   const lastResolvedMode = useStudioStore((state) => state.lastResolvedMode);
+  const agentPhaseLabel = useStudioStore((state) => state.agentPhaseLabel);
+  const stopGeneration = useStudioStore((state) => state.stopGeneration);
+  const metrics = useStudioStore((state) => state.metrics);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, isGenerating]);
+  }, [messages, isGenerating, agentPhaseLabel]);
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -49,6 +52,14 @@ export function ChatPanel() {
         {lastResolvedMode ? (
           <p className="mt-1 text-xs text-secondary">
             Último roteamento: {MODE_LABELS[lastResolvedMode]}
+          </p>
+        ) : null}
+        {agentPhaseLabel ? (
+          <p className="mt-1 text-xs text-accent">
+            Fase: {agentPhaseLabel}
+            {metrics?.repairCycles
+              ? ` · repairs ${metrics.repairCycles}`
+              : ""}
           </p>
         ) : null}
       </div>
@@ -90,7 +101,7 @@ export function ChatPanel() {
                   onClick={() => setGenerationPreference("auto")}
                   disabled={isGenerating}
                   aria-pressed={generationPreference === "auto"}
-                  title="X09 escolhe: Groq (edição), Gemini (criação) ou Claude (premium)"
+                  title="Auto: edições→Groq, apps novos→Claude com spec"
                   className={cn(
                     "flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium transition-colors disabled:opacity-50",
                     generationPreference === "auto"
@@ -122,6 +133,7 @@ export function ChatPanel() {
             <Button
               type={isGenerating ? "button" : "submit"}
               size="icon"
+              onClick={isGenerating ? () => stopGeneration() : undefined}
               aria-label={isGenerating ? "Parar geração" : "Enviar prompt"}
             >
               {isGenerating ? (

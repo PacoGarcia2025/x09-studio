@@ -1,5 +1,6 @@
 import type { SandpackFiles } from "@codesandbox/sandpack-react";
 import { DESIGN_TOKENS } from "@/lib/design-tokens";
+import { KIT_FILES } from "@/lib/x09-kit";
 
 /**
  * Template `react-ts` do Sandpack lê `/public/index.html` (não `/index.html`).
@@ -87,6 +88,13 @@ export function toSandpackFiles(files: Record<string, string>): SandpackFiles {
 }
 `,
     };
+  }
+
+  // Kit X09 + tokens sempre presentes (IA não deve sobrescrever o kit)
+  for (const [path, code] of Object.entries(KIT_FILES)) {
+    if (!mappedFiles[path] || path.startsWith("/components/ui/")) {
+      mappedFiles[path] = { code, hidden: path.includes("/ui/") };
+    }
   }
 
   return {

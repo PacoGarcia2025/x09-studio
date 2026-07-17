@@ -15,6 +15,7 @@ import { AuthModal } from "@/components/auth/AuthModal";
 import { ChatPanel } from "@/components/chat/ChatPanel";
 import { UserProfileModal } from "@/components/profile/UserProfileModal";
 import { MyProjectsModal } from "@/components/projects/MyProjectsModal";
+import { DeployPublishModal } from "@/components/projects/DeployPublishModal";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -26,6 +27,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CodeEditor } from "@/components/workspace/CodeEditor";
 import { ConsoleRender } from "@/components/workspace/ConsoleRender";
 import { PreviewRender } from "@/components/workspace/PreviewRender";
+import { SandpackErrorBridge } from "@/components/workspace/SandpackErrorBridge";
 import { toSandpackFiles } from "@/components/workspace/sandpack-files";
 import { sandpackCustomSetup } from "@/components/workspace/sandpack-setup";
 import { Timeline } from "@/components/workspace/Timeline";
@@ -52,6 +54,7 @@ export default function App() {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [isProjectsOpen, setIsProjectsOpen] = useState(false);
+  const [isDeployOpen, setIsDeployOpen] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const isGenerating = useStudioStore((state) => state.isGenerating);
   const wasGeneratingRef = useRef(false);
@@ -237,6 +240,10 @@ export default function App() {
         open={isProjectsOpen}
         onClose={() => setIsProjectsOpen(false)}
       />
+      <DeployPublishModal
+        open={isDeployOpen}
+        onClose={() => setIsDeployOpen(false)}
+      />
 
       <ResizablePanelGroup
         direction="horizontal"
@@ -261,7 +268,11 @@ export default function App() {
           className="min-w-0 overflow-hidden"
         >
           <div className="relative z-0 h-full min-w-0 overflow-hidden bg-background">
-            <WorkspacePanel onSave={() => void handleSave()} isSaving={isSaving} />
+            <WorkspacePanel
+              onSave={() => void handleSave()}
+              isSaving={isSaving}
+              onDeploy={() => setIsDeployOpen(true)}
+            />
           </div>
         </ResizablePanel>
       </ResizablePanelGroup>
@@ -272,12 +283,27 @@ export default function App() {
 function WorkspacePanel({
   onSave,
   isSaving,
+  onDeploy,
 }: {
   onSave: () => void;
   isSaving: boolean;
+  onDeploy: () => void;
 }) {
   const files = useStudioStore((state) => state.files);
+  const activeFile = useStudioStore((state) => state.activeFile);
   const sandpackFiles = useMemo(() => toSandpackFiles(files), [files]);
+  const visibleFiles = useMemo(() => {
+    const paths = Object.keys(files)
+      .filter(
+        (p) =>
+          !p.startsWith("/components/ui/") &&
+          p !== "/design-tokens.ts" &&
+          p !== "/package.json" &&
+          p !== "/lib/mock-data.ts",
+      )
+      .sort();
+    return paths.length > 0 ? paths : ["/App.tsx"];
+  }, [files]);
 
   return (
     <Tabs defaultValue="preview" className="flex h-full min-h-0 flex-col bg-background">
@@ -302,7 +328,7 @@ function WorkspacePanel({
             )}
             Salvar
           </Button>
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" onClick={onDeploy}>
             <Rocket className="h-4 w-4" />
             Deploy
           </Button>
@@ -330,12 +356,15 @@ function WorkspacePanel({
             overflow: "hidden",
           }}
           options={{
-            activeFile: "/App.tsx",
-            visibleFiles: ["/App.tsx"],
+            activeFile: visibleFiles.includes(activeFile)
+              ? activeFile
+              : "/App.tsx",
+            visibleFiles,
             externalResources: ["https://cdn.tailwindcss.com"],
           }}
           customSetup={sandpackCustomSetup}
         >
+          <SandpackErrorBridge />
           <div className="relative h-full w-full min-w-0 overflow-hidden">
             <TabsContent
               value="preview"

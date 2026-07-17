@@ -1,3 +1,4 @@
+import { supabase } from "@/lib/supabase";
 import { useUserStore } from "@/store/user-store";
 
 export type ApiChatMessage = {
@@ -5,200 +6,77 @@ export type ApiChatMessage = {
   content: string;
 };
 
-/**
- * Preferência do usuário no UI.
- * - "auto"    → o X09 escolhe (edit/fast/premium) pelo comando
- * - "premium" → força Claude Sonnet
- */
 export type GenerationPreference = "auto" | "premium";
+export type ResolvedMode = "edit" | "fast" | "premium" | "repair" | "plan";
+export type AgentPhase =
+  | "planejando"
+  | "construindo"
+  | "verificando"
+  | "corrigindo"
+  | "concluido"
+  | "erro";
 
-/** Modo efetivo após o roteador. */
-export type ResolvedMode = "edit" | "fast" | "premium";
+export type RepairIssue = {
+  id: string;
+  category:
+    | "compile"
+    | "runtime"
+    | "import"
+    | "typescript"
+    | "lint"
+    | "build"
+    | "other";
+  severity?: "error" | "warning";
+  message: string;
+  file?: string;
+  line?: number;
+  suggestion?: string;
+};
+
+export type GenerationEvent =
+  | { type: "phase"; phase: AgentPhase; label: string }
+  | { type: "mode"; mode: ResolvedMode; model: string }
+  | { type: "spec"; spec: unknown }
+  | { type: "manifest"; manifest: unknown }
+  | { type: "delta"; text: string }
+  | {
+      type: "metrics";
+      inputTokens?: number;
+      outputTokens?: number;
+      latencyMs?: number;
+      repairCycles?: number;
+    }
+  | { type: "error"; message: string }
+  | { type: "done"; text: string; mode: ResolvedMode };
 
 export type RouteContext = {
   preference: GenerationPreference;
-  /** Já existe App.tsx gerado (não só o placeholder inicial). */
   hasExistingApp: boolean;
-  /** Código atual de /App.tsx — injetado no modo edit. */
   currentAppCode?: string;
+  currentFiles?: Record<string, string>;
+  phase?: "auto" | "plan" | "build" | "repair";
+  repairIssues?: RepairIssue[];
+  appSpec?: unknown;
+  signal?: AbortSignal;
+  onEvent?: (event: GenerationEvent) => void;
 };
 
 export const MODE_LABELS: Record<ResolvedMode, string> = {
   edit: "Groq · edição rápida",
   fast: "Gemini · rápido",
   premium: "Claude · premium",
+  repair: "Claude · correção",
+  plan: "Gemini · planejamento",
 };
 
-/** Modelos OpenRouter (fast / premium). */
-export const OPENROUTER_MODEL: Record<"fast" | "premium", string> = {
-  fast: "google/gemini-2.5-flash",
-  premium: "anthropic/claude-sonnet-4.5",
+export const PHASE_LABELS: Record<AgentPhase, string> = {
+  planejando: "Planejando",
+  construindo: "Construindo",
+  verificando: "Verificando",
+  corrigindo: "Corrigindo",
+  concluido: "Concluído",
+  erro: "Erro",
 };
-
-/** Modelo Groq (OpenAI-compatible). */
-export const GROQ_MODEL = "llama-3.3-70b-versatile";
-
-const EDIT_HINTS =
-  /\b(troca|trocar|muda|mudar|altera|alterar|ajusta|ajustar|corrige|corrigir|renomeia|renomear|adiciona|adicionar|remove|remover|tira|tirar|coloca|colocar|atualiza|atualizar|substitu[ií]|whatsapp|instagram|email|e-mail|logo|cor|cores|texto|t[ií]tulo|bot[aã]o|fonte|espa[cç]o|padding|margin|tamanho|icone|ícone)\b/i;
-
-const PREMIUM_HINTS =
-  /\b(premium|ag[eê]ncia|refaz(er)?\s+(com\s+)?qualidade|melhor\s+qualidade|vers[aã]o\s+final|cinematogr[aá]fico|nível\s+stripe|nível\s+linear)\b/i;
-
-const CREATE_HINTS =
-  /\b(cria|criar|gere|gerar|fa[cç]a|fazer|monte|montar|landing|p[aá]gina|site|home|homepage|from\s+scratch|do\s+zero)\b/i;
-
-/**
- * O X09 escolhe o provedor pelo comando:
- * - edição curta em app existente → Groq
- * - intenção premium → Claude
- * - criação / restante → Gemini Flash
- */
-export function resolveGenerationMode(
-  prompt: string,
-  ctx: Pick<RouteContext, "preference" | "hasExistingApp">,
-): ResolvedMode {
-  if (ctx.preference === "premium") return "premium";
-
-  const text = prompt.trim();
-  const short = text.length < 220;
-
-  if (PREMIUM_HINTS.test(text)) return "premium";
-
-  if (
-    ctx.hasExistingApp &&
-    short &&
-    EDIT_HINTS.test(text) &&
-    !CREATE_HINTS.test(text)
-  ) {
-    return "edit";
-  }
-
-  return "fast";
-}
-
-/**
- * Direção de arte 2026 — o produto só sobrevive se a saída parecer agência top.
- * Anti-amador: lista negra explícita + receitas concretas + motion obrigatório.
- */
-export const SYSTEM_PROMPT = `Você é o X09 Studio: Diretor de Arte + Engenheiro Front-end de elite (nível Linear, Vercel, Stripe, Raycast, Apple Vision Pro UI).
-Ano: 2026. O usuário pagaria R$ 30.000+ por este site. Se parecer template Bootstrap/Wix/Canva, VOCÊ FALHOU — reescreva mentalmente até ficar cinematográfico.
-
-VOCÊ TEM UM MANUAL DE ESTILO OBRIGATÓRIO:
-Sempre importe as constantes de design-tokens e use-as para estilizar todos os elementos:
-import { DESIGN_TOKENS } from "./design-tokens";
-(O arquivo ./design-tokens.ts já está disponível no Preview — é o mesmo manual de src/lib/design-tokens.ts do Studio.)
-- Use \`DESIGN_TOKENS.colors.bg\` para o fundo da página.
-- Use \`DESIGN_TOKENS.colors.card\` e \`DESIGN_TOKENS.effects.glass\` para TODOS os cards.
-- Use \`DESIGN_TOKENS.typography\` para os títulos e textos (h1, h2, body).
-- Combine com clsx/template: className={\`\${DESIGN_TOKENS.colors.bg} \${DESIGN_TOKENS.typography.h1}\`}
-NUNCA use cores hardcoded (como 'bg-purple-500' ou 'bg-black') se houver uma constante equivalente. O objetivo é um visual minimalista, dark mode profundo e extremamente elegante.
-
-═══════════════════════════════════════
-PACOTES DISPONÍVEIS (USE DE VERDADE)
-═══════════════════════════════════════
-- framer-motion (OBRIGATÓRIO): motion, AnimatePresence, useScroll, useTransform, useSpring, staggerChildren, whileInView, whileHover, whileTap.
-- lucide-react (OBRIGATÓRIO): ícones em TODOS os cards, CTAs, lista de features, contatos.
-  Só ícones que EXISTEM no pacote. Lista segura: Sparkles, Zap, Shield, Rocket, ArrowUpRight, Play, Check, Globe, Cpu, Layers, Hexagon, Mail, Phone, MessageCircle, AtSign, MapPin, Home, Building2, Users, Star, TrendingUp, ArrowRight.
-  PROIBIDO importar do lucide: Instagram, Facebook, Twitter, Linkedin, WhatsApp, Youtube, TikTok — esses NÃO existem e quebram o Preview.
-  Para redes/contato use: AtSign (Instagram), MessageCircle (WhatsApp), Mail (e-mail), Phone (telefone), Share2 (social genérico).
-- recharts: use em pelo menos UMA seção (sparkline, barras ou área) quando o produto for SaaS/tech/dados.
-- React + Tailwind via CDN (já injetado no preview). NUNCA faça \`import 'tailwindcss'\` nem \`import 'tailwindcss/tailwind.css'\` — isso quebra o Sandpack.
-- design-tokens (OBRIGATÓRIO): import { DESIGN_TOKENS } from "./design-tokens"
-- Sem next/, shadcn, @/, react-router, three.js.
-
-═══════════════════════════════════════
-LISTA NEGRA (PROIBIDO — design amador)
-═══════════════════════════════════════
-- Gradiente violeta→rosa / purple-pink genérico de IA.
-- Grid 3 colunas idênticas, cards iguais, hero com "Lorem" ou título frouxo.
-- Fundo chapado único, sem profundidade (sem glows, mesh, noise, orbs).
-- Botões azul bootstrap, bordas grossas, sombra preta feia.
-- Fotos/placeholder loremflickr, unsplash inventado, picsum — PROIBIDO.
-- Página "só texto + 3 cards" sem ritmo, sem motion, sem hierarquia.
-- Tipografia pequena e tímida. Em 2026 o título DOMINA o viewport.
-
-═══════════════════════════════════════
-RECEITA VISUAL PREMIUM (OBRIGATÓRIO)
-═══════════════════════════════════════
-RAIZ:
-className={\`relative min-h-screen overflow-x-hidden antialiased \${DESIGN_TOKENS.colors.bg} \${DESIGN_TOKENS.colors.textPrimary}\`}
-
-ATMOSFERA (sempre no body do App):
-- Orbs/glow absolutos: blur-[100px] rounded-full com cores sutis (zinc/white em opacity baixa — sem purple-pink de IA).
-- Mesh: radial-gradient no topo (ellipse_80%_50%_at_50%_-20%, rgba(255,255,255,0.06), transparent).
-- Noise opcional via overlay pointer-events-none opacity-[0.03] (CSS repeating-linear-gradient fino).
-
-NAVBAR sticky:
-- glass: combine DESIGN_TOKENS.effects.glass + bg-zinc-950/70 border-b
-- Logo (img se houver URL do cliente) + links + CTA pill (DESIGN_TOKENS.colors.accent + text-zinc-950).
-- motion: slide down inicial.
-
-HERO cinematográfico (1º viewport):
-- Headline: DESIGN_TOKENS.typography.h1 (pode somar lg:text-8xl leading-[0.95])
-- Subtexto: DESIGN_TOKENS.typography.body + text-lg md:text-xl max-w-2xl
-- 2 CTAs: primário (DESIGN_TOKENS.colors.accent text-zinc-950 rounded-full) + secundário (border border-zinc-800 rounded-full)
-- Elemento visual "produto": mock de UI / bento flutuante / gráfico Recharts / cards empilhados com perspective + rotate — NÃO foto stock.
-- motion: headline y:40→0 opacity 0→1; CTA delay; mock float infinito suave (y: [0,-12,0]).
-
-BENTO GRID (features):
-- grid grid-cols-1 md:grid-cols-6 gap-4
-- Cards com spans diferentes (md:col-span-4 / md:col-span-2 / md:col-span-3)
-- Glass OBRIGATÓRIO: \`\${DESIGN_TOKENS.colors.card} \${DESIGN_TOKENS.effects.glass} \${DESIGN_TOKENS.effects.shadow} p-6 md:p-8\`
-- hover: border-zinc-700 + translate-y + whileHover
-- Cada card: ícone lucide em círculo + título (typography.h2 em escala menor ou font-semibold text-white) + body. Stagger whileInView.
-
-SCROLL MOTION (lei):
-- Toda seção importante: motion.section whileInView={{ opacity:1, y:0 }} initial={{ opacity:0, y:48 }} viewport={{ once:true, amount:0.25 }} transition={{ duration:0.7, ease:[0.22,1,0.36,1] }}
-- Listas: variants com staggerChildren 0.08–0.12
-- Pelo menos um efeito parallax leve com useScroll + useTransform no Hero ou em um bloco de prova social.
-- Hover em cards/botões: whileHover={{ scale: 1.02 }} / whileTap={{ scale: 0.98 }}
-
-PROVA SOCIAL / MÉTRICAS:
-- Números grandes (text-4xl font-bold tracking-tighter) + label zinc-500
-- Ou logo wall tipográfico (não imagens stock)
-
-CTA FINAL:
-- Bloco full-bleed com glow + headline curta + botão + contatos do cliente
-
-FOOTER rico:
-- Nome/logo, links, WhatsApp, Instagram, e-mail (dados reais se existirem no contexto)
-
-═══════════════════════════════════════
-INTERAÇÃO "3D" SEM THREE.JS
-═══════════════════════════════════════
-Simule profundidade com CSS:
-- perspective-[1200px] no container
-- rotateX / rotateY sutis no hover do mock (framer-motion)
-- Camadas (z-index) com blur diferente e sombra longa
-Isso é o padrão 2026 em Sandpack — realista e fluido.
-
-═══════════════════════════════════════
-COPY (pt-BR)
-═══════════════════════════════════════
-- Textos curtos, premium, sem clichê ("soluções inovadoras").
-- Fale como marca cara: concreto, aspiracional, confiante.
-- Tudo em português do Brasil.
-
-═══════════════════════════════════════
-CÓDIGO / SANDPACK
-═══════════════════════════════════════
-1. UM arquivo gerado pela IA: \`\`\`tsx path="/App.tsx" (design-tokens.ts já existe no Preview)
-2. export default function App() { ... }
-3. Componentes internos (Nav, Hero, Bento, Footer) no MESMO arquivo.
-4. import { motion, useScroll, useTransform } from "framer-motion"
-5. import { ... } from "lucide-react"
-6. import { DESIGN_TOKENS } from "./design-tokens" — OBRIGATÓRIO
-7. PROIBIDO: import de tailwindcss, .css locais, next/image, @/
-8. No chat: 2–3 frases em pt-BR dizendo o conceito visual; depois SÓ o bloco de código.
-9. Se o resultado parecer template genérico, você falhou — entregue algo que cause "uau".`;
-
-function mapToOpenRouterRole(
-  role: ApiChatMessage["role"],
-): "system" | "user" | "assistant" {
-  if (role === "ai" || role === "assistant") return "assistant";
-  if (role === "system") return "system";
-  return "user";
-}
 
 function buildUserContext(): string {
   const profile = useUserStore.getState();
@@ -213,115 +91,87 @@ function buildUserContext(): string {
   if (!hasProfile) return "";
 
   return `\n\n=== DADOS REAIS DO CLIENTE ===
-Você DEVE utilizar as informações abaixo sempre que for criar um Header, Footer ou seção de Contato:
 - Nome/Empresa: ${profile.name || "Não informado"}
 - Email: ${profile.email || "Não informado"}
 - WhatsApp: ${profile.whatsapp || "Não informado"}
 - Instagram: ${profile.instagram || "Não informado"}
-- URL da Logo: ${profile.logoUrl || "Não informado"}
-
-Se a URL da Logo for fornecida, use-a na tag <img> do Header no lugar de um texto ou ícone genérico.`;
+- URL da Logo: ${profile.logoUrl || "Não informado"}`;
 }
 
-const EDIT_SYSTEM_PROMPT = `Você é o X09 Studio em modo EDIÇÃO RÁPIDA.
-Tarefa: aplicar APENAS a alteração pedida no App.tsx existente.
-Regras:
-1. Preserve layout, design system (DESIGN_TOKENS), motion e estrutura — mude só o necessário.
-2. Se o arquivo ainda não importa tokens, adicione: import { DESIGN_TOKENS } from "./design-tokens"
-3. Resposta: 1–2 frases em pt-BR + único bloco \`\`\`tsx path="/App.tsx"\`\`\` com o arquivo COMPLETO atualizado.
-4. NUNCA importar tailwindcss. Use framer-motion e lucide-react se já estiverem no arquivo.
-5. Não redesenhe a página do zero.`;
+function apiBase(): string {
+  const env = import.meta.env.VITE_API_BASE as string | undefined;
+  if (env && env.trim()) return env.replace(/\/$/, "");
+  return "";
+}
 
-const ART_QA =
-  "\n\n[QA DE ARTE — FALHA = REFAZER]\n" +
-  "1) pt-BR em todo o UI.\n" +
-  "2) PROIBIDO: loremflickr, unsplash inventado, grid 3 cards iguais, gradiente purple-pink de IA, página sem motion, ícones lucide inexistentes (Instagram/WhatsApp/Facebook/Twitter/Linkedin).\n" +
-  "3) OBRIGATÓRIO: import { DESIGN_TOKENS } from \"./design-tokens\"; Hero com typography.h1; cards com colors.card + effects.glass; whileInView + stagger; CTAs rounded-full; ícones lucide válidos (AtSign/MessageCircle/Mail/Phone para contato).\n" +
-  "4) Pelo menos 1 uso de useScroll/useTransform OU float infinito no Hero.\n" +
-  '5) Resposta: 2–3 frases + único bloco ```tsx path="/App.tsx"```. NUNCA importar tailwindcss — Tailwind já está no CDN.\n' +
-  "6) Dados REAIS DO CLIENTE no Header/Footer/Contato quando existirem.\n" +
-  "7) Visual minimalista dark zinc — se parecer amador ou com cores hardcoded fora dos tokens, você falhou.";
+async function getAccessToken(): Promise<string | null> {
+  const { data } = await supabase.auth.getSession();
+  return data.session?.access_token ?? null;
+}
 
-function prepareMessages(
+/**
+ * Cliente do BFF /api/llm/stream — chaves LLM ficam só no servidor.
+ */
+export async function streamAIResponse(
+  onChunk: (text: string) => void,
+  onFinish: (text: string) => void,
   messages: ApiChatMessage[],
-  mode: ResolvedMode,
-  currentAppCode?: string,
-): { system: string; messages: Array<{ role: "system" | "user" | "assistant"; content: string }> } {
-  const userContext = buildUserContext();
-  const system =
-    mode === "edit"
-      ? EDIT_SYSTEM_PROMPT + userContext
-      : SYSTEM_PROMPT + userContext;
-
-  const formatted = messages
-    .filter((message) => message.content.trim().length > 0)
-    .map((msg) => ({ ...msg }));
-
-  const lastIndex = formatted.length - 1;
-  if (lastIndex >= 0 && formatted[lastIndex]!.role === "user") {
-    if (mode === "edit" && currentAppCode?.trim()) {
-      formatted[lastIndex]!.content +=
-        `\n\n=== App.tsx ATUAL (edite este arquivo) ===\n\`\`\`tsx\n${currentAppCode}\n\`\`\`\n` +
-        "Aplique só a alteração pedida e devolva o arquivo completo.";
-    } else {
-      formatted[lastIndex]!.content += ART_QA;
-    }
+  route: RouteContext,
+): Promise<ResolvedMode> {
+  const token = await getAccessToken();
+  if (!token) {
+    const errorText =
+      "Faça login para usar a geração com IA (sessão necessária no BFF).";
+    onChunk(errorText);
+    onFinish(errorText);
+    route.onEvent?.({ type: "error", message: errorText });
+    return "fast";
   }
 
-  return {
-    system,
-    messages: [
-      { role: "system", content: system },
-      ...formatted.map((message) => ({
-        role: mapToOpenRouterRole(message.role),
-        content: message.content,
-      })),
-    ],
-  };
-}
-
-async function streamOpenAICompatible(options: {
-  url: string;
-  apiKey: string;
-  model: string;
-  messages: Array<{ role: string; content: string }>;
-  temperature: number;
-  extraHeaders?: Record<string, string>;
-  providerLabel: string;
-  onChunk: (text: string) => void;
-  onFinish: (text: string) => void;
-}): Promise<void> {
+  let resolvedMode: ResolvedMode = "premium";
   let accumulated = "";
 
   try {
-    const response = await fetch(options.url, {
+    const response = await fetch(`${apiBase()}/api/llm/stream`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${options.apiKey}`,
-        ...options.extraHeaders,
+        Authorization: `Bearer ${token}`,
       },
+      signal: route.signal,
       body: JSON.stringify({
-        model: options.model,
-        stream: true,
-        temperature: options.temperature,
-        messages: options.messages,
+        messages,
+        preference: route.preference,
+        hasExistingApp: route.hasExistingApp,
+        currentAppCode: route.currentAppCode,
+        currentFiles: route.currentFiles,
+        userContext: buildUserContext(),
+        phase: route.phase ?? "auto",
+        repairIssues: route.repairIssues,
+        appSpec: route.appSpec,
       }),
     });
 
     if (!response.ok) {
-      const errorBody = await response.text();
-      const errorText = `Erro ${options.providerLabel} (${response.status}): ${errorBody || response.statusText}`;
-      options.onChunk(errorText);
-      options.onFinish(errorText);
-      return;
+      const body = await response.text();
+      let message = `Erro na API (${response.status})`;
+      try {
+        const parsed = JSON.parse(body) as { error?: string };
+        if (parsed.error) message = parsed.error;
+      } catch {
+        if (body) message = body.slice(0, 400);
+      }
+      onChunk(message);
+      onFinish(message);
+      route.onEvent?.({ type: "error", message });
+      return resolvedMode;
     }
 
     if (!response.body) {
-      const errorText = `A resposta de ${options.providerLabel} não incluiu um corpo com stream.`;
-      options.onChunk(errorText);
-      options.onFinish(errorText);
-      return;
+      const message = "A API não retornou stream.";
+      onChunk(message);
+      onFinish(message);
+      return resolvedMode;
     }
 
     const reader = response.body.getReader();
@@ -339,101 +189,73 @@ async function streamOpenAICompatible(options: {
       for (const rawLine of lines) {
         const line = rawLine.trim();
         if (!line || !line.startsWith("data:")) continue;
-
         const data = line.slice(5).trim();
         if (!data || data === "[DONE]") continue;
 
         try {
-          const parsed = JSON.parse(data) as {
-            choices?: Array<{ delta?: { content?: string } }>;
-          };
-          const delta = parsed.choices?.[0]?.delta?.content;
-          if (!delta) continue;
+          const event = JSON.parse(data) as GenerationEvent;
+          route.onEvent?.(event);
 
-          accumulated += delta;
-          options.onChunk(accumulated);
+          if (event.type === "delta") {
+            accumulated = event.text;
+            onChunk(accumulated);
+          } else if (event.type === "mode") {
+            resolvedMode = event.mode;
+          } else if (event.type === "done") {
+            accumulated = event.text;
+            resolvedMode = event.mode;
+            onChunk(accumulated);
+          } else if (event.type === "error") {
+            if (!accumulated) {
+              accumulated = event.message;
+              onChunk(accumulated);
+            }
+          }
         } catch {
-          // Ignora chunks SSE incompletos/inválidos
+          // ignore
         }
       }
     }
 
-    options.onFinish(accumulated);
+    onFinish(accumulated);
+    return resolvedMode;
   } catch (error) {
+    if (error instanceof DOMException && error.name === "AbortError") {
+      const message = "Geração cancelada.";
+      onChunk(accumulated || message);
+      onFinish(accumulated || message);
+      return resolvedMode;
+    }
     const message =
-      error instanceof Error ? error.message : "Falha desconhecida no streaming.";
-    const errorText = `Falha ao conectar em ${options.providerLabel}: ${message}`;
-    options.onChunk(accumulated || errorText);
-    options.onFinish(accumulated || errorText);
+      error instanceof Error
+        ? `Falha ao conectar no BFF: ${error.message}`
+        : "Falha ao conectar no BFF.";
+    onChunk(accumulated || message);
+    onFinish(accumulated || message);
+    route.onEvent?.({ type: "error", message });
+    return resolvedMode;
   }
 }
 
-/**
- * Streaming com roteamento automático:
- * - edit    → Groq (direto), fallback Gemini via OpenRouter
- * - fast    → Gemini Flash (OpenRouter)
- * - premium → Claude Sonnet (OpenRouter)
- *
- * Retorna o modo efetivo usado (útil para UI).
- */
-export async function streamAIResponse(
-  onChunk: (text: string) => void,
-  onFinish: (text: string) => void,
-  messages: ApiChatMessage[],
-  route: RouteContext,
-): Promise<ResolvedMode> {
-  const lastUser = [...messages].reverse().find((m) => m.role === "user");
-  const mode = resolveGenerationMode(lastUser?.content ?? "", route);
-  const prepared = prepareMessages(messages, mode, route.currentAppCode);
-
-  if (mode === "edit") {
-    const groqKey = import.meta.env.VITE_GROQ_API_KEY as string | undefined;
-    if (groqKey && !groqKey.includes("sua-chave")) {
-      await streamOpenAICompatible({
-        url: "https://api.groq.com/openai/v1/chat/completions",
-        apiKey: groqKey,
-        model: GROQ_MODEL,
-        messages: prepared.messages,
-        temperature: 0.4,
-        providerLabel: "Groq",
-        onChunk,
-        onFinish,
-      });
-      return mode;
-    }
-    // Sem chave Groq → cai no Gemini (ainda é "edit" no prompt)
+/** Mantido no client só para preview de UI antes do stream. */
+export function resolveGenerationMode(
+  prompt: string,
+  ctx: Pick<RouteContext, "preference" | "hasExistingApp">,
+): ResolvedMode {
+  if (ctx.preference === "premium") return "premium";
+  const text = prompt.trim();
+  const short = text.length < 220;
+  const editHints =
+    /\b(troca|muda|altera|ajusta|corrige|adiciona|remove|whatsapp|cor|texto|título)\b/i;
+  const createHints = /\b(cria|gerar|landing|site|app|dashboard|crm|saas)\b/i;
+  if (
+    ctx.hasExistingApp &&
+    short &&
+    editHints.test(text) &&
+    !createHints.test(text)
+  ) {
+    return "edit";
   }
-
-  const openRouterKey = import.meta.env.VITE_OPENROUTER_API_KEY as
-    | string
-    | undefined;
-
-  if (!openRouterKey || openRouterKey.includes("sua-chave-aqui")) {
-    const errorText =
-      mode === "edit"
-        ? "Configure `VITE_GROQ_API_KEY` (edições) ou `VITE_OPENROUTER_API_KEY` no `.env.local` e reinicie o `npm run dev`."
-        : "Configure `VITE_OPENROUTER_API_KEY` no arquivo `.env.local` e reinicie o `npm run dev`.";
-    onChunk(errorText);
-    onFinish(errorText);
-    return mode;
-  }
-
-  const openRouterMode = mode === "premium" ? "premium" : "fast";
-
-  await streamOpenAICompatible({
-    url: "https://openrouter.ai/api/v1/chat/completions",
-    apiKey: openRouterKey,
-    model: OPENROUTER_MODEL[openRouterMode],
-    messages: prepared.messages,
-    temperature: mode === "edit" ? 0.4 : 0.85,
-    extraHeaders: {
-      "HTTP-Referer": "http://localhost:5173",
-      "X-Title": "x09 Studio",
-    },
-    providerLabel: "OpenRouter",
-    onChunk,
-    onFinish,
-  });
-
-  return mode;
+  if (!ctx.hasExistingApp || createHints.test(text)) return "premium";
+  return "fast";
 }

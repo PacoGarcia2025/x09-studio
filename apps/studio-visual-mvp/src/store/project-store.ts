@@ -17,6 +17,8 @@ type ProjectRow = ProjectSummary & {
   user_id: string;
   files: Record<string, string> | null;
   chat_history: ChatMessage[] | null;
+  app_spec?: unknown;
+  metrics?: unknown;
 };
 
 type ProjectState = {
@@ -35,6 +37,8 @@ type ProjectState = {
   createNewProject: () => void;
 };
 
+const TABLES = ["visual_projects", "projects"] as const;
+
 function deriveProjectName(messages: ChatMessage[]): string {
   const firstUser = messages.find(
     (message) => message.role === "user" && message.content.trim(),
@@ -43,6 +47,18 @@ function deriveProjectName(messages: ChatMessage[]): string {
 
   const cleaned = firstUser.content.trim().replace(/\s+/g, " ");
   return cleaned.length > 48 ? `${cleaned.slice(0, 48)}…` : cleaned;
+}
+
+async function upsertProject(payload: Record<string, unknown>) {
+  let lastError: string | null = null;
+  for (const table of TABLES) {
+    const { error } = await supabase.from(table).upsert(payload, {
+      onConflict: "id",
+    });
+    if (!error) return { error: null, table };
+    lastError = error.message;
+  }
+  return { error: lastError ?? "Falha ao salvar", table: null };
 }
 
 export const useProjectStore = create<ProjectState>((set, get) => ({
@@ -78,21 +94,27 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
 
     set({ isLoadingList: true, lastError: null });
 
-    const { data, error } = await supabase
-      .from("projects")
-      .select("id, name, created_at, updated_at")
-      .eq("user_id", userId)
-      .order("updated_at", { ascending: false });
+    for (const table of TABLES) {
+      const { data, error } = await supabase
+        .from(table)
+        .select("id, name, created_at, updated_at")
+        .eq("user_id", userId)
+        .order("updated_at", { ascending: false });
 
-    set({ isLoadingList: false });
-
-    if (error) {
-      set({ lastError: error.message });
-      return { error: error.message };
+      if (!error) {
+        set({
+          isLoadingList: false,
+          projectsList: (data as ProjectSummary[]) ?? [],
+        });
+        return { error: null };
+      }
     }
 
-    set({ projectsList: (data as ProjectSummary[]) ?? [] });
-    return { error: null };
+    set({
+      isLoadingList: false,
+      lastError: "Não foi possível listar projetos.",
+    });
+    return { error: "Não foi possível listar projetos." };
   },
 
   saveProject: async () => {
@@ -101,7 +123,8 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       return { error: "Faça login para salvar o projeto." };
     }
 
-    const { files, messages } = useStudioStore.getState();
+    const studio = useStudioStore.getState();
+    const { files, messages, lastAppSpec, metrics } = studio;
     const existingId = get().currentProjectId;
     const projectId = existingId ?? crypto.randomUUID();
     const name =
@@ -118,19 +141,18 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       name,
       files,
       chat_history: messages,
+      app_spec: lastAppSpec,
+      metrics,
       updated_at: now,
       ...(existingId ? {} : { created_at: now }),
     };
 
-    const { error } = await supabase.from("projects").upsert(payload, {
-      onConflict: "id",
-    });
-
+    const result = await upsertProject(payload);
     set({ isSaving: false });
 
-    if (error) {
-      set({ lastError: error.message });
-      return { error: error.message };
+    if (result.error) {
+      set({ lastError: result.error });
+      return { error: result.error };
     }
 
     set({
@@ -139,9 +161,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       lastSavedAt: Date.now(),
     });
 
-    // Atualiza a lista em background
     void get().fetchUserProjects();
-
     return { error: null, id: projectId };
   },
 
@@ -153,23 +173,24 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
 
     set({ lastError: null });
 
-    const { data, error } = await supabase
-      .from("projects")
-      .select("*")
-      .eq("id", id)
-      .eq("user_id", userId)
-      .maybeSingle();
-
-    if (error) {
-      set({ lastError: error.message });
-      return { error: error.message };
+    let row: ProjectRow | null = null;
+    for (const table of TABLES) {
+      const { data, error } = await supabase
+        .from(table)
+        .select("*")
+        .eq("id", id)
+        .eq("user_id", userId)
+        .maybeSingle();
+      if (!error && data) {
+        row = data as ProjectRow;
+        break;
+      }
     }
 
-    if (!data) {
+    if (!row) {
       return { error: "Projeto não encontrado." };
     }
 
-    const row = data as ProjectRow;
     const files =
       row.files && typeof row.files === "object" && Object.keys(row.files).length > 0
         ? row.files
