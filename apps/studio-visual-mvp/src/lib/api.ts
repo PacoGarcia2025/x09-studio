@@ -87,7 +87,10 @@ Ano: 2026. O usuário pagaria R$ 30.000+ por este site. Se parecer template Boot
 PACOTES DISPONÍVEIS (USE DE VERDADE)
 ═══════════════════════════════════════
 - framer-motion (OBRIGATÓRIO): motion, AnimatePresence, useScroll, useTransform, useSpring, staggerChildren, whileInView, whileHover, whileTap.
-- lucide-react (OBRIGATÓRIO): ícones em TODOS os cards, CTAs, lista de features, contatos. Só ícones que existem (Sparkles, Zap, Shield, Rocket, ArrowUpRight, Play, Check, Globe, Cpu, Layers, Hexagon…).
+- lucide-react (OBRIGATÓRIO): ícones em TODOS os cards, CTAs, lista de features, contatos.
+  Só ícones que EXISTEM no pacote. Lista segura: Sparkles, Zap, Shield, Rocket, ArrowUpRight, Play, Check, Globe, Cpu, Layers, Hexagon, Mail, Phone, MessageCircle, AtSign, MapPin, Home, Building2, Users, Star, TrendingUp, ArrowRight.
+  PROIBIDO importar do lucide: Instagram, Facebook, Twitter, Linkedin, WhatsApp, Youtube, TikTok — esses NÃO existem e quebram o Preview.
+  Para redes/contato use: AtSign (Instagram), MessageCircle (WhatsApp), Mail (e-mail), Phone (telefone), Share2 (social genérico).
 - recharts: use em pelo menos UMA seção (sparkline, barras ou área) quando o produto for SaaS/tech/dados.
 - React + Tailwind via CDN (já injetado no preview). NUNCA faça \`import 'tailwindcss'\` nem \`import 'tailwindcss/tailwind.css'\` — isso quebra o Sandpack.
 - Sem next/, shadcn, @/, react-router, three.js.
@@ -219,8 +222,8 @@ Regras:
 const ART_QA =
   "\n\n[QA DE ARTE — FALHA = REFAZER]\n" +
   "1) pt-BR em todo o UI.\n" +
-  "2) PROIBIDO: loremflickr, unsplash inventado, grid 3 cards iguais, gradiente purple-pink de IA, página sem motion.\n" +
-  "3) OBRIGATÓRIO: Hero cinematográfico (título enorme), orbs/glow, bento assimétrico, whileInView + stagger, CTAs rounded-full, ícones lucide em todos os cards, mock 3D com perspective/rotate.\n" +
+  "2) PROIBIDO: loremflickr, unsplash inventado, grid 3 cards iguais, gradiente purple-pink de IA, página sem motion, ícones lucide inexistentes (Instagram/WhatsApp/Facebook/Twitter/Linkedin).\n" +
+  "3) OBRIGATÓRIO: Hero cinematográfico (título enorme), orbs/glow, bento assimétrico, whileInView + stagger, CTAs rounded-full, ícones lucide válidos (AtSign/MessageCircle/Mail/Phone para contato), mock 3D com perspective/rotate.\n" +
   "4) Pelo menos 1 uso de useScroll/useTransform OU float infinito no Hero.\n" +
   '5) Resposta: 2–3 frases + único bloco ```tsx path="/App.tsx"```. NUNCA importar tailwindcss — Tailwind já está no CDN.\n' +
   "6) Dados REAIS DO CLIENTE no Header/Footer/Contato quando existirem.\n" +

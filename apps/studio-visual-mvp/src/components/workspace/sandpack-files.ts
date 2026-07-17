@@ -100,12 +100,32 @@ function normalizeVirtualPath(path: string): string {
 }
 
 /**
+ * Ícones de marca que a IA importa do lucide-react mas não existem (ou foram removidos).
+ * Substituímos no import e no JSX para o Preview não quebrar.
+ */
+const LUCIDE_ICON_ALIASES: Record<string, string> = {
+  Instagram: "AtSign",
+  Facebook: "Share2",
+  Twitter: "AtSign",
+  Linkedin: "Briefcase",
+  LinkedIn: "Briefcase",
+  WhatsApp: "MessageCircle",
+  Whatsapp: "MessageCircle",
+  Youtube: "Play",
+  YouTube: "Play",
+  TikTok: "Music",
+  Tiktok: "Music",
+  XIcon: "AtSign",
+};
+
+/**
  * Corrige padrões comuns da IA que quebram o Sandpack:
  * - import de tailwindcss (Tailwind já vem via CDN no index.html)
  * - imports de CSS locais inexistentes
+ * - ícones lucide inexistentes (Instagram, WhatsApp, etc.)
  */
 export function sanitizeSandpackCode(code: string): string {
-  return code
+  let next = code
     .replace(
       /^\s*import\s+['"]tailwindcss(?:\/[^'"]*)?['"]\s*;?\s*$/gm,
       "",
@@ -113,8 +133,49 @@ export function sanitizeSandpackCode(code: string): string {
     .replace(
       /^\s*import\s+['"]\.\/(?:index|styles|globals|app)\.css['"]\s*;?\s*$/gm,
       "",
-    )
-    .replace(/\n{3,}/g, "\n\n");
+    );
+
+  next = rewriteBrokenLucideIcons(next);
+  return next.replace(/\n{3,}/g, "\n\n");
+}
+
+function rewriteBrokenLucideIcons(code: string): string {
+  const lucideImport =
+    /import\s*\{([^}]+)\}\s*from\s*['"]lucide-react['"]\s*;?/g;
+
+  return code.replace(lucideImport, (full, namesBlock: string) => {
+    const names = namesBlock.split(",").map((part) => part.trim()).filter(Boolean);
+    const rewritten: string[] = [];
+    const seen = new Set<string>();
+
+    for (const raw of names) {
+      // suporte a `Instagram as Ig` / `Instagram as InstagramIcon`
+      const [original, alias] = raw.split(/\s+as\s+/).map((s) => s.trim());
+      if (!original) continue;
+
+      const mapped = LUCIDE_ICON_ALIASES[original] ?? original;
+      const localName = alias || original;
+
+      // Se o ícone era inválido e usava o mesmo nome no JSX (<Instagram />),
+      // mantemos o nome local via alias: `AtSign as Instagram`
+      if (mapped !== original && !alias) {
+        const entry = `${mapped} as ${original}`;
+        if (!seen.has(entry) && !seen.has(mapped)) {
+          rewritten.push(entry);
+          seen.add(entry);
+        }
+        continue;
+      }
+
+      const entry = alias ? `${mapped} as ${localName}` : mapped;
+      if (!seen.has(entry)) {
+        rewritten.push(entry);
+        seen.add(entry);
+      }
+    }
+
+    return `import { ${rewritten.join(", ")} } from "lucide-react";`;
+  });
 }
 
 /**
