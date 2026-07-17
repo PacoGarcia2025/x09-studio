@@ -115,7 +115,7 @@ export async function streamAIResponse(
         "X-Title": "x09 Studio",
       },
       body: JSON.stringify({
-        model: "openai/gpt-4o",
+        model: "anthropic/claude-3.5-sonnet",
         stream: true,
         messages: payloadMessages,
       }),
