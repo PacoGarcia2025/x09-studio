@@ -18,7 +18,7 @@ PACOTES DISPONÍVEIS (USE DE VERDADE)
 - framer-motion (OBRIGATÓRIO): motion, AnimatePresence, useScroll, useTransform, useSpring, staggerChildren, whileInView, whileHover, whileTap.
 - lucide-react (OBRIGATÓRIO): ícones em TODOS os cards, CTAs, lista de features, contatos. Só ícones que existem (Sparkles, Zap, Shield, Rocket, ArrowUpRight, Play, Check, Globe, Cpu, Layers, Hexagon…).
 - recharts: use em pelo menos UMA seção (sparkline, barras ou área) quando o produto for SaaS/tech/dados.
-- React + Tailwind via CDN (já injetado no preview). NUNCA faça `import 'tailwindcss'` nem `import 'tailwindcss/tailwind.css'` — isso quebra o Sandpack.
+- React + Tailwind via CDN (já injetado no preview). NUNCA faça \`import 'tailwindcss'\` nem \`import 'tailwindcss/tailwind.css'\` — isso quebra o Sandpack.
 - Sem next/, shadcn, @/, react-router, three.js.
 
 ═══════════════════════════════════════
