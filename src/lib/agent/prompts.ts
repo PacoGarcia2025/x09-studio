@@ -36,18 +36,19 @@ import { Button, Card, Section, Navbar, FormField, DataTable, EmptyState, AppShe
 Base dark: DESIGN_TOKENS.colors.bg / card / glass.
 MAS: PROIBIDO entregar site 100% preto-e-branco.
 Todo produto DEVE ter UMA cor de marca dominante (escolha em DESIGN_TOKENS.brands OU classes Tailwind livres):
+indigo (padrão SaaS), cyan, emerald, rose, orange.
+- tech / SaaS → indigo ou cyan
 - imobiliária / luxury → orange/amber
-- tech / SaaS → cyan
 - saúde / eco → emerald
 - moda / lifestyle → rose
 - criativo → violet
 
 USE de verdade:
-- Hero: gradiente cinematográfico (ex.: from-zinc-950 via-zinc-900 to-orange-600) OU mesh + orbs coloridos
-- CTAs principais: cor de marca (bg-orange-500, bg-cyan-400…) — NÃO botão branco genérico em todo site
+- Hero: gradiente cinematográfico (ex.: from-zinc-950 via-zinc-900 to-indigo-950) OU mesh + orbs coloridos
+- CTAs principais: cor de marca (bg-indigo-500, bg-cyan-400…) — NÃO botão branco genérico em todo site
 - Orbs/glow: blur-[100px] com a cor de marca em opacity baixa
 - Hover cards: glow da marca (shadow com rgba da accent)
-- className no Button pode SOBRESCREVER o variant primary: className="bg-orange-500 text-zinc-950"
+- className no Button pode SOBRESCREVER o variant primary: className="bg-indigo-500 text-white"
 
 Hardcoded Tailwind de accent É PERMITIDO E OBRIGATÓRIO para personalidade.
 PROIBIDO apenas: purple-pink genérico de IA, loremflickr, templates 3 cards iguais sem rhythm.
@@ -110,7 +111,7 @@ export function buildArtQa(): string {
     "\n\n[QA DE ARTE — FALHA = REFAZER]\n" +
     "1) pt-BR em todo o UI.\n" +
     "2) PROIBIDO: site só preto/branco, loremflickr, grid 3 cards iguais, purple-pink genérico, ícones lucide inexistentes, tutorial sem código.\n" +
-    "3) OBRIGATÓRIO: cor de marca (orange/cyan/emerald/rose/violet), Hero com gradiente ou orbs coloridos, DESIGN_TOKENS + kit UI, motion, CTAs coloridos.\n" +
+    "3) OBRIGATÓRIO: cor de marca (indigo/cyan/emerald/rose/orange), Hero com gradiente ou orbs coloridos, DESIGN_TOKENS + kit UI, motion, CTAs coloridos.\n" +
     "4) Multi-arquivo com path= em cada bloco.\n" +
     "5) /lib/data.ts com mocks se houver dados/auth.\n" +
     "6) Pareça produto de R$30k — se parecer Canva/Wix/P&B genérico, falhou."

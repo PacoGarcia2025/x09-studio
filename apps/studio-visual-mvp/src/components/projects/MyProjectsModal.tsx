@@ -7,6 +7,7 @@ import { useProjectStore } from "@/store/project-store";
 type MyProjectsModalProps = {
   open: boolean;
   onClose: () => void;
+  onOpened?: () => void;
 };
 
 function formatDate(iso: string): string {
@@ -23,7 +24,7 @@ function formatDate(iso: string): string {
   }
 }
 
-export function MyProjectsModal({ open, onClose }: MyProjectsModalProps) {
+export function MyProjectsModal({ open, onClose, onOpened }: MyProjectsModalProps) {
   const projectsList = useProjectStore((state) => state.projectsList);
   const isLoadingList = useProjectStore((state) => state.isLoadingList);
   const currentProjectId = useProjectStore((state) => state.currentProjectId);
@@ -63,6 +64,7 @@ export function MyProjectsModal({ open, onClose }: MyProjectsModalProps) {
       return;
     }
 
+    onOpened?.();
     onClose();
   }
 
@@ -76,11 +78,11 @@ export function MyProjectsModal({ open, onClose }: MyProjectsModalProps) {
       />
 
       <div className="relative z-10 flex max-h-[85vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-border bg-surface shadow-glow">
-        <div className="pointer-events-none absolute inset-x-0 top-0 h-28 bg-gradient-to-br from-violet-600/20 via-fuchsia-500/10 to-transparent" />
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-28 bg-gradient-to-br from-cyan-500/20 via-sky-500/10 to-transparent" />
 
         <div className="relative flex items-start justify-between border-b border-border px-6 py-5">
           <div className="flex items-center gap-3">
-            <div className="grid h-10 w-10 place-items-center rounded-xl bg-gradient-to-br from-violet-600 to-fuchsia-600 text-white shadow-glow">
+            <div className="grid h-10 w-10 place-items-center rounded-xl bg-gradient-to-br from-cyan-400 to-sky-600 text-zinc-950 shadow-glow">
               <FolderOpen className="h-5 w-5" />
             </div>
             <div>
@@ -157,6 +159,20 @@ export function MyProjectsModal({ open, onClose }: MyProjectsModalProps) {
                     <p className="text-xs text-secondary">
                       {formatDate(project.updated_at || project.created_at)}
                     </p>
+                    {project.published_url ? (
+                      <p className="mt-2 truncate text-[11px] text-cyan-300">
+                        {project.published_url}
+                      </p>
+                    ) : project.publish_status ? (
+                      <p className="mt-2 text-[11px] text-secondary">
+                        Deploy: {project.publish_status}
+                      </p>
+                    ) : null}
+                    {project.github_repo_full_name ? (
+                      <p className="mt-1 truncate text-[11px] text-secondary">
+                        {project.github_repo_full_name}
+                      </p>
+                    ) : null}
                     {isActive ? (
                       <p className="mt-2 text-[11px] font-medium text-accent">
                         Projeto atual

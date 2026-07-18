@@ -59,6 +59,8 @@ export type RouteContext = {
   appSpec?: unknown;
   signal?: AbortSignal;
   onEvent?: (event: GenerationEvent) => void;
+  clientRequestId?: string;
+  onInsufficientCredits?: (message: string) => void;
 };
 
 export const MODE_LABELS: Record<ResolvedMode, string> = {
@@ -130,6 +132,7 @@ export async function streamAIResponse(
 
   let resolvedMode: ResolvedMode = "premium";
   let accumulated = "";
+  const clientRequestId = route.clientRequestId || crypto.randomUUID();
 
   try {
     const response = await fetch(`${apiBase()}/api/llm/stream`, {
@@ -137,6 +140,7 @@ export async function streamAIResponse(
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
+        "X-Client-Request-Id": clientRequestId,
       },
       signal: route.signal,
       body: JSON.stringify({
@@ -149,6 +153,7 @@ export async function streamAIResponse(
         phase: route.phase ?? "auto",
         repairIssues: route.repairIssues,
         appSpec: route.appSpec,
+        clientRequestId,
       }),
     });
 
@@ -156,10 +161,16 @@ export async function streamAIResponse(
       const body = await response.text();
       let message = `Erro na API (${response.status})`;
       try {
-        const parsed = JSON.parse(body) as { error?: string };
+        const parsed = JSON.parse(body) as { error?: string; code?: string };
         if (parsed.error) message = parsed.error;
+        if (response.status === 402 || parsed.code === "insufficient_credits") {
+          route.onInsufficientCredits?.(message);
+        }
       } catch {
         if (body) message = body.slice(0, 400);
+        if (response.status === 402) {
+          route.onInsufficientCredits?.(message);
+        }
       }
       onChunk(message);
       onFinish(message);

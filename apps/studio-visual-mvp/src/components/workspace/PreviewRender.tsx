@@ -10,7 +10,7 @@ export function PreviewRender() {
         <SandpackPreview
           showNavigator={false}
           showOpenInCodeSandbox={false}
-          showRefreshButton
+          showRefreshButton={false}
           style={{ height: "100%" }}
         />
       </SandpackLayout>

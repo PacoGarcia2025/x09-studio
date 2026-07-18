@@ -1,4 +1,4 @@
-import { Loader2, Lock, Mail, UserPlus, X } from "lucide-react";
+import { GitBranch, Loader2, Lock, Mail, UserPlus, X } from "lucide-react";
 import { FormEvent, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -41,6 +41,32 @@ export function AuthModal({ open, onClose }: AuthModalProps) {
   }, [open, onClose]);
 
   if (!open) return null;
+
+  async function handleGitHubOAuth() {
+    setError(null);
+    setInfo(null);
+    setLoading(true);
+    try {
+      const redirectTo = `${window.location.origin}/`;
+      // Supabase exchange happens on Next BFF when using hosted callback;
+      // for Vite MVP we use the current origin + Supabase redirect allow-list.
+      const { error: oauthError } = await supabase.auth.signInWithOAuth({
+        provider: "github",
+        options: {
+          redirectTo,
+          scopes: "read:user user:email",
+          queryParams: { access_type: "online" },
+        },
+      });
+      if (oauthError) setError(oauthError.message);
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Falha ao iniciar login GitHub.",
+      );
+    } finally {
+      setLoading(false);
+    }
+  }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -157,6 +183,27 @@ export function AuthModal({ open, onClose }: AuthModalProps) {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4 px-6 py-6">
+          <Button
+            type="button"
+            variant="ghost"
+            disabled={loading}
+            onClick={() => void handleGitHubOAuth()}
+            className="w-full border border-white/15 bg-white/5 text-primary hover:bg-white/10"
+          >
+            {loading ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <GitBranch className="h-4 w-4" />
+            )}
+            Continuar com GitHub
+          </Button>
+
+          <div className="flex items-center gap-3 text-[11px] uppercase tracking-wide text-secondary">
+            <span className="h-px flex-1 bg-white/10" />
+            ou e-mail
+            <span className="h-px flex-1 bg-white/10" />
+          </div>
+
           <div className="space-y-1.5">
             <label
               htmlFor="auth-email"

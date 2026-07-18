@@ -23,7 +23,10 @@ jobs:
       - name: Lint
         run: npm run lint
 
-      - name: Test agent
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Test (agent, billing, github, deploy)
         run: npm test
 
       - name: Build

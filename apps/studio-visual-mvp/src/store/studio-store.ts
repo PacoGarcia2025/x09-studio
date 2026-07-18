@@ -35,6 +35,8 @@ export type GenerationMetrics = {
   firstBuildOk?: boolean;
 };
 
+export type BuildMode = "build" | "plan";
+
 const MAX_REPAIR_CYCLES = 3;
 
 const welcomeMessage: ChatMessage = {
@@ -50,6 +52,7 @@ type StudioState = {
   agentPhase: AgentPhase | null;
   agentPhaseLabel: string | null;
   generationPreference: GenerationPreference;
+  buildMode: BuildMode;
   lastResolvedMode: ResolvedMode | null;
   lastAppSpec: unknown | null;
   previewError: RepairIssue | null;
@@ -61,9 +64,12 @@ type StudioState = {
   versions: StudioVersion[];
   activeVersionId: string | null;
   abortController: AbortController | null;
+  upgradeRequired: boolean;
   addMessage: (message: ChatMessage) => void;
   setGenerationPreference: (preference: GenerationPreference) => void;
+  setBuildMode: (mode: BuildMode) => void;
   setPreviewError: (issue: RepairIssue | null) => void;
+  clearUpgradeRequired: () => void;
   sendMessage: (prompt: string) => Promise<void>;
   stopGeneration: () => void;
   requestRepair: (issues: RepairIssue[]) => Promise<void>;
@@ -151,6 +157,7 @@ export const useStudioStore = create<StudioState>((set, get) => ({
   agentPhase: null,
   agentPhaseLabel: null,
   generationPreference: "auto",
+  buildMode: "build",
   lastResolvedMode: null,
   lastAppSpec: null,
   previewError: null,
@@ -165,6 +172,7 @@ export const useStudioStore = create<StudioState>((set, get) => ({
   versions: [],
   activeVersionId: null,
   abortController: null,
+  upgradeRequired: false,
 
   addMessage: (message) =>
     set((state) => ({
@@ -174,7 +182,11 @@ export const useStudioStore = create<StudioState>((set, get) => ({
   setGenerationPreference: (preference) =>
     set({ generationPreference: preference }),
 
+  setBuildMode: (mode) => set({ buildMode: mode }),
+
   setPreviewError: (issue) => set({ previewError: issue }),
+
+  clearUpgradeRequired: () => set({ upgradeRequired: false }),
 
   stopGeneration: () => {
     get().abortController?.abort();
@@ -346,10 +358,12 @@ export const useStudioStore = create<StudioState>((set, get) => ({
           hasExistingApp,
           currentAppCode: currentApp,
           currentFiles: get().files,
-          phase: "auto",
+          phase: get().buildMode === "plan" ? "plan" : "auto",
           appSpec: get().lastAppSpec ?? undefined,
           signal: abortController.signal,
           onEvent: handleEvent,
+          clientRequestId: crypto.randomUUID(),
+          onInsufficientCredits: () => set({ upgradeRequired: true }),
         },
       );
 

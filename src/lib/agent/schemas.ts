@@ -122,6 +122,7 @@ export const StreamRequestSchema = z.object({
     .default("auto"),
   repairIssues: z.array(RepairIssueSchema).max(30).optional(),
   appSpec: AppSpecSchema.optional(),
+  clientRequestId: z.string().uuid().optional(),
 });
 export type StreamRequest = z.infer<typeof StreamRequestSchema>;
 

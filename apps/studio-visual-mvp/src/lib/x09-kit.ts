@@ -22,8 +22,8 @@ export function Button({
     lg: "px-6 py-3 text-base",
   };
   const variants = {
-    primary: \`\${DESIGN_TOKENS.colors.accent} \${DESIGN_TOKENS.colors.accentText} hover:brightness-110\`,
-    secondary: "border border-zinc-700 bg-transparent text-white hover:bg-white/5",
+    primary: \`\${DESIGN_TOKENS.colors.accent} \${DESIGN_TOKENS.colors.glow}\`,
+    secondary: "border border-white/15 bg-white/[0.03] text-white hover:bg-white/5",
     ghost: "text-zinc-300 hover:bg-white/5",
   };
   return (
@@ -109,8 +109,8 @@ export function Navbar({
   onNavigate?: (id: string) => void;
 }) {
   return (
-    <header className={\`sticky top-0 z-40 border-b border-zinc-800/80 bg-zinc-950/70 \${DESIGN_TOKENS.effects.glass}\`}>
-      <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
+    <header className={\`sticky top-0 z-40 border-b \${DESIGN_TOKENS.colors.border} bg-white/[0.03] backdrop-blur-md\`}>
+      <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-3.5">
         <button
           type="button"
           onClick={() => onNavigate?.("home")}
@@ -124,7 +124,7 @@ export function Navbar({
               key={link.id}
               type="button"
               onClick={() => onNavigate?.(link.id)}
-              className="text-sm text-zinc-400 transition hover:text-white"
+              className={\`text-sm \${DESIGN_TOKENS.colors.textSecondary} transition hover:text-white\`}
             >
               {link.label}
             </button>
@@ -257,7 +257,7 @@ export function AppShell({
 }) {
   return (
     <div className={\`relative min-h-screen overflow-x-hidden antialiased \${DESIGN_TOKENS.colors.bg} \${DESIGN_TOKENS.colors.textPrimary}\`}>
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_-20%,rgba(255,255,255,0.06),transparent)]" />
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_70%_45%_at_50%_-10%,rgba(99,102,241,0.22),transparent)]" />
       <Navbar brand={brand} links={links} cta={cta} onNavigate={onNavigate} />
       <main className="relative z-10">{children}</main>
     </div>

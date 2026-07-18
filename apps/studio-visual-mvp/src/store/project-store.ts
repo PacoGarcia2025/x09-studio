@@ -11,6 +11,9 @@ export type ProjectSummary = {
   name: string;
   created_at: string;
   updated_at: string;
+  published_url?: string | null;
+  publish_status?: string | null;
+  github_repo_full_name?: string | null;
 };
 
 type ProjectRow = ProjectSummary & {
@@ -37,7 +40,7 @@ type ProjectState = {
   createNewProject: () => void;
 };
 
-const TABLES = ["visual_projects", "projects"] as const;
+const TABLE = "visual_projects";
 
 function deriveProjectName(messages: ChatMessage[]): string {
   const firstUser = messages.find(
@@ -47,18 +50,6 @@ function deriveProjectName(messages: ChatMessage[]): string {
 
   const cleaned = firstUser.content.trim().replace(/\s+/g, " ");
   return cleaned.length > 48 ? `${cleaned.slice(0, 48)}…` : cleaned;
-}
-
-async function upsertProject(payload: Record<string, unknown>) {
-  let lastError: string | null = null;
-  for (const table of TABLES) {
-    const { error } = await supabase.from(table).upsert(payload, {
-      onConflict: "id",
-    });
-    if (!error) return { error: null, table };
-    lastError = error.message;
-  }
-  return { error: lastError ?? "Falha ao salvar", table: null };
 }
 
 export const useProjectStore = create<ProjectState>((set, get) => ({
@@ -94,27 +85,27 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
 
     set({ isLoadingList: true, lastError: null });
 
-    for (const table of TABLES) {
-      const { data, error } = await supabase
-        .from(table)
-        .select("id, name, created_at, updated_at")
-        .eq("user_id", userId)
-        .order("updated_at", { ascending: false });
+    const { data, error } = await supabase
+      .from(TABLE)
+      .select(
+        "id, name, created_at, updated_at, published_url, publish_status, github_repo_full_name",
+      )
+      .eq("user_id", userId)
+      .order("updated_at", { ascending: false });
 
-      if (!error) {
-        set({
-          isLoadingList: false,
-          projectsList: (data as ProjectSummary[]) ?? [],
-        });
-        return { error: null };
-      }
+    if (error) {
+      set({
+        isLoadingList: false,
+        lastError: "Não foi possível listar projetos.",
+      });
+      return { error: "Não foi possível listar projetos." };
     }
 
     set({
       isLoadingList: false,
-      lastError: "Não foi possível listar projetos.",
+      projectsList: (data as ProjectSummary[]) ?? [],
     });
-    return { error: "Não foi possível listar projetos." };
+    return { error: null };
   },
 
   saveProject: async () => {
@@ -147,12 +138,15 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       ...(existingId ? {} : { created_at: now }),
     };
 
-    const result = await upsertProject(payload);
+    const { error } = await supabase.from(TABLE).upsert(payload, {
+      onConflict: "id",
+    });
+
     set({ isSaving: false });
 
-    if (result.error) {
-      set({ lastError: result.error });
-      return { error: result.error };
+    if (error) {
+      set({ lastError: error.message });
+      return { error: error.message };
     }
 
     set({
@@ -173,24 +167,18 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
 
     set({ lastError: null });
 
-    let row: ProjectRow | null = null;
-    for (const table of TABLES) {
-      const { data, error } = await supabase
-        .from(table)
-        .select("*")
-        .eq("id", id)
-        .eq("user_id", userId)
-        .maybeSingle();
-      if (!error && data) {
-        row = data as ProjectRow;
-        break;
-      }
-    }
+    const { data, error } = await supabase
+      .from(TABLE)
+      .select("*")
+      .eq("id", id)
+      .eq("user_id", userId)
+      .maybeSingle();
 
-    if (!row) {
+    if (error || !data) {
       return { error: "Projeto não encontrado." };
     }
 
+    const row = data as ProjectRow;
     const files =
       row.files && typeof row.files === "object" && Object.keys(row.files).length > 0
         ? row.files

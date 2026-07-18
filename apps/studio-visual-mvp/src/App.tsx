@@ -1,21 +1,28 @@
 import { SandpackProvider } from "@codesandbox/sandpack-react";
 import {
-  FolderOpen,
-  GitBranch,
+  ArrowLeft,
+  Code2,
   Loader2,
   LogOut,
-  Plus,
+  MonitorPlay,
   Rocket,
   Save,
-  Share2,
+  Terminal,
   User,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AuthModal } from "@/components/auth/AuthModal";
+import { UpgradeModal } from "@/components/billing/UpgradeModal";
 import { ChatPanel } from "@/components/chat/ChatPanel";
+import { ConnectorsPanel } from "@/components/connectors/ConnectorsPanel";
+import { DashboardHome } from "@/components/dashboard/DashboardHome";
+import { AppShell } from "@/components/layout/AppShell";
+import type { AppNavId } from "@/components/layout/SidebarNav";
 import { UserProfileModal } from "@/components/profile/UserProfileModal";
-import { MyProjectsModal } from "@/components/projects/MyProjectsModal";
 import { DeployPublishModal } from "@/components/projects/DeployPublishModal";
+import { MyProjectsModal } from "@/components/projects/MyProjectsModal";
+import { BillingSettings } from "@/components/settings/BillingSettings";
+import { fetchBillingMe } from "@/lib/api-client";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -30,12 +37,13 @@ import { PreviewRender } from "@/components/workspace/PreviewRender";
 import { SandpackErrorBridge } from "@/components/workspace/SandpackErrorBridge";
 import { toSandpackFiles } from "@/components/workspace/sandpack-files";
 import { sandpackCustomSetup } from "@/components/workspace/sandpack-setup";
-import { Timeline } from "@/components/workspace/Timeline";
 import { supabase } from "@/lib/supabase";
 import { cn } from "@/lib/utils";
 import { useProjectStore } from "@/store/project-store";
 import { useStudioStore } from "@/store/studio-store";
 import { useUserStore } from "@/store/user-store";
+
+type ShellView = "home" | "studio";
 
 export default function App() {
   const session = useUserStore((state) => state.session);
@@ -47,16 +55,31 @@ export default function App() {
 
   const createNewProject = useProjectStore((state) => state.createNewProject);
   const saveProject = useProjectStore((state) => state.saveProject);
+  const loadProject = useProjectStore((state) => state.loadProject);
+  const fetchUserProjects = useProjectStore((state) => state.fetchUserProjects);
+  const projectsList = useProjectStore((state) => state.projectsList);
+  const isLoadingList = useProjectStore((state) => state.isLoadingList);
   const isSaving = useProjectStore((state) => state.isSaving);
   const currentProjectName = useProjectStore((state) => state.currentProjectName);
-  const lastSavedAt = useProjectStore((state) => state.lastSavedAt);
 
+  const sendMessage = useStudioStore((state) => state.sendMessage);
+  const stopGeneration = useStudioStore((state) => state.stopGeneration);
+  const isGenerating = useStudioStore((state) => state.isGenerating);
+  const buildMode = useStudioStore((state) => state.buildMode);
+  const setBuildMode = useStudioStore((state) => state.setBuildMode);
+  const upgradeRequired = useStudioStore((state) => state.upgradeRequired);
+  const clearUpgradeRequired = useStudioStore(
+    (state) => state.clearUpgradeRequired,
+  );
+
+  const [shellView, setShellView] = useState<ShellView>("home");
+  const [nav, setNav] = useState<AppNavId>("dashboard");
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [isProjectsOpen, setIsProjectsOpen] = useState(false);
   const [isDeployOpen, setIsDeployOpen] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
-  const isGenerating = useStudioStore((state) => state.isGenerating);
+  const [creditBalance, setCreditBalance] = useState<number | null>(null);
   const wasGeneratingRef = useRef(false);
 
   const isLoggedIn = Boolean(session?.user);
@@ -65,7 +88,6 @@ export default function App() {
     .charAt(0)
     .toUpperCase();
 
-  // Auto-save quando a IA termina de gerar
   useEffect(() => {
     if (wasGeneratingRef.current && !isGenerating && isLoggedIn) {
       void saveProject();
@@ -75,162 +97,204 @@ export default function App() {
 
   useEffect(() => {
     let mounted = true;
-
     void supabase.auth.getSession().then(({ data }) => {
       if (!mounted) return;
       setSession(data.session);
-      if (data.session) {
-        void fetchProfile();
-      }
+      if (data.session) void fetchProfile();
     });
-
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, nextSession) => {
       setSession(nextSession);
-      if (nextSession) {
-        void fetchProfile();
-      } else {
-        clearUser();
-      }
+      if (nextSession) void fetchProfile();
+      else clearUser();
     });
-
     return () => {
       mounted = false;
       subscription.unsubscribe();
     };
   }, [setSession, fetchProfile, clearUser]);
 
+  useEffect(() => {
+    if (isLoggedIn && (shellView === "home" || nav === "projects")) {
+      void fetchUserProjects();
+    }
+  }, [isLoggedIn, shellView, nav, fetchUserProjects]);
+
+  useEffect(() => {
+    if (!isLoggedIn) {
+      setCreditBalance(null);
+      return;
+    }
+    void fetchBillingMe()
+      .then((snap) => setCreditBalance(snap.wallet.balance))
+      .catch(() => setCreditBalance(null));
+  }, [isLoggedIn, isGenerating, nav]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("github") === "connected") {
+      setNav("connectors");
+      setShellView("home");
+      setSaveMessage("GitHub conectado!");
+      window.setTimeout(() => setSaveMessage(null), 2500);
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+  }, []);
+
   async function handleSave() {
     if (!isLoggedIn) {
       setIsAuthOpen(true);
       return;
     }
-
     const result = await saveProject();
-    if (result.error) {
-      setSaveMessage(result.error);
-      return;
-    }
-
-    setSaveMessage("Projeto salvo!");
+    setSaveMessage(result.error ?? "Projeto salvo!");
     window.setTimeout(() => setSaveMessage(null), 2500);
+  }
+
+  function goHome() {
+    setShellView("home");
+    setNav("dashboard");
   }
 
   function handleNewProject() {
     createNewProject();
     setSaveMessage(null);
+    goHome();
   }
 
-  return (
-    <div className="flex h-screen flex-col bg-background text-primary">
-      <header className="flex h-14 shrink-0 items-center justify-between border-b border-border bg-surface px-4">
-        <button
-          type="button"
-          onClick={handleNewProject}
-          className="flex min-w-0 items-center gap-3 rounded-xl text-left transition hover:opacity-90"
-          title="Novo Projeto"
-        >
-          <div className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-accent text-xs font-bold text-white shadow-glow">
-            X09
-          </div>
-          <div className="min-w-0">
-            <p className="text-sm font-semibold leading-none">studio.x09</p>
-            <p className="mt-1 truncate text-xs text-secondary">
-              {currentProjectName || "AI visual builder"}
-            </p>
-          </div>
-        </button>
+  async function handleStartFromPrompt(prompt: string) {
+    setShellView("studio");
+    setNav("dashboard");
+    await sendMessage(prompt);
+  }
 
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={handleNewProject}>
-            <Plus className="h-4 w-4" />
-            Novo Projeto
-          </Button>
+  async function handleOpenProject(id: string) {
+    const result = await loadProject(id);
+    if (result.error) {
+      setSaveMessage(result.error);
+      return;
+    }
+    setShellView("studio");
+  }
 
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              if (!isLoggedIn) {
-                setIsAuthOpen(true);
-                return;
-              }
-              setIsProjectsOpen(true);
-            }}
+  function handleNav(id: AppNavId) {
+    setNav(id);
+    if (id === "dashboard") {
+      setShellView("home");
+      clearUpgradeRequired();
+      return;
+    }
+    if (id === "projects") {
+      if (!isLoggedIn) {
+        setIsAuthOpen(true);
+        return;
+      }
+      setShellView("home");
+      setIsProjectsOpen(true);
+      return;
+    }
+    if (id === "settings") {
+      if (!isLoggedIn) {
+        setIsAuthOpen(true);
+        return;
+      }
+      setShellView("home");
+      return;
+    }
+    if (id === "connectors") {
+      if (!isLoggedIn) {
+        setIsAuthOpen(true);
+        return;
+      }
+      setShellView("home");
+    }
+  }
+
+  const headerActions = (
+    <>
+      <div className="min-w-0">
+        <p className="truncate text-sm font-medium text-white">
+          {shellView === "studio"
+            ? currentProjectName || "Workspace"
+            : "Dashboard"}
+        </p>
+      </div>
+      <div className="flex items-center gap-2">
+        {isLoggedIn && creditBalance !== null ? (
+          <button
+            type="button"
+            onClick={() => handleNav("settings")}
+            className="hidden rounded-full border border-white/10 bg-indigo-500/15 px-3 py-1 text-xs font-medium text-indigo-100 backdrop-blur-md sm:inline"
+            title="Créditos"
           >
-            <FolderOpen className="h-4 w-4" />
-            Meus Projetos
-          </Button>
-
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={isSaving}
-            onClick={() => void handleSave()}
-            title={
-              lastSavedAt
-                ? `Último save: ${new Date(lastSavedAt).toLocaleTimeString("pt-BR")}`
-                : "Salvar no Supabase"
-            }
-          >
-            {isSaving ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Save className="h-4 w-4" />
+            {creditBalance} créditos
+          </button>
+        ) : null}
+        {saveMessage ? (
+          <span
+            className={cn(
+              "hidden text-xs sm:inline",
+              saveMessage === "Projeto salvo!" ||
+                saveMessage.includes("conectado")
+                ? "text-emerald-300"
+                : "text-red-300",
             )}
-            {isSaving ? "Salvando…" : "Salvar Projeto"}
-          </Button>
-
-          {saveMessage ? (
-            <span
-              className={cn(
-                "hidden text-xs sm:inline",
-                saveMessage === "Projeto salvo!"
-                  ? "text-emerald-400"
-                  : "text-red-300",
-              )}
-            >
-              {saveMessage}
-            </span>
-          ) : null}
-
-          {isLoggedIn ? (
-            <>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setIsProfileOpen(true)}
-              >
-                <User className="h-4 w-4" />
-                Meu Perfil
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => void signOut()}
-                title="Sair"
-              >
-                <LogOut className="h-4 w-4" />
-                Sair
-              </Button>
-              <Avatar>
-                <AvatarFallback>{avatarLabel}</AvatarFallback>
-              </Avatar>
-            </>
-          ) : (
+          >
+            {saveMessage}
+          </span>
+        ) : null}
+        {isLoggedIn ? (
+          <>
             <Button
-              size="sm"
-              onClick={() => setIsAuthOpen(true)}
-              className="bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white shadow-glow hover:from-violet-500 hover:to-fuchsia-500"
+              variant="ghost"
+              size="icon"
+              className="h-9 w-9 rounded-full"
+              onClick={() => setIsProfileOpen(true)}
+              title="Perfil"
             >
-              <User className="h-4 w-4" />
-              Entrar
+              <Avatar className="h-8 w-8">
+                <AvatarFallback className="bg-indigo-500/25 text-indigo-100">
+                  {avatarLabel}
+                </AvatarFallback>
+              </Avatar>
             </Button>
-          )}
-        </div>
-      </header>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-9 w-9"
+              onClick={() => void signOut()}
+              title="Sair"
+            >
+              <LogOut className="h-4 w-4" />
+            </Button>
+          </>
+        ) : (
+          <Button
+            size="sm"
+            onClick={() => setIsAuthOpen(true)}
+            className="rounded-full bg-indigo-500 text-white hover:bg-indigo-400"
+          >
+            <User className="h-4 w-4" />
+            Entrar
+          </Button>
+        )}
+      </div>
+    </>
+  );
 
+  return (
+    <AppShell
+      activeNav={nav}
+      onNavigate={handleNav}
+      onBrandClick={handleNewProject}
+      hideHeader={shellView === "studio"}
+      header={
+        <>
+          {headerActions}
+        </>
+      }
+    >
       <AuthModal open={isAuthOpen} onClose={() => setIsAuthOpen(false)} />
       <UserProfileModal
         open={isProfileOpen}
@@ -239,58 +303,125 @@ export default function App() {
       <MyProjectsModal
         open={isProjectsOpen}
         onClose={() => setIsProjectsOpen(false)}
+        onOpened={() => setShellView("studio")}
       />
       <DeployPublishModal
         open={isDeployOpen}
         onClose={() => setIsDeployOpen(false)}
       />
+      <UpgradeModal
+        open={upgradeRequired}
+        onClose={clearUpgradeRequired}
+      />
 
-      <ResizablePanelGroup
-        direction="horizontal"
-        className="min-h-0 w-full flex-1 overflow-hidden"
-      >
-        <ResizablePanel
-          id="chat"
-          defaultSize="32"
-          minSize="22"
-          maxSize="45"
-          className="min-w-0 overflow-hidden"
-        >
-          <div className="relative z-20 h-full min-w-0 overflow-hidden border-r border-border bg-surface">
-            <ChatPanel />
+      {shellView === "home" && nav === "connectors" ? (
+        <ConnectorsPanel />
+      ) : shellView === "home" && nav === "settings" ? (
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          <BillingSettings highlightUpgrade={upgradeRequired} />
+          <div className="mx-auto max-w-3xl px-6 pb-10">
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => setIsProfileOpen(true)}
+              className="text-zinc-400"
+            >
+              Editar perfil
+            </Button>
           </div>
-        </ResizablePanel>
-        <ResizableHandle withHandle className="z-30" />
-        <ResizablePanel
-          id="workspace"
-          defaultSize="68"
-          minSize="55"
-          className="min-w-0 overflow-hidden"
+        </div>
+      ) : shellView === "home" ? (
+        <DashboardHome
+          buildMode={buildMode}
+          onBuildModeChange={setBuildMode}
+          onSubmitPrompt={handleStartFromPrompt}
+          isGenerating={isGenerating}
+          onStop={stopGeneration}
+          projects={projectsList}
+          isLoadingProjects={isLoadingList}
+          onOpenProject={(id) => void handleOpenProject(id)}
+          isLoggedIn={isLoggedIn}
+          onRequestLogin={() => setIsAuthOpen(true)}
+          creditBalance={creditBalance}
+          onOpenBilling={() => handleNav("settings")}
+        />
+      ) : (
+        <ResizablePanelGroup
+          direction="horizontal"
+          className="min-h-0 w-full flex-1 overflow-hidden"
         >
-          <div className="relative z-0 h-full min-w-0 overflow-hidden bg-background">
+          <ResizablePanel
+            id="chat"
+            defaultSize="28"
+            minSize="20"
+            maxSize="40"
+            className="min-w-0 overflow-hidden"
+          >
+            <div className="relative z-20 h-full min-w-0 overflow-hidden border-r border-white/10 bg-white/[0.02] backdrop-blur-md">
+              <ChatPanel compact />
+            </div>
+          </ResizablePanel>
+          <ResizableHandle withHandle className="z-30 bg-white/5" />
+          <ResizablePanel
+            id="workspace"
+            defaultSize="72"
+            minSize="55"
+            className="min-w-0 overflow-hidden"
+          >
             <WorkspacePanel
+              projectName={currentProjectName}
+              onBack={goHome}
               onSave={() => void handleSave()}
               isSaving={isSaving}
               onDeploy={() => setIsDeployOpen(true)}
+              creditBalance={creditBalance}
+              onOpenBilling={() => handleNav("settings")}
+              isLoggedIn={isLoggedIn}
+              avatarLabel={avatarLabel}
+              onProfile={() => setIsProfileOpen(true)}
+              onSignOut={() => void signOut()}
+              onLogin={() => setIsAuthOpen(true)}
+              saveMessage={saveMessage}
             />
-          </div>
-        </ResizablePanel>
-      </ResizablePanelGroup>
-    </div>
+          </ResizablePanel>
+        </ResizablePanelGroup>
+      )}
+    </AppShell>
   );
 }
 
 function WorkspacePanel({
+  projectName,
+  onBack,
   onSave,
   isSaving,
   onDeploy,
+  creditBalance,
+  onOpenBilling,
+  isLoggedIn,
+  avatarLabel,
+  onProfile,
+  onSignOut,
+  onLogin,
+  saveMessage,
 }: {
+  projectName: string | null;
+  onBack: () => void;
   onSave: () => void;
   isSaving: boolean;
   onDeploy: () => void;
+  creditBalance: number | null;
+  onOpenBilling: () => void;
+  isLoggedIn: boolean;
+  avatarLabel: string;
+  onProfile: () => void;
+  onSignOut: () => void;
+  onLogin: () => void;
+  saveMessage: string | null;
 }) {
   const files = useStudioStore((state) => state.files);
   const activeFile = useStudioStore((state) => state.activeFile);
+  const agentPhaseLabel = useStudioStore((state) => state.agentPhaseLabel);
   const sandpackFiles = useMemo(() => toSandpackFiles(files), [files]);
   const visibleFiles = useMemo(() => {
     const paths = Object.keys(files)
@@ -306,44 +437,129 @@ function WorkspacePanel({
   }, [files]);
 
   return (
-    <Tabs defaultValue="preview" className="flex h-full min-h-0 flex-col bg-background">
-      <div className="flex h-14 shrink-0 items-center justify-between border-b border-border bg-background px-4">
-        <TabsList>
-          <TabsTrigger value="preview">Preview</TabsTrigger>
-          <TabsTrigger value="code">Code</TabsTrigger>
-          <TabsTrigger value="console">Console</TabsTrigger>
-        </TabsList>
-
-        <div className="flex items-center gap-2">
+    <Tabs
+      defaultValue="preview"
+      className="flex h-full min-h-0 flex-col bg-transparent"
+    >
+      {/* Única barra superior do Preview — sem chrome extra */}
+      <div className="flex h-11 shrink-0 items-center justify-between gap-2 border-b border-white/10 bg-white/[0.03] px-3 backdrop-blur-md">
+        <div className="flex min-w-0 items-center gap-2">
           <Button
-            variant="outline"
+            variant="ghost"
+            size="sm"
+            onClick={onBack}
+            className="h-8 gap-1.5 px-2 text-xs text-zinc-400 hover:text-white"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">Dashboard</span>
+          </Button>
+          <span className="hidden h-4 w-px bg-white/10 sm:block" />
+          <p className="hidden max-w-[140px] truncate text-xs font-medium text-zinc-300 md:inline">
+            {projectName || "Workspace"}
+          </p>
+          <TabsList className="ml-1 h-8 gap-0.5 rounded-full border border-white/10 bg-white/[0.04] p-0.5">
+            <TabsTrigger
+              value="preview"
+              className="h-7 rounded-full px-3 text-xs data-[state=active]:bg-indigo-500/25 data-[state=active]:text-indigo-100"
+            >
+              <MonitorPlay className="mr-1.5 h-3.5 w-3.5" />
+              Preview
+            </TabsTrigger>
+            <TabsTrigger
+              value="code"
+              className="h-7 rounded-full px-3 text-xs data-[state=active]:bg-indigo-500/25 data-[state=active]:text-indigo-100"
+            >
+              <Code2 className="mr-1.5 h-3.5 w-3.5" />
+              Code
+            </TabsTrigger>
+            <TabsTrigger
+              value="console"
+              className="h-7 rounded-full px-3 text-xs data-[state=active]:bg-indigo-500/25 data-[state=active]:text-indigo-100"
+            >
+              <Terminal className="mr-1.5 h-3.5 w-3.5" />
+              Console
+            </TabsTrigger>
+          </TabsList>
+        </div>
+
+        <div className="flex min-w-0 items-center gap-1.5">
+          {agentPhaseLabel ? (
+            <span className="mr-1 hidden max-w-[160px] truncate text-[11px] text-indigo-200/80 lg:inline">
+              {agentPhaseLabel}
+            </span>
+          ) : null}
+          {saveMessage ? (
+            <span className="mr-1 hidden text-[11px] text-emerald-300 xl:inline">
+              {saveMessage}
+            </span>
+          ) : null}
+          {isLoggedIn && creditBalance !== null ? (
+            <button
+              type="button"
+              onClick={onOpenBilling}
+              className="hidden rounded-full border border-white/10 bg-indigo-500/15 px-2.5 py-1 text-[11px] font-medium text-indigo-100 md:inline"
+            >
+              {creditBalance}
+            </button>
+          ) : null}
+          <Button
+            variant="ghost"
             size="sm"
             disabled={isSaving}
             onClick={onSave}
+            className="h-8 px-2 text-xs text-zinc-400 hover:text-white"
           >
             {isSaving ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
             ) : (
-              <Save className="h-4 w-4" />
+              <Save className="h-3.5 w-3.5" />
             )}
-            Salvar
           </Button>
-          <Button variant="outline" size="sm" onClick={onDeploy}>
-            <Rocket className="h-4 w-4" />
-            Deploy
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onDeploy}
+            className="h-8 px-2 text-xs text-zinc-400 hover:text-white"
+            title="Deploy"
+          >
+            <Rocket className="h-3.5 w-3.5" />
           </Button>
-          <Button variant="outline" size="sm">
-            <GitBranch className="h-4 w-4" />
-            GitHub Sync
-          </Button>
-          <Button variant="outline" size="sm">
-            <Share2 className="h-4 w-4" />
-            Share
-          </Button>
+          {isLoggedIn ? (
+            <>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 rounded-full"
+                onClick={onProfile}
+              >
+                <Avatar className="h-7 w-7">
+                  <AvatarFallback className="bg-indigo-500/25 text-[11px] text-indigo-100">
+                    {avatarLabel}
+                  </AvatarFallback>
+                </Avatar>
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={onSignOut}
+              >
+                <LogOut className="h-3.5 w-3.5" />
+              </Button>
+            </>
+          ) : (
+            <Button
+              size="sm"
+              onClick={onLogin}
+              className="h-8 rounded-full bg-indigo-500 px-3 text-xs text-white hover:bg-indigo-400"
+            >
+              Entrar
+            </Button>
+          )}
         </div>
       </div>
 
-      <div className="relative min-h-0 w-full min-w-0 flex-1 overflow-hidden">
+      <div className="relative min-h-0 w-full min-w-0 flex-1 overflow-hidden bg-zinc-950/40">
         <SandpackProvider
           template="react-ts"
           theme="dark"
@@ -388,8 +604,6 @@ function WorkspacePanel({
           </div>
         </SandpackProvider>
       </div>
-
-      <Timeline />
     </Tabs>
   );
 }
