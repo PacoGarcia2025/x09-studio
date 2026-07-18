@@ -62,7 +62,7 @@ export type RouteContext = {
 };
 
 export const MODE_LABELS: Record<ResolvedMode, string> = {
-  edit: "Groq · edição rápida",
+  edit: "Claude · edição",
   fast: "Gemini · rápido",
   premium: "Claude · premium",
   repair: "Claude · correção",

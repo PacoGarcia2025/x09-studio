@@ -18,6 +18,7 @@ import {
   PLAN_SYSTEM_PROMPT,
   REPAIR_SYSTEM_PROMPT,
   buildArtQa,
+  buildEditQa,
 } from "./prompts";
 
 export type StreamEmit = (event: GenerationEvent) => void;
@@ -177,16 +178,24 @@ async function streamBuild(
     }
 
     if (mode === "edit" && req.currentAppCode) {
-      extra += `\n\n=== App.tsx ATUAL ===\n\`\`\`tsx\n${req.currentAppCode}\n\`\`\`\n`;
+      extra += `\n\n=== App.tsx ATUAL (APLIQUE A MUDANÇA NESTE ARQUIVO E DEVOLVA COMPLETO) ===\n\`\`\`tsx\n${req.currentAppCode}\n\`\`\`\n`;
     }
 
     if (req.currentFiles && Object.keys(req.currentFiles).length > 0) {
       const entries = Object.entries(req.currentFiles)
-        .filter(([p]) => p !== "/package.json")
+        .filter(
+          ([p]) =>
+            p !== "/package.json" &&
+            !p.startsWith("/components/ui/") &&
+            p !== "/design-tokens.ts" &&
+            p !== "/lib/mock-data.ts",
+        )
         .slice(0, 12);
-      extra += "\n\n=== ARQUIVOS ATUAIS ===\n";
-      for (const [path, code] of entries) {
-        extra += `\n--- ${path} ---\n\`\`\`tsx\n${code.slice(0, 12_000)}\n\`\`\`\n`;
+      if (entries.length && mode !== "edit") {
+        extra += "\n\n=== ARQUIVOS ATUAIS ===\n";
+        for (const [path, code] of entries) {
+          extra += `\n--- ${path} ---\n\`\`\`tsx\n${code.slice(0, 12_000)}\n\`\`\`\n`;
+        }
       }
     }
 
@@ -194,7 +203,9 @@ async function streamBuild(
       extra += `\n\n=== ERROS A CORRIGIR ===\n${JSON.stringify(req.repairIssues, null, 2)}\n`;
     }
 
-    if (mode !== "edit" && mode !== "repair") {
+    if (mode === "edit") {
+      extra += buildEditQa();
+    } else if (mode !== "repair") {
       extra += buildArtQa();
     }
 

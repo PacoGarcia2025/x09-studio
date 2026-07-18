@@ -22,7 +22,7 @@ export function Button({
     lg: "px-6 py-3 text-base",
   };
   const variants = {
-    primary: \`\${DESIGN_TOKENS.colors.accent} text-zinc-950 hover:bg-zinc-100\`,
+    primary: \`\${DESIGN_TOKENS.colors.accent} \${DESIGN_TOKENS.colors.accentText} hover:brightness-110\`,
     secondary: "border border-zinc-700 bg-transparent text-white hover:bg-white/5",
     ghost: "text-zinc-300 hover:bg-white/5",
   };

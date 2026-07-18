@@ -31,18 +31,13 @@ export function getLlmProvider(id: StudioLlmId = "gemini-2.5-flash"): LlmProvide
 }
 
 /**
- * Resolve provider por modo de geração.
- * Preferências: Groq direto → OpenRouter Claude/Gemini → Gemini nativo.
+ * Edit/premium/repair → Claude (aplica código de verdade).
+ * Plan/fast → Gemini.
  */
 export function getProviderForMode(mode: GenerationMode): LlmProvider {
   try {
     switch (mode) {
       case "edit":
-        try {
-          return createGroqProvider();
-        } catch {
-          return getFallbackFast();
-        }
       case "premium":
       case "repair":
         return createClaudeViaOpenRouter();
@@ -53,7 +48,6 @@ export function getProviderForMode(mode: GenerationMode): LlmProvider {
         return getFallbackFast();
     }
   } catch (error) {
-    // Último recurso: Gemini nativo
     try {
       return createGeminiFlashProvider();
     } catch {

@@ -295,9 +295,12 @@ export const useStudioStore = create<StudioState>((set, get) => ({
         (finalText) => {
           const { nextFiles, paths } = applyParsedFiles(get().files, finalText);
           const generatedVersionId = crypto.randomUUID();
-          const prose =
-            stripCodeFencesForChat(finalText) ||
-            "Pronto. Confira o Preview — estou verificando erros automaticamente.";
+          const proseBase = stripCodeFencesForChat(finalText);
+          const noCodeApplied = paths.length === 0;
+          const prose = noCodeApplied
+            ? "Não consegui aplicar a alteração no código (resposta sem bloco path=). Tente de novo — ex.: \"mude o fundo da hero para degradê preto e laranja\"."
+            : proseBase ||
+              "Pronto. Confira o Preview — estou verificando erros automaticamente.";
 
           set((state) => ({
             files: nextFiles,
@@ -305,26 +308,34 @@ export const useStudioStore = create<StudioState>((set, get) => ({
               ? "/App.tsx"
               : paths[paths.length - 1] ?? state.activeFile,
             isGenerating: false,
-            agentPhase: "verificando",
-            agentPhaseLabel: "Verificando Preview…",
+            agentPhase: noCodeApplied ? "erro" : "verificando",
+            agentPhaseLabel: noCodeApplied
+              ? "Edição sem código — nada mudou no Preview"
+              : "Verificando Preview…",
             abortController: null,
             messages: state.messages.map((message) =>
               message.id === aiMessageId ? { ...message, content: prose } : message,
             ),
-            versions: [
-              ...state.versions,
-              {
-                id: generatedVersionId,
-                prompt: content.slice(0, 60),
-                timestamp: Date.now(),
-                files: { ...nextFiles },
-              },
-            ],
-            activeVersionId: generatedVersionId,
-            lastStableFiles: { ...nextFiles },
+            versions: noCodeApplied
+              ? state.versions
+              : [
+                  ...state.versions,
+                  {
+                    id: generatedVersionId,
+                    prompt: content.slice(0, 60),
+                    timestamp: Date.now(),
+                    files: { ...nextFiles },
+                  },
+                ],
+            activeVersionId: noCodeApplied
+              ? state.activeVersionId
+              : generatedVersionId,
+            lastStableFiles: noCodeApplied
+              ? state.lastStableFiles
+              : { ...nextFiles },
             metrics: {
               ...(state.metrics ?? { repairCycles: 0 }),
-              firstBuildOk: true,
+              firstBuildOk: !noCodeApplied,
               repairCycles: state.repairCycles,
             },
           }));
