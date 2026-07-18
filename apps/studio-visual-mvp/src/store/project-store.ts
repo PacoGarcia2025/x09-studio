@@ -3,6 +3,8 @@ import { supabase } from "@/lib/supabase";
 import {
   useStudioStore,
   type ChatMessage,
+  type GenerationMetrics,
+  type StudioVersion,
 } from "@/store/studio-store";
 import { useUserStore } from "@/store/user-store";
 
@@ -21,7 +23,14 @@ type ProjectRow = ProjectSummary & {
   files: Record<string, string> | null;
   chat_history: ChatMessage[] | null;
   app_spec?: unknown;
-  metrics?: unknown;
+  metrics?: GenerationMetrics | null;
+};
+
+type VersionRow = {
+  id: string;
+  prompt: string;
+  files: Record<string, string> | null;
+  created_at: string;
 };
 
 type ProjectState = {
@@ -41,6 +50,13 @@ type ProjectState = {
 };
 
 const TABLE = "visual_projects";
+const VERSIONS_TABLE = "visual_project_versions";
+
+function isUuid(value: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+    value,
+  );
+}
 
 function deriveProjectName(messages: ChatMessage[]): string {
   const firstUser = messages.find(
@@ -115,7 +131,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     }
 
     const studio = useStudioStore.getState();
-    const { files, messages, lastAppSpec, metrics } = studio;
+    const { files, messages, lastAppSpec, metrics, versions } = studio;
     const existingId = get().currentProjectId;
     const projectId = existingId ?? crypto.randomUUID();
     const name =
@@ -147,6 +163,26 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     if (error) {
       set({ lastError: error.message });
       return { error: error.message };
+    }
+
+    const versionRows = versions
+      .filter((version) => isUuid(version.id))
+      .slice(-20)
+      .map((version) => ({
+        id: version.id,
+        project_id: projectId,
+        user_id: userId,
+        prompt: version.prompt,
+        files: version.files,
+        created_at: new Date(version.timestamp).toISOString(),
+      }));
+
+    if (versionRows.length > 0) {
+      // Histórico é complementar: não invalida o save principal se a migration
+      // ainda não foi aplicada no ambiente remoto.
+      await supabase.from(VERSIONS_TABLE).upsert(versionRows, {
+        onConflict: "id",
+      });
     }
 
     set({
@@ -190,7 +226,35 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
           };
     const messages = Array.isArray(row.chat_history) ? row.chat_history : [];
 
-    useStudioStore.getState().hydrateProject({ files, messages });
+    const { data: versionData } = await supabase
+      .from(VERSIONS_TABLE)
+      .select("id, prompt, files, created_at")
+      .eq("project_id", row.id)
+      .eq("user_id", userId)
+      .order("created_at", { ascending: true })
+      .limit(20);
+
+    const versions: StudioVersion[] = ((versionData as VersionRow[] | null) ?? [])
+      .filter(
+        (version) =>
+          version.files &&
+          typeof version.files === "object" &&
+          Object.keys(version.files).length > 0,
+      )
+      .map((version) => ({
+        id: version.id,
+        prompt: version.prompt,
+        timestamp: new Date(version.created_at).getTime(),
+        files: version.files!,
+      }));
+
+    useStudioStore.getState().hydrateProject({
+      files,
+      messages,
+      versions,
+      appSpec: row.app_spec ?? null,
+      metrics: row.metrics ?? null,
+    });
 
     set({
       currentProjectId: row.id,

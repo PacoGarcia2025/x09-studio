@@ -31,13 +31,6 @@ export async function debitForGeneration(input: {
 
   if (billable === "skip" || cost === 0) {
     const balance = await getWalletBalance(input.userId);
-    if (balance <= 0) {
-      throw new PublicError(
-        "Créditos insuficientes. Compre créditos para continuar.",
-        402,
-        "insufficient_credits",
-      );
-    }
     return {
       ok: true,
       duplicate: false,

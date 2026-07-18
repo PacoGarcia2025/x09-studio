@@ -41,12 +41,12 @@ export function UpgradeModal({
       />
 
       <section className="relative z-10 w-full max-w-lg overflow-hidden rounded-3xl border border-white/10 bg-zinc-950/90 p-6 shadow-[0_0_60px_rgba(99,102,241,0.25)] backdrop-blur-2xl">
-        <div className="pointer-events-none absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-indigo-500/20 to-transparent" />
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-violet-600/20 to-transparent" />
 
         <div className="relative">
           <div className="flex items-start justify-between gap-4">
             <div>
-              <div className="mb-3 inline-flex rounded-2xl border border-indigo-400/20 bg-indigo-500/15 p-2.5 text-indigo-200">
+              <div className="mb-3 inline-flex rounded-2xl border border-violet-400/20 bg-violet-600/15 p-2.5 text-violet-200">
                 <Sparkles className="h-5 w-5" />
               </div>
               <h2 className="text-xl font-semibold text-white">
@@ -73,9 +73,9 @@ export function UpgradeModal({
               type="button"
               disabled={Boolean(loadingPlan)}
               onClick={() => void buy("basic")}
-              className="rounded-2xl border border-indigo-400/30 bg-indigo-500/15 p-4 text-left transition hover:border-indigo-300/50 hover:bg-indigo-500/20 disabled:opacity-60"
+              className="rounded-2xl border border-violet-400/30 bg-violet-600/15 p-4 text-left transition hover:border-violet-300/50 hover:bg-violet-600/20 disabled:opacity-60"
             >
-              <Zap className="h-4 w-4 text-indigo-300" />
+              <Zap className="h-4 w-4 text-violet-300" />
               <p className="mt-3 font-semibold text-white">100 créditos</p>
               <p className="mt-1 text-xs text-zinc-400">Pacote Básico</p>
             </button>
@@ -83,9 +83,9 @@ export function UpgradeModal({
               type="button"
               disabled={Boolean(loadingPlan)}
               onClick={() => void buy("pro")}
-              className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-left transition hover:border-indigo-400/35 hover:bg-white/[0.06] disabled:opacity-60"
+              className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-left transition hover:border-violet-400/35 hover:bg-white/[0.06] disabled:opacity-60"
             >
-              <Sparkles className="h-4 w-4 text-indigo-300" />
+              <Sparkles className="h-4 w-4 text-fuchsia-300" />
               <p className="mt-3 font-semibold text-white">500 créditos</p>
               <p className="mt-1 text-xs text-zinc-400">Pacote Pro</p>
             </button>
@@ -101,7 +101,7 @@ export function UpgradeModal({
             type="button"
             disabled={Boolean(loadingPlan)}
             onClick={() => void buy("basic")}
-            className="mt-5 w-full rounded-full bg-indigo-500 text-white shadow-[0_0_20px_rgba(99,102,241,0.35)] hover:bg-indigo-400"
+            className="mt-5 w-full rounded-full bg-violet-600 text-white shadow-[0_0_24px_rgba(124,58,237,0.35)] hover:bg-violet-700"
           >
             {loadingPlan === "basic" ? (
               <Loader2 className="h-4 w-4 animate-spin" />

@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Laudo técnico — Studio X09</title>
+  <style>
+    :root {
+      --text: #1a1a1a;
+      --muted: #555;
+      --line: #ddd;
+      --bg: #fff;
+      --soft: #f6f6f6;
+      --ok: #0b6b3a;
+      --warn: #8a5a00;
+      --bad: #8b1e1e;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font: 14px/1.55 "Segoe UI", system-ui, sans-serif;
+      color: var(--text);
+      background: var(--bg);
+    }
+    .toolbar {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 20px;
+      background: #111;
+      color: #fff;
+    }
+    .toolbar button {
+      border: 0;
+      border-radius: 8px;
+      padding: 10px 16px;
+      background: #4f46e5;
+      color: #fff;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .wrap { max-width: 920px; margin: 0 auto; padding: 32px 24px 64px; }
+    h1 { font-size: 28px; margin: 0 0 8px; letter-spacing: -0.03em; }
+    h2 { font-size: 20px; margin: 36px 0 12px; border-bottom: 1px solid var(--line); padding-bottom: 6px; }
+    h3 { font-size: 16px; margin: 22px 0 8px; }
+    p, li { color: var(--text); }
+    .muted { color: var(--muted); }
+    .meta { font-size: 12px; color: var(--muted); margin-bottom: 24px; }
+    .callout {
+      border: 1px solid var(--line);
+      background: var(--soft);
+      border-radius: 10px;
+      padding: 12px 14px;
+      margin: 14px 0;
+    }
+    .callout.warn { border-color: #e6c98a; background: #fff8e8; }
+    .callout.danger { border-color: #e2b0b0; background: #fff1f1; }
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      margin: 16px 0 24px;
+    }
+    .stat {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 12px;
+      background: var(--soft);
+    }
+    .stat strong { display: block; font-size: 22px; }
+    .stat span { font-size: 12px; color: var(--muted); }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 10px 0 18px;
+      font-size: 12.5px;
+    }
+    th, td {
+      border: 1px solid var(--line);
+      padding: 8px 10px;
+      text-align: left;
+      vertical-align: top;
+    }
+    th { background: var(--soft); }
+    .ok { color: var(--ok); font-weight: 600; }
+    .warn { color: var(--warn); font-weight: 600; }
+    .bad { color: var(--bad); font-weight: 600; }
+    .toc a { color: #3730a3; text-decoration: none; }
+    .toc li { margin: 4px 0; }
+    @media print {
+      .toolbar { display: none !important; }
+      .wrap { max-width: none; padding: 0; }
+      a { color: inherit; text-decoration: none; }
+      h2 { break-after: avoid; }
+      table, .callout, .stat { break-inside: avoid; }
+      body { font-size: 11.5px; }
+    }
+    @media (max-width: 800px) {
+      .stats { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="toolbar">
+    <div>
+      <strong>Laudo técnico — Studio X09</strong>
+      <div style="font-size:12px;opacity:.75">Clique em “Salvar como PDF” (ou Ctrl+P → Salvar como PDF)</div>
+    </div>
+    <button type="button" onclick="window.print()">Salvar como PDF</button>
+  </div>
+
+  <div class="wrap">
+    <h1>Laudo técnico — Studio X09</h1>
+    <p class="muted">
+      Inventário das páginas, funções, APIs, chaves e conexões do monorepo.
+      Valores secretos <strong>não</strong> são exibidos — apenas nomes e status.
+    </p>
+    <p class="meta">
+      Fonte: código do repositório + `.env.example` + health da VPS (2026-07-18).<br />
+      Domínio: https://studio.x09.com.br · Repo: PacoGarcia2025/x09-studio
+    </p>
+
+    <div class="callout danger">
+      <strong>Segurança:</strong> este documento lista apenas os <em>nomes</em> das variáveis de ambiente.
+      Nunca cole Access Tokens, Secret Keys ou private keys em PDF, chat ou PR.
+    </div>
+
+    <h2>Sumário</h2>
+    <ol class="toc">
+      <li><a href="#resumo">1. Resumo executivo</a></li>
+      <li><a href="#paginas">2. Páginas e telas</a></li>
+      <li><a href="#funcoes">3. Funções do produto</a></li>
+      <li><a href="#apis">4. APIs HTTP</a></li>
+      <li><a href="#chaves">5. Chaves e variáveis</a></li>
+      <li><a href="#conexoes">6. Conexões externas</a></li>
+      <li><a href="#banco">7. Banco Supabase</a></li>
+      <li><a href="#infra">8. Infraestrutura</a></li>
+      <li><a href="#riscos">9. Riscos e pendências</a></li>
+    </ol>
+
+    <h2 id="resumo">1. Resumo executivo</h2>
+    <div class="stats">
+      <div class="stat"><strong>2</strong><span>Interfaces (Next + Visual MVP)</span></div>
+      <div class="stat"><strong>8</strong><span>Páginas Next.js</span></div>
+      <div class="stat"><strong>18</strong><span>Módulos de API</span></div>
+      <div class="stat"><strong>20</strong><span>Tabelas Supabase (RLS)</span></div>
+    </div>
+
+    <div class="callout">
+      <strong>Como o produto está organizado:</strong> o usuário final usa principalmente o
+      <em>Visual MVP</em> (Vite + Sandpack). O <em>Next.js</em> é o BFF/API (auth, LLM, billing,
+      GitHub, Vercel) e também mantém uma UI de pipeline mais antiga (`/projects`, Plan/Build/Verify).
+    </div>
+
+    <h3>Status das conexões críticas (VPS — 2026-07-18)</h3>
+    <table>
+      <thead><tr><th>Integração</th><th>Status</th><th>Significado</th></tr></thead>
+      <tbody>
+        <tr><td>Supabase</td><td class="ok">OK</td><td>URL + secret key presentes</td></tr>
+        <tr><td>Mercado Pago</td><td class="ok">OK</td><td><code>MP_ACCESS_TOKEN</code> presente</td></tr>
+        <tr><td>LLM</td><td class="ok">OK</td><td>Pelo menos uma chave Gemini/OpenRouter/Anthropic</td></tr>
+        <tr><td>GitHub App</td><td class="warn">Ausente</td><td><code>GITHUB_APP_ID</code> / private key faltando</td></tr>
+        <tr><td>Vercel</td><td class="warn">Ausente</td><td><code>VERCEL_TOKEN</code> faltando</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="paginas">2. Páginas e telas</h2>
+
+    <h3>2.1 Visual MVP (produto principal)</h3>
+    <p class="muted">SPA em <code>apps/studio-visual-mvp</code>. Uma URL física; navegação por estado React (<code>shellView</code> + <code>nav</code>).</p>
+    <table>
+      <thead><tr><th>Tela</th><th>Como abre</th><th>O que faz</th><th>Auth</th></tr></thead>
+      <tbody>
+        <tr><td>Dashboard Home</td><td>nav = dashboard</td><td>PromptComposer (Build/Plan), créditos, projetos recentes</td><td>Opcional</td></tr>
+        <tr><td>Meus Projetos</td><td>nav = projects → modal</td><td>Lista/abre <code>visual_projects</code></td><td>Obrigatório</td></tr>
+        <tr><td>Conectores</td><td>nav = connectors</td><td>GitHub App, criar repo, push</td><td>Obrigatório</td></tr>
+        <tr><td>Configurações / Billing</td><td>nav = settings</td><td>Saldo, pacotes Basic/Pro, checkout MP</td><td>Obrigatório</td></tr>
+        <tr><td>Workspace Studio</td><td>após prompt ou abrir projeto</td><td>Chat + Preview/Code/Console (Sandpack/Monaco)</td><td>Recomendado</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Modais do Visual MVP</h3>
+    <table>
+      <thead><tr><th>Modal</th><th>Função</th></tr></thead>
+      <tbody>
+        <tr><td>AuthModal</td><td>Login/signup Supabase (+ GitHub OAuth)</td></tr>
+        <tr><td>UserProfileModal</td><td>Editar perfil (nome, WhatsApp, Instagram, logo)</td></tr>
+        <tr><td>MyProjectsModal</td><td>Abrir projetos salvos</td></tr>
+        <tr><td>DeployPublishModal</td><td>Deploy Vercel + polling de status</td></tr>
+        <tr><td>UpgradeModal</td><td>Abre no HTTP 402 (créditos insuficientes)</td></tr>
+      </tbody>
+    </table>
+
+    <h3>2.2 Next.js — páginas de rota</h3>
+    <table>
+      <thead><tr><th>Rota</th><th>Função</th><th>Auth</th></tr></thead>
+      <tbody>
+        <tr><td><code>/</code></td><td>Landing; se logado → /projects</td><td>Pública</td></tr>
+        <tr><td><code>/login</code> / <code>/signup</code></td><td>Entrar / criar conta</td><td>Pública</td></tr>
+        <tr><td><code>/projects</code></td><td>Lista projetos do pipeline clássico</td><td>Cookie</td></tr>
+        <tr><td><code>/projects/new</code></td><td>Novo projeto + scaffold</td><td>Cookie</td></tr>
+        <tr><td><code>/projects/[id]</code></td><td>Workspace Plan/Build/Verify/Fix</td><td>Cookie + ownership</td></tr>
+        <tr><td><code>/ai</code></td><td>Catálogo de providers (informativo)</td><td>Tecnicamente pública</td></tr>
+        <tr><td><code>/ecosystem</code></td><td>Catálogo de conectores (muitos planejados)</td><td>Tecnicamente pública</td></tr>
+        <tr><td><code>/auth/callback</code></td><td>Callback OAuth Supabase → MVP</td><td>OAuth</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="funcoes">3. Funções do produto</h2>
+    <table>
+      <thead><tr><th>Função</th><th>Como funciona</th></tr></thead>
+      <tbody>
+        <tr><td>Geração IA (Build/Plan/Repair)</td><td><code>POST /api/llm/stream</code> com Bearer; debita crédito antes do SSE. Build/edit = 1 crédito; Plan e repair = 0. Sem saldo = 402.</td></tr>
+        <tr><td>Preview ao vivo</td><td>Sandpack (react-ts) + Monaco + Console. Tailwind via CDN. Auto-repair até 3 ciclos.</td></tr>
+        <tr><td>Persistência visual</td><td><code>visual_projects</code> (files, chat, spec, metrics). Autosave após geração.</td></tr>
+        <tr><td>Créditos / checkout</td><td>Signup = 5 créditos. Pacotes Basic 100 / Pro 500 via Mercado Pago. Webhook concede créditos de forma idempotente.</td></tr>
+        <tr><td>GitHub App</td><td>Instalar → criar repo privado → push com filtro de segredos.</td></tr>
+        <tr><td>Deploy Vercel</td><td>Empacota arquivos Vite e cria deployment; modal faz polling.</td></tr>
+        <tr><td>Pipeline clássico (Next)</td><td>Planner → Builder → Verify → Auto Fix em <code>/projects/[id]</code> (filesystem + tabelas plans/tasks).</td></tr>
+        <tr><td>Publish SQL</td><td><code>POST /api/publish</code> valida plano de migrations, mas ainda não executa SQL.</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="apis">4. APIs HTTP</h2>
+    <p class="muted">Auth padrão das APIs de produto: Bearer JWT Supabase. Health é público. Webhooks usam assinatura do provedor.</p>
+
+    <h3>Core / IA</h3>
+    <table>
+      <thead><tr><th>Método</th><th>Rota</th><th>Auth</th><th>Efeito</th></tr></thead>
+      <tbody>
+        <tr><td>GET</td><td><code>/api/health</code></td><td>Público</td><td>Liveness</td></tr>
+        <tr><td>GET</td><td><code>/api/health/integrations</code></td><td>Público</td><td>Presença de envs</td></tr>
+        <tr><td>GET</td><td><code>/api/health/llm</code></td><td>Público</td><td>Checa chave Gemini</td></tr>
+        <tr><td>POST</td><td><code>/api/llm/stream</code></td><td>Bearer + rate limit</td><td>Debita crédito → SSE do agente</td></tr>
+        <tr><td>GET</td><td><code>/auth/callback</code></td><td>OAuth</td><td>Troca code por sessão</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Billing</h3>
+    <table>
+      <thead><tr><th>Método</th><th>Rota</th><th>Efeito</th></tr></thead>
+      <tbody>
+        <tr><td>GET</td><td><code>/api/billing/me</code></td><td>Wallet + planos + custos</td></tr>
+        <tr><td>POST</td><td><code>/api/billing/checkout</code></td><td>Preference MP (basic|pro)</td></tr>
+        <tr><td>POST</td><td><code>/api/billing/cancel</code></td><td>Cancelar assinatura legada</td></tr>
+        <tr><td>POST</td><td><code>/api/webhooks/mercadopago</code> (e alias <code>/api/billing/webhook</code>)</td><td>Confirma pagamento e concede créditos</td></tr>
+      </tbody>
+    </table>
+
+    <h3>GitHub / Deploy / Publish</h3>
+    <table>
+      <thead><tr><th>Método</th><th>Rota</th><th>Efeito</th></tr></thead>
+      <tbody>
+        <tr><td>GET</td><td><code>/api/github/install</code></td><td>Status / URL de instalação</td></tr>
+        <tr><td>GET</td><td><code>/api/github/callback</code></td><td>Vincula installation ao usuário</td></tr>
+        <tr><td>POST</td><td><code>/api/github/webhook</code></td><td>Deliveries + suspensão</td></tr>
+        <tr><td>GET/POST</td><td><code>/api/projects/:id/github/repository</code></td><td>Ler/criar repo</td></tr>
+        <tr><td>POST</td><td><code>/api/projects/:id/github/push</code></td><td>Push filtrado</td></tr>
+        <tr><td>GET/POST</td><td><code>/api/projects/:id/deploy</code></td><td>Listar / iniciar Vercel</td></tr>
+        <tr><td>GET</td><td><code>/api/projects/:id/deploy/:deploymentId</code></td><td>Status</td></tr>
+        <tr><td>POST</td><td><code>/api/webhooks/vercel</code></td><td>Atualiza status remoto</td></tr>
+        <tr><td>POST</td><td><code>/api/publish</code></td><td>Gate de migrations (sem SQL real)</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="chaves">5. Chaves e variáveis</h2>
+
+    <h3>Supabase (obrigatório)</h3>
+    <table>
+      <thead><tr><th>Variável</th><th>Uso</th><th>Local</th><th>VPS</th></tr></thead>
+      <tbody>
+        <tr><td><code>NEXT_PUBLIC_SUPABASE_URL</code></td><td>URL do projeto</td><td>Sim</td><td>Sim*</td></tr>
+        <tr><td><code>NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY</code> / <code>ANON_KEY</code></td><td>Auth pública</td><td>Sim</td><td>Sim*</td></tr>
+        <tr><td><code>SUPABASE_SECRET_KEY</code> / <code>SERVICE_ROLE_KEY</code></td><td>Admin / RPCs</td><td>Sim</td><td>Sim*</td></tr>
+        <tr><td><code>VITE_SUPABASE_URL</code> / <code>VITE_SUPABASE_ANON_KEY</code></td><td>Cliente Vite</td><td>Sim</td><td>Depende do build MVP</td></tr>
+      </tbody>
+    </table>
+    <p class="meta">* Inferido pelo health <code>supabase: true</code> na VPS.</p>
+
+    <h3>LLM (implementadas)</h3>
+    <table>
+      <thead><tr><th>Variável</th><th>Uso real</th></tr></thead>
+      <tbody>
+        <tr><td><code>GEMINI_API_KEY</code> / <code>GOOGLE_AI_API_KEY</code></td><td>Gemini direto (fast/plan fallback)</td></tr>
+        <tr><td><code>OPENROUTER_API_KEY</code></td><td>Claude Sonnet + Gemini via gateway (edit/premium/repair)</td></tr>
+        <tr><td><code>GROQ_API_KEY</code></td><td>Provider opcional (implementado, não é o roteador padrão)</td></tr>
+        <tr><td><code>ANTHROPIC_API_KEY</code></td><td>Só catálogo/health — Claude atual usa OpenRouter</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Mercado Pago / GitHub / Vercel</h3>
+    <table>
+      <thead><tr><th>Variável</th><th>Uso</th><th>VPS</th></tr></thead>
+      <tbody>
+        <tr><td><code>MP_ACCESS_TOKEN</code></td><td>Checkout + consulta pagamento</td><td class="ok">Sim</td></tr>
+        <tr><td><code>MP_WEBHOOK_SECRET</code></td><td>HMAC webhook</td><td class="ok">Sim</td></tr>
+        <tr><td><code>GITHUB_APP_ID</code> + <code>GITHUB_APP_PRIVATE_KEY</code></td><td>JWT da App</td><td class="warn">Não</td></tr>
+        <tr><td><code>GITHUB_WEBHOOK_SECRET</code></td><td>Assinatura webhook</td><td>—</td></tr>
+        <tr><td><code>VERCEL_TOKEN</code></td><td>API de deploy</td><td class="warn">Não</td></tr>
+        <tr><td><code>VERCEL_WEBHOOK_SECRET</code></td><td>Webhook de status</td><td>—</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Somente catalogadas (sem implementação funcional)</h3>
+    <p>
+      <code>OPENAI_API_KEY</code>, <code>DEEPSEEK_*</code>, <code>MISTRAL_*</code>, <code>HUGGINGFACE_*</code>,
+      <code>TOGETHER_*</code>, <code>XAI_*</code>, <code>RESEND_API_KEY</code>,
+      <code>CLOUDFLARE_API_TOKEN</code>, <code>R2_*</code>, <code>SENTRY_DSN</code>,
+      <code>NEXT_PUBLIC_POSTHOG_*</code>, <code>STRIPE_*</code>,
+      <code>STUDIO_DOCKER_NETWORK</code>, <code>STUDIO_PREVIEW_IDLE_MS</code>.
+    </p>
+
+    <h2 id="conexoes">6. Conexões externas</h2>
+    <table>
+      <thead><tr><th>Conexão</th><th>Papel</th><th>Estado</th></tr></thead>
+      <tbody>
+        <tr><td>Supabase</td><td>Auth + Postgres + RLS + RPCs</td><td class="ok">Ativo</td></tr>
+        <tr><td>Google Gemini</td><td>Geração rápida</td><td class="ok">Ativo</td></tr>
+        <tr><td>OpenRouter</td><td>Claude + Gemini gateway</td><td>Código pronto</td></tr>
+        <tr><td>Groq</td><td>Provider opcional</td><td>Código pronto</td></tr>
+        <tr><td>Mercado Pago</td><td>Checkout de créditos</td><td class="ok">Ativo na VPS</td></tr>
+        <tr><td>GitHub App</td><td>Repo + push</td><td class="warn">Env VPS ausente</td></tr>
+        <tr><td>Vercel API</td><td>Deploy dos apps</td><td class="warn">Env VPS ausente</td></tr>
+        <tr><td>Sandpack / Tailwind CDN</td><td>Preview no browser</td><td class="ok">Ativo</td></tr>
+        <tr><td>Cloudflare + Nginx + PM2</td><td>Proxy, SSL, processo</td><td class="ok">Operacional</td></tr>
+      </tbody>
+    </table>
+
+    <p><strong>Webhooks a configurar nos painéis:</strong></p>
+    <ul>
+      <li>Mercado Pago → <code>https://studio.x09.com.br/api/webhooks/mercadopago</code></li>
+      <li>GitHub App → <code>https://studio.x09.com.br/api/github/webhook</code></li>
+      <li>Vercel → <code>https://studio.x09.com.br/api/webhooks/vercel</code></li>
+      <li>Supabase Auth redirect → <code>/auth/callback</code></li>
+    </ul>
+
+    <h2 id="banco">7. Banco Supabase</h2>
+    <p>20 tabelas públicas com RLS. RPCs financeiras apenas com <code>service_role</code>.</p>
+    <table>
+      <thead><tr><th>Grupo</th><th>Tabelas</th></tr></thead>
+      <tbody>
+        <tr><td>Identidade</td><td><code>profiles</code>, <code>workspaces</code>, <code>projects</code></td></tr>
+        <tr><td>Pipeline Next</td><td><code>plans</code>, <code>plan_tasks</code>, <code>plan_task_logs</code>, <code>verify_reports</code>, <code>fix_runs</code></td></tr>
+        <tr><td>Visual MVP</td><td><code>visual_projects</code></td></tr>
+        <tr><td>Billing</td><td><code>billing_plans</code>, <code>subscriptions</code>, <code>credit_wallets</code>, <code>credit_ledger</code>, <code>usage_logs</code>, <code>billing_webhook_events</code></td></tr>
+        <tr><td>GitHub</td><td><code>github_installations</code>, <code>github_repositories</code>, <code>github_oauth_states</code>, <code>github_webhook_deliveries</code></td></tr>
+        <tr><td>Deploy</td><td><code>project_deployments</code></td></tr>
+      </tbody>
+    </table>
+
+    <h3>Regras de crédito</h3>
+    <ul>
+      <li>Signup → wallet + <strong>5</strong> créditos</li>
+      <li>Build/edit → <strong>1</strong> crédito</li>
+      <li>Plan / repair → <strong>0</strong></li>
+      <li>Pacotes: Basic 100 / Pro 500</li>
+      <li>RPCs: <code>debit_generation_credits</code>, <code>grant_credit_package</code>, <code>apply_ledger_entry</code></li>
+    </ul>
+
+    <div class="callout warn">
+      <strong>Dois mundos de projeto:</strong> <code>projects</code> (pipeline Next + disco) e
+      <code>visual_projects</code> (MVP + JSON) são modelos separados. O produto visual atual usa só
+      <code>visual_projects</code>.
+    </div>
+
+    <h2 id="infra">8. Infraestrutura</h2>
+    <table>
+      <thead><tr><th>Componente</th><th>Detalhe</th></tr></thead>
+      <tbody>
+        <tr><td>Domínio</td><td>https://studio.x09.com.br</td></tr>
+        <tr><td>VPS</td><td>2.25.169.23 · app em <code>/opt/x09-studio</code></td></tr>
+        <tr><td>Next/BFF</td><td>PM2 <code>x09-studio</code> · porta 3001 · standalone</td></tr>
+        <tr><td>Nginx</td><td>HTTPS → proxy 127.0.0.1:3001</td></tr>
+        <tr><td>Cloudflare</td><td>Proxy + Origin cert</td></tr>
+        <tr><td>Deploy</td><td><code>bash deploy/deploy.sh</code> (pull, build, pm2)</td></tr>
+        <tr><td>CI</td><td>GitHub Actions: lint/typecheck/test/build (sem deploy automático)</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="riscos">9. Riscos e pendências</h2>
+    <ol>
+      <li>Aplicar migrations SaaS no Supabase remoto (o deploy da VPS não roda SQL).</li>
+      <li>Configurar GitHub App e Vercel na VPS (<code>health</code> ainda false).</li>
+      <li>Configurar webhook Mercado Pago no painel para creditar automaticamente.</li>
+      <li>Middleware de <code>/api/projects/**</code> olha cookie; cliente Vite só com Bearer pode ser redirecionado.</li>
+      <li><code>phase=plan</code> no orquestrador pode executar build sem débito (divergência billing vs agent).</li>
+      <li>Débito de crédito ocorre antes do LLM; não há refund automático se a geração falhar.</li>
+      <li><code>/api/publish</code> ainda não publica de verdade.</li>
+      <li>Checkout atual é compra avulsa; tabelas/cancel ainda têm vestígios de assinatura.</li>
+      <li>Itens do catálogo <code>/ai</code> e <code>/ecosystem</code> (Stripe, Resend, R2, Sentry…) são só planejamento.</li>
+      <li>Deploy PM2 com <code>delete</code> + start gera janela de downtime.</li>
+    </ol>
+
+    <p class="meta" style="margin-top:40px">
+      Fim do laudo · gerado a partir do inventário do repositório x09-studio · 2026-07-18
+    </p>
+  </div>
+</body>
+</html>

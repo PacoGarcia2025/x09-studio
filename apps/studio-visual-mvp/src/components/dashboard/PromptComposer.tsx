@@ -47,11 +47,11 @@ export function PromptComposer({
     <form onSubmit={(e) => void onSubmit(e)} className="w-full">
       <div
         className={cn(
-          "relative overflow-hidden rounded-3xl border border-white/10 bg-white/[0.03] p-2 shadow-[0_0_20px_rgba(99,102,241,0.12)] backdrop-blur-md",
-          large && "p-3",
+          "relative overflow-visible rounded-2xl border border-[#27272A] bg-[#1A1A1F]/95 p-2 shadow-[0_20px_60px_rgba(0,0,0,0.28)] backdrop-blur-xl transition focus-within:border-violet-500/50 focus-within:shadow-[0_0_36px_rgba(124,58,237,0.16)]",
+          large && "p-3.5",
         )}
       >
-        <div className="pointer-events-none absolute inset-x-10 top-0 h-px bg-gradient-to-r from-transparent via-indigo-400/50 to-transparent" />
+        <div className="pointer-events-none absolute inset-x-10 top-0 h-px bg-gradient-to-r from-transparent via-violet-400/70 to-transparent" />
 
         <div className={cn("flex gap-2", large ? "items-start" : "items-end")}>
           <Button
@@ -71,8 +71,8 @@ export function PromptComposer({
             placeholder={placeholder}
             disabled={isGenerating}
             className={cn(
-              "min-h-[56px] flex-1 resize-none border-0 bg-transparent px-1 py-3 text-base text-white shadow-none placeholder:text-zinc-500 focus-visible:ring-0",
-              large && "min-h-[112px] text-lg",
+              "min-h-[56px] flex-1 resize-none border-0 bg-transparent px-1 py-3 text-base text-[#F8FAFC] shadow-none placeholder:text-slate-500 focus-visible:ring-0",
+              large && "min-h-[124px] text-lg leading-8",
             )}
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) {
@@ -106,7 +106,7 @@ export function PromptComposer({
                     className={cn(
                       "block w-full rounded-lg px-3 py-2 text-left text-xs font-medium capitalize transition",
                       buildMode === mode
-                        ? "bg-indigo-500/25 text-indigo-100"
+                        ? "bg-violet-600/25 text-violet-100"
                         : "text-zinc-300 hover:bg-white/5",
                     )}
                   >
@@ -132,7 +132,7 @@ export function PromptComposer({
             type="submit"
             size="icon"
             aria-label={isGenerating ? "Parar" : "Enviar"}
-            className="h-10 w-10 rounded-full bg-indigo-500 text-white shadow-[0_0_20px_rgba(99,102,241,0.35)] hover:bg-indigo-400"
+            className="h-10 w-10 rounded-full bg-violet-600 text-white shadow-[0_0_24px_rgba(124,58,237,0.35)] hover:bg-violet-700"
           >
             {isGenerating ? (
               <Square className="h-3.5 w-3.5 fill-current" />

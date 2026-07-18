@@ -143,7 +143,7 @@ export function ConnectorsPanel() {
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-center gap-3">
             <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
-              <GitBranch className="h-5 w-5 text-cyan-200" />
+              <GitBranch className="h-5 w-5 text-violet-200" />
             </div>
             <div>
               <h2 className="text-sm font-semibold text-primary">GitHub App</h2>
@@ -172,7 +172,7 @@ export function ConnectorsPanel() {
             type="button"
             disabled={busy}
             onClick={() => void handleInstall()}
-            className="bg-gradient-to-r from-cyan-300 to-sky-500 text-zinc-950"
+            className="bg-violet-600 text-white hover:bg-violet-700"
           >
             {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <GitBranch className="h-4 w-4" />}
             Instalar GitHub App
@@ -185,7 +185,7 @@ export function ConnectorsPanel() {
                 {projectName || "Nenhum projeto aberto"}
               </p>
               {repo?.full_name ? (
-                <p className="mt-2 text-xs text-cyan-200">
+                <p className="mt-2 text-xs text-violet-200">
                   Repo:{" "}
                   <a
                     href={repo.html_url}
@@ -225,7 +225,7 @@ export function ConnectorsPanel() {
                   type="button"
                   disabled={busy}
                   onClick={() => void handlePush()}
-                  className="bg-gradient-to-r from-cyan-300 to-sky-500 text-zinc-950"
+                  className="bg-violet-600 text-white hover:bg-violet-700"
                 >
                   {busy ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
@@ -240,7 +240,7 @@ export function ConnectorsPanel() {
         )}
 
         {message ? (
-          <p className="rounded-xl border border-cyan-400/20 bg-cyan-400/10 px-3 py-2 text-xs text-cyan-100">
+          <p className="rounded-xl border border-violet-400/20 bg-violet-500/10 px-3 py-2 text-xs text-violet-100">
             {message}
           </p>
         ) : null}

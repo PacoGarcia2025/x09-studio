@@ -4,14 +4,18 @@ import {
   Code2,
   Loader2,
   LogOut,
+  Monitor,
   MonitorPlay,
   Rocket,
   Save,
+  Smartphone,
+  Tablet,
   Terminal,
   User,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AuthModal } from "@/components/auth/AuthModal";
+import { AgentsPanel } from "@/components/agents/AgentsPanel";
 import { UpgradeModal } from "@/components/billing/UpgradeModal";
 import { ChatPanel } from "@/components/chat/ChatPanel";
 import { ConnectorsPanel } from "@/components/connectors/ConnectorsPanel";
@@ -35,6 +39,7 @@ import { CodeEditor } from "@/components/workspace/CodeEditor";
 import { ConsoleRender } from "@/components/workspace/ConsoleRender";
 import { PreviewRender } from "@/components/workspace/PreviewRender";
 import { SandpackErrorBridge } from "@/components/workspace/SandpackErrorBridge";
+import { Timeline } from "@/components/workspace/Timeline";
 import { toSandpackFiles } from "@/components/workspace/sandpack-files";
 import { sandpackCustomSetup } from "@/components/workspace/sandpack-setup";
 import { supabase } from "@/lib/supabase";
@@ -134,7 +139,7 @@ export default function App() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get("github") === "connected") {
-      setNav("connectors");
+      setNav("ecosystem");
       setShellView("home");
       setSaveMessage("GitHub conectado!");
       window.setTimeout(() => setSaveMessage(null), 2500);
@@ -179,6 +184,10 @@ export default function App() {
   }
 
   function handleNav(id: AppNavId) {
+    if (id === "create") {
+      handleNewProject();
+      return;
+    }
     setNav(id);
     if (id === "dashboard") {
       setShellView("home");
@@ -202,7 +211,7 @@ export default function App() {
       setShellView("home");
       return;
     }
-    if (id === "connectors") {
+    if (id === "ecosystem") {
       if (!isLoggedIn) {
         setIsAuthOpen(true);
         return;
@@ -217,7 +226,13 @@ export default function App() {
         <p className="truncate text-sm font-medium text-white">
           {shellView === "studio"
             ? currentProjectName || "Workspace"
-            : "Dashboard"}
+            : nav === "agents"
+              ? "Agentes"
+              : nav === "ecosystem"
+                ? "Ecossistema"
+                : nav === "settings"
+                  ? "Configurações"
+                  : "Início"}
         </p>
       </div>
       <div className="flex items-center gap-2">
@@ -225,7 +240,7 @@ export default function App() {
           <button
             type="button"
             onClick={() => handleNav("settings")}
-            className="hidden rounded-full border border-white/10 bg-indigo-500/15 px-3 py-1 text-xs font-medium text-indigo-100 backdrop-blur-md sm:inline"
+            className="hidden rounded-full border border-violet-500/20 bg-violet-500/10 px-3 py-1 text-xs font-medium text-violet-100 backdrop-blur-md sm:inline"
             title="Créditos"
           >
             {creditBalance} créditos
@@ -254,7 +269,7 @@ export default function App() {
               title="Perfil"
             >
               <Avatar className="h-8 w-8">
-                <AvatarFallback className="bg-indigo-500/25 text-indigo-100">
+                <AvatarFallback className="bg-violet-500/25 text-violet-100">
                   {avatarLabel}
                 </AvatarFallback>
               </Avatar>
@@ -273,7 +288,7 @@ export default function App() {
           <Button
             size="sm"
             onClick={() => setIsAuthOpen(true)}
-            className="rounded-full bg-indigo-500 text-white hover:bg-indigo-400"
+            className="rounded-full bg-violet-600 text-white hover:bg-violet-700"
           >
             <User className="h-4 w-4" />
             Entrar
@@ -314,8 +329,10 @@ export default function App() {
         onClose={clearUpgradeRequired}
       />
 
-      {shellView === "home" && nav === "connectors" ? (
+      {shellView === "home" && nav === "ecosystem" ? (
         <ConnectorsPanel />
+      ) : shellView === "home" && nav === "agents" ? (
+        <AgentsPanel />
       ) : shellView === "home" && nav === "settings" ? (
         <div className="min-h-0 flex-1 overflow-y-auto">
           <BillingSettings highlightUpgrade={upgradeRequired} />
@@ -422,6 +439,9 @@ function WorkspacePanel({
   const files = useStudioStore((state) => state.files);
   const activeFile = useStudioStore((state) => state.activeFile);
   const agentPhaseLabel = useStudioStore((state) => state.agentPhaseLabel);
+  const [previewViewport, setPreviewViewport] = useState<
+    "desktop" | "tablet" | "mobile"
+  >("desktop");
   const sandpackFiles = useMemo(() => toSandpackFiles(files), [files]);
   const visibleFiles = useMemo(() => {
     const paths = Object.keys(files)
@@ -442,7 +462,7 @@ function WorkspacePanel({
       className="flex h-full min-h-0 flex-col bg-transparent"
     >
       {/* Única barra superior do Preview — sem chrome extra */}
-      <div className="flex h-11 shrink-0 items-center justify-between gap-2 border-b border-white/10 bg-white/[0.03] px-3 backdrop-blur-md">
+      <div className="flex h-12 shrink-0 items-center justify-between gap-2 border-b border-[#27272A] bg-[#111113]/90 px-3 backdrop-blur-xl">
         <div className="flex min-w-0 items-center gap-2">
           <Button
             variant="ghost"
@@ -460,31 +480,55 @@ function WorkspacePanel({
           <TabsList className="ml-1 h-8 gap-0.5 rounded-full border border-white/10 bg-white/[0.04] p-0.5">
             <TabsTrigger
               value="preview"
-              className="h-7 rounded-full px-3 text-xs data-[state=active]:bg-indigo-500/25 data-[state=active]:text-indigo-100"
+              className="h-7 rounded-full px-3 text-xs data-[state=active]:bg-violet-600/25 data-[state=active]:text-violet-100"
             >
               <MonitorPlay className="mr-1.5 h-3.5 w-3.5" />
               Preview
             </TabsTrigger>
             <TabsTrigger
               value="code"
-              className="h-7 rounded-full px-3 text-xs data-[state=active]:bg-indigo-500/25 data-[state=active]:text-indigo-100"
+              className="h-7 rounded-full px-3 text-xs data-[state=active]:bg-violet-600/25 data-[state=active]:text-violet-100"
             >
               <Code2 className="mr-1.5 h-3.5 w-3.5" />
               Code
             </TabsTrigger>
             <TabsTrigger
               value="console"
-              className="h-7 rounded-full px-3 text-xs data-[state=active]:bg-indigo-500/25 data-[state=active]:text-indigo-100"
+              className="h-7 rounded-full px-3 text-xs data-[state=active]:bg-violet-600/25 data-[state=active]:text-violet-100"
             >
               <Terminal className="mr-1.5 h-3.5 w-3.5" />
               Console
             </TabsTrigger>
           </TabsList>
+          <div className="ml-1 hidden items-center gap-0.5 rounded-full border border-white/10 bg-black/20 p-0.5 lg:flex">
+            {(
+              [
+                ["desktop", Monitor, "Desktop"],
+                ["tablet", Tablet, "Tablet"],
+                ["mobile", Smartphone, "Mobile"],
+              ] as const
+            ).map(([id, Icon, label]) => (
+              <button
+                key={id}
+                type="button"
+                onClick={() => setPreviewViewport(id)}
+                title={label}
+                className={cn(
+                  "grid h-7 w-8 place-items-center rounded-full transition",
+                  previewViewport === id
+                    ? "bg-violet-600/25 text-violet-200"
+                    : "text-slate-500 hover:text-white",
+                )}
+              >
+                <Icon className="h-3.5 w-3.5" />
+              </button>
+            ))}
+          </div>
         </div>
 
         <div className="flex min-w-0 items-center gap-1.5">
           {agentPhaseLabel ? (
-            <span className="mr-1 hidden max-w-[160px] truncate text-[11px] text-indigo-200/80 lg:inline">
+            <span className="mr-1 hidden max-w-[160px] truncate text-[11px] text-violet-200/80 lg:inline">
               {agentPhaseLabel}
             </span>
           ) : null}
@@ -497,7 +541,7 @@ function WorkspacePanel({
             <button
               type="button"
               onClick={onOpenBilling}
-              className="hidden rounded-full border border-white/10 bg-indigo-500/15 px-2.5 py-1 text-[11px] font-medium text-indigo-100 md:inline"
+              className="hidden rounded-full border border-violet-500/20 bg-violet-500/10 px-2.5 py-1 text-[11px] font-medium text-violet-100 md:inline"
             >
               {creditBalance}
             </button>
@@ -533,7 +577,7 @@ function WorkspacePanel({
                 onClick={onProfile}
               >
                 <Avatar className="h-7 w-7">
-                  <AvatarFallback className="bg-indigo-500/25 text-[11px] text-indigo-100">
+                  <AvatarFallback className="bg-violet-500/25 text-[11px] text-violet-100">
                     {avatarLabel}
                   </AvatarFallback>
                 </Avatar>
@@ -551,7 +595,7 @@ function WorkspacePanel({
             <Button
               size="sm"
               onClick={onLogin}
-              className="h-8 rounded-full bg-indigo-500 px-3 text-xs text-white hover:bg-indigo-400"
+              className="h-8 rounded-full bg-violet-600 px-3 text-xs text-white hover:bg-violet-700"
             >
               Entrar
             </Button>
@@ -585,9 +629,26 @@ function WorkspacePanel({
             <TabsContent
               value="preview"
               forceMount
-              className="absolute inset-0 m-0 mt-0 h-full max-w-full min-h-0 min-w-0 overflow-hidden data-[state=inactive]:hidden"
+              className="absolute inset-0 m-0 mt-0 flex h-full max-w-full min-h-0 min-w-0 items-stretch justify-center overflow-hidden bg-[#0A0A0B] p-0 data-[state=inactive]:hidden lg:p-3"
             >
-              <PreviewRender />
+              <div
+                className={cn(
+                  "h-full min-w-0 overflow-hidden bg-white transition-[width,border-radius] duration-300",
+                  previewViewport !== "desktop" &&
+                    "rounded-xl border border-white/10",
+                )}
+                style={{
+                  width:
+                    previewViewport === "mobile"
+                      ? 390
+                      : previewViewport === "tablet"
+                        ? 768
+                        : "100%",
+                  maxWidth: "100%",
+                }}
+              >
+                <PreviewRender />
+              </div>
             </TabsContent>
             <TabsContent
               value="code"
@@ -604,6 +665,7 @@ function WorkspacePanel({
           </div>
         </SandpackProvider>
       </div>
+      <Timeline />
     </Tabs>
   );
 }

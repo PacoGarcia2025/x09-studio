@@ -3,18 +3,21 @@
 @tailwind utilities;
 
 :root {
-  --bg-primary: #09090b;
-  --bg-secondary: rgba(24, 24, 27, 0.55);
-  --text-primary: #fafafa;
-  --text-secondary: #a1a1aa;
-  --accent-primary: #6366f1;
-  --accent-hover: #818cf8;
-  --accent-deep: #4f46e5;
-  --border-color: rgba(255, 255, 255, 0.1);
-  --glow: rgba(99, 102, 241, 0.3);
-  --mesh-a: rgba(99, 102, 241, 0.18);
-  --mesh-b: rgba(139, 92, 246, 0.12);
-  --mesh-c: rgba(99, 102, 241, 0.08);
+  --bg-primary: #0a0a0b;
+  --bg-secondary: rgba(17, 17, 19, 0.86);
+  --card: #1a1a1f;
+  --text-primary: #f8fafc;
+  --text-secondary: #cbd5e1;
+  --accent-primary: #7c3aed;
+  --accent-hover: #6d28d9;
+  --accent-deep: #5b21b6;
+  --accent-secondary: #c026d3;
+  --border-color: #27272a;
+  --glow: rgba(124, 58, 237, 0.28);
+  --mesh-a: rgba(124, 58, 237, 0.2);
+  --mesh-b: rgba(192, 38, 211, 0.12);
+  --mesh-c: rgba(79, 70, 229, 0.1);
+  --success: #22c55e;
 }
 
 html,
@@ -29,13 +32,12 @@ body {
   color: var(--text-primary);
   font-family: Outfit, ui-sans-serif, system-ui, sans-serif;
   background-color: var(--bg-primary);
-  background-image: linear-gradient(
-    145deg,
-    #09090b 0%,
-    #18181b 45%,
-    #1e1b4b 100%
-  );
+  background-image:
+    radial-gradient(circle at 18% 0%, var(--mesh-a), transparent 32%),
+    radial-gradient(circle at 82% 18%, var(--mesh-b), transparent 28%),
+    radial-gradient(circle at 55% 100%, var(--mesh-c), transparent 34%);
   background-attachment: fixed;
+  -webkit-font-smoothing: antialiased;
 }
 
 * {
@@ -43,21 +45,21 @@ body {
 }
 
 .glass-panel {
-  background: rgba(255, 255, 255, 0.03);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(17, 17, 19, 0.84);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--border-color);
   box-shadow:
-    0 24px 64px rgba(0, 0, 0, 0.35),
+    0 24px 64px rgba(0, 0, 0, 0.3),
     inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
 .glass-card {
-  background: rgba(255, 255, 255, 0.03);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.28);
+  background: rgba(26, 26, 31, 0.82);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border: 1px solid var(--border-color);
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.24);
   transition:
     border-color 0.2s ease,
     transform 0.2s ease,
@@ -65,11 +67,21 @@ body {
 }
 
 .glass-card:hover {
-  border-color: rgba(129, 140, 248, 0.4);
+  border-color: rgba(124, 58, 237, 0.5);
   transform: translateY(-2px);
   box-shadow:
-    0 16px 48px rgba(0, 0, 0, 0.35),
-    0 0 28px rgba(99, 102, 241, 0.16);
+    0 16px 44px rgba(0, 0, 0, 0.3),
+    0 0 28px rgba(124, 58, 237, 0.16);
+}
+
+::selection {
+  background: rgba(124, 58, 237, 0.45);
+  color: #fff;
+}
+
+:focus-visible {
+  outline: 2px solid rgba(124, 58, 237, 0.9);
+  outline-offset: 2px;
 }
 
 /* Sandpack: altura só DENTRO do preview + chrome limpo */

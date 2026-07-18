@@ -138,7 +138,7 @@ export function DeployPublishModal({
             <span className="font-medium text-primary">{status}</span>
           </p>
           {url ? (
-            <p className="mt-2 break-all text-cyan-200">
+            <p className="mt-2 break-all text-violet-200">
               <a href={url} target="_blank" rel="noreferrer" className="underline">
                 {url}
               </a>
@@ -167,7 +167,7 @@ export function DeployPublishModal({
             type="button"
             disabled={busy || status === "building" || status === "queued"}
             onClick={() => void handleDeploy()}
-            className="bg-gradient-to-r from-cyan-300 to-sky-500 text-zinc-950"
+            className="bg-violet-600 text-white hover:bg-violet-700"
           >
             {busy || status === "building" || status === "queued" ? (
               <Loader2 className="h-4 w-4 animate-spin" />

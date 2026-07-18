@@ -35,8 +35,10 @@ export async function updateSession(request: NextRequest) {
 
   const path = request.nextUrl.pathname;
   const isAuthPage = path === "/login" || path === "/signup";
-  const isProtected =
-    path.startsWith("/projects") || path.startsWith("/api/projects");
+  // Páginas Next usam sessão por cookie. APIs do Visual MVP validam o Bearer
+  // Supabase dentro de cada handler; redirecioná-las aqui quebraria clientes
+  // Vite autenticados que não compartilham o cookie SSR.
+  const isProtected = path.startsWith("/projects");
 
   if (!user && isProtected) {
     const url = request.nextUrl.clone();

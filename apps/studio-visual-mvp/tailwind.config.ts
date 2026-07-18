@@ -13,6 +13,7 @@ const config: Config = {
       colors: {
         background: "var(--bg-primary)",
         surface: "var(--bg-secondary)",
+        card: "var(--card)",
         foreground: "var(--text-primary)",
         muted: "var(--text-secondary)",
         primary: "var(--text-primary)",
@@ -21,8 +22,10 @@ const config: Config = {
           DEFAULT: "var(--accent-primary)",
           hover: "var(--accent-hover)",
           deep: "var(--accent-deep)",
+          secondary: "var(--accent-secondary)",
         },
         border: "var(--border-color)",
+        success: "var(--success)",
       },
       borderRadius: {
         xl: "1rem",
@@ -31,7 +34,7 @@ const config: Config = {
       },
       boxShadow: {
         glow: "0 0 40px var(--glow)",
-        soft: "0 20px 50px rgba(0,0,0,0.35)",
+        soft: "0 20px 50px rgba(0,0,0,0.3)",
       },
       keyframes: {
         "fade-up": {

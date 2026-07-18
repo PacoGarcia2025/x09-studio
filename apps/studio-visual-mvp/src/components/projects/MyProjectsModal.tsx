@@ -78,11 +78,11 @@ export function MyProjectsModal({ open, onClose, onOpened }: MyProjectsModalProp
       />
 
       <div className="relative z-10 flex max-h-[85vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-border bg-surface shadow-glow">
-        <div className="pointer-events-none absolute inset-x-0 top-0 h-28 bg-gradient-to-br from-cyan-500/20 via-sky-500/10 to-transparent" />
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-28 bg-gradient-to-br from-violet-600/20 via-fuchsia-600/10 to-transparent" />
 
         <div className="relative flex items-start justify-between border-b border-border px-6 py-5">
           <div className="flex items-center gap-3">
-            <div className="grid h-10 w-10 place-items-center rounded-xl bg-gradient-to-br from-cyan-400 to-sky-600 text-zinc-950 shadow-glow">
+            <div className="grid h-10 w-10 place-items-center rounded-xl bg-gradient-to-br from-violet-600 to-fuchsia-600 text-white shadow-glow">
               <FolderOpen className="h-5 w-5" />
             </div>
             <div>
@@ -160,7 +160,7 @@ export function MyProjectsModal({ open, onClose, onOpened }: MyProjectsModalProp
                       {formatDate(project.updated_at || project.created_at)}
                     </p>
                     {project.published_url ? (
-                      <p className="mt-2 truncate text-[11px] text-cyan-300">
+                      <p className="mt-2 truncate text-[11px] text-violet-300">
                         {project.published_url}
                       </p>
                     ) : project.publish_status ? (

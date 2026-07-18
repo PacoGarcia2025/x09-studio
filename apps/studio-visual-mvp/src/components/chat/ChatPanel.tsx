@@ -45,7 +45,7 @@ export function ChatPanel({ compact = false }: { compact?: boolean }) {
           </p>
         ) : null}
         {agentPhaseLabel ? (
-          <p className="mt-0.5 text-[11px] text-indigo-300">
+          <p className="mt-0.5 text-[11px] text-violet-300">
             {agentPhaseLabel}
             {metrics?.repairCycles ? ` · repairs ${metrics.repairCycles}` : ""}
           </p>
@@ -100,7 +100,7 @@ function MessageBubble({
   return (
     <div className={cn("flex min-w-0 gap-2.5", isUser && "justify-end")}>
       {!isUser ? (
-        <div className="mt-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-indigo-400/30 bg-indigo-500/15 text-indigo-300">
+        <div className="mt-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-violet-400/30 bg-violet-600/15 text-violet-300">
           <Bot className="h-3.5 w-3.5" />
         </div>
       ) : null}
@@ -109,7 +109,7 @@ function MessageBubble({
         className={cn(
           "min-w-0 max-w-[85%] rounded-2xl px-3.5 py-2.5 text-sm leading-6",
           isUser
-            ? "bg-indigo-500 text-white shadow-[0_0_16px_rgba(99,102,241,0.25)]"
+            ? "bg-violet-600 text-white shadow-[0_0_16px_rgba(124,58,237,0.25)]"
             : "border border-white/10 bg-white/[0.03] text-primary backdrop-blur-md",
         )}
       >
@@ -128,7 +128,7 @@ function MessageBubble({
                   ),
                   pre: () => null,
                   code: ({ children }) => (
-                    <span className="font-medium text-cyan-200">{children}</span>
+                    <span className="font-medium text-fuchsia-200">{children}</span>
                   ),
                 }}
               >
@@ -145,7 +145,7 @@ function MessageBubble({
       </div>
 
       {isUser ? (
-        <div className="mt-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-cyan-400 text-zinc-950">
+        <div className="mt-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-fuchsia-500 text-white">
           <User className="h-3.5 w-3.5" />
         </div>
       ) : null}
@@ -161,7 +161,7 @@ function GeneratingStatus({ compact = false }: { compact?: boolean }) {
         compact ? "mt-3 border-t border-white/10 pt-3" : "",
       )}
     >
-      <Loader2 className="h-4 w-4 shrink-0 animate-spin text-cyan-300" />
+      <Loader2 className="h-4 w-4 shrink-0 animate-spin text-violet-300" />
       <div className="min-w-0">
         <p className="text-sm text-primary">
           {compact ? "Gerando…" : "Criando sua experiência…"}

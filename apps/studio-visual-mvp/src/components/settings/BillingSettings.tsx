@@ -90,7 +90,7 @@ export function BillingSettings({
       <section className="glass-card grid gap-4 rounded-3xl p-6 sm:grid-cols-3">
         <div>
           <p className="text-xs uppercase tracking-wide text-secondary">Saldo</p>
-          <p className="mt-1 text-3xl font-semibold text-cyan-100">
+          <p className="mt-1 text-3xl font-semibold text-violet-100">
             {loading ? "…" : balance}
           </p>
           <p className="text-xs text-secondary">créditos</p>
@@ -146,9 +146,9 @@ export function BillingSettings({
             >
               <div className="mb-4 flex items-center gap-2">
                 {code === "pro" ? (
-                  <Sparkles className="h-4 w-4 text-cyan-200" />
+                  <Sparkles className="h-4 w-4 text-fuchsia-300" />
                 ) : (
-                  <Zap className="h-4 w-4 text-cyan-200" />
+                  <Zap className="h-4 w-4 text-violet-300" />
                 )}
                 <h3 className="font-semibold text-primary">{p.name}</h3>
               </div>
@@ -162,7 +162,7 @@ export function BillingSettings({
                 type="button"
                 disabled={busy}
                 onClick={() => void handleCheckout(code)}
-                className="mt-5 w-full bg-indigo-500 text-white hover:bg-indigo-400"
+                className="mt-5 w-full bg-violet-600 text-white hover:bg-violet-700"
               >
                 {busy ? (
                   <Loader2 className="h-4 w-4 animate-spin" />

@@ -253,9 +253,7 @@ async function streamBuild(
   return result.text;
 }
 
-/**
- * Orquestra plan → build (ou edit/repair direto).
- */
+/** Orquestra plan-only, plan → build, edit ou repair. */
 export async function runAgentStream(
   req: StreamRequest,
   emit: StreamEmit,
@@ -292,6 +290,22 @@ export async function runAgentStream(
         });
         console.warn("[agent] plan failed", planError);
       }
+    }
+
+    // Plan é uma entrega não-billable e não pode cair silenciosamente em Build.
+    // No modo auto, o plano continua sendo usado como entrada da geração.
+    if (req.phase === "plan") {
+      if (!spec) {
+        throw new Error("Não foi possível gerar o plano do aplicativo.");
+      }
+      const text = JSON.stringify(spec, null, 2);
+      emit({
+        type: "phase",
+        phase: "concluido",
+        label: "Plano concluído",
+      });
+      emit({ type: "done", text, mode: "plan" });
+      return;
     }
 
     const text = await streamBuild(req, mode, emit, spec, signal);

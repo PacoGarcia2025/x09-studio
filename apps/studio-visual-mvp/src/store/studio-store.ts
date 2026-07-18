@@ -80,6 +80,9 @@ type StudioState = {
   hydrateProject: (payload: {
     files: Record<string, string>;
     messages: ChatMessage[];
+    versions?: StudioVersion[];
+    appSpec?: unknown | null;
+    metrics?: GenerationMetrics | null;
   }) => void;
 };
 
@@ -557,8 +560,15 @@ export const useStudioStore = create<StudioState>((set, get) => ({
     });
   },
 
-  hydrateProject: ({ files, messages }) => {
+  hydrateProject: ({
+    files,
+    messages,
+    versions = [],
+    appSpec = null,
+    metrics = null,
+  }) => {
     const filePaths = Object.keys(files);
+    const activeVersion = versions[versions.length - 1] ?? null;
     set({
       files: { ...files },
       messages:
@@ -568,16 +578,16 @@ export const useStudioStore = create<StudioState>((set, get) => ({
       activeFile: filePaths.includes("/App.tsx")
         ? "/App.tsx"
         : filePaths[0] ?? "/App.tsx",
-      versions: [],
-      activeVersionId: null,
+      versions,
+      activeVersionId: activeVersion?.id ?? null,
       isGenerating: false,
       lastResolvedMode: null,
       agentPhase: null,
       agentPhaseLabel: null,
-      lastAppSpec: null,
+      lastAppSpec: appSpec,
       previewError: null,
       repairCycles: 0,
-      metrics: null,
+      metrics,
       lastStableFiles: { ...files },
       abortController: null,
     });

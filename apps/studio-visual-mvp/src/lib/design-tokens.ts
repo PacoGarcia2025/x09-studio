@@ -1,35 +1,34 @@
 export const DESIGN_TOKENS = {
   colors: {
-    // Fundo com leve gradiente de profundidade
-    bg: "bg-gradient-to-br from-zinc-950 via-zinc-900 to-indigo-950",
-    // Cards com vidro fosco premium
-    card: "bg-white/[0.03] border border-white/10 backdrop-blur-md",
-    border: "border-white/10",
-    textPrimary: "text-white",
-    textSecondary: "text-zinc-400",
-    // Cores vibrantes estilo "SaaS moderno"
-    accent: "bg-indigo-500 hover:bg-indigo-400 text-white",
+    bg: "bg-[#0A0A0B]",
+    surface: "bg-[#111113]",
+    card: "bg-[#1A1A1F] border border-[#27272A]",
+    border: "border-[#27272A]",
+    textPrimary: "text-[#F8FAFC]",
+    textSecondary: "text-[#CBD5E1]",
+    accent: "bg-violet-600 hover:bg-violet-700 text-white",
     accentText: "text-white",
-    accentSoft: "bg-indigo-500/15 text-indigo-300",
-    glow: "shadow-[0_0_20px_rgba(99,102,241,0.3)]",
+    accentSoft: "bg-violet-600/15 text-violet-200",
+    glow: "shadow-[0_0_28px_rgba(124,58,237,0.28)]",
+    success: "text-emerald-400",
   },
   typography: {
-    h1: "text-5xl md:text-7xl font-bold tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-white to-zinc-400",
-    h2: "text-3xl font-semibold tracking-tight text-white",
-    body: "text-zinc-400 leading-relaxed",
+    h1: "text-5xl md:text-7xl font-bold tracking-[-0.045em] text-[#F8FAFC]",
+    h2: "text-3xl font-semibold tracking-tight text-[#F8FAFC]",
+    body: "text-[#CBD5E1] leading-relaxed",
   },
   effects: {
-    glass: "backdrop-blur-2xl border border-white/5 rounded-3xl",
-    shadow: "shadow-2xl shadow-indigo-500/10",
-    glow: "shadow-[0_0_20px_rgba(99,102,241,0.3)]",
+    glass: "backdrop-blur-2xl border border-white/5 rounded-2xl",
+    shadow: "shadow-2xl shadow-violet-950/20",
+    glow: "shadow-[0_0_28px_rgba(124,58,237,0.28)]",
   },
-  /** Paletas de marca sugeridas — escolha UMA por projeto */
+  /** Paletas sugeridas para os apps gerados; o Studio usa violet. */
   brands: {
-    indigo: {
-      accent: "bg-indigo-500 hover:bg-indigo-400 text-white",
-      gradient: "bg-gradient-to-br from-zinc-950 via-zinc-900 to-indigo-950",
-      orb: "bg-indigo-500/30",
-      ring: "ring-indigo-400/40",
+    violet: {
+      accent: "bg-violet-600 hover:bg-violet-700 text-white",
+      gradient: "bg-gradient-to-r from-violet-600 via-fuchsia-600 to-indigo-600",
+      orb: "bg-violet-600/30",
+      ring: "ring-violet-500/40",
     },
     cyan: {
       accent: "bg-cyan-400 hover:bg-cyan-300 text-zinc-950",
