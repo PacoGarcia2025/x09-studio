@@ -1,7 +1,7 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import type { LlmCompleteInput, LlmCompleteResult, LlmProvider } from "./types";
 
-const MODEL_ID = "gemini-2.5-flash";
+const DEFAULT_MODEL = "gemini-2.5-flash";
 
 function requireGeminiApiKey(): string {
   const key = process.env.GEMINI_API_KEY ?? process.env.GOOGLE_AI_API_KEY;
@@ -11,13 +11,15 @@ function requireGeminiApiKey(): string {
   return key;
 }
 
-export function createGeminiFlashProvider(): LlmProvider {
+export function createGeminiFlashProvider(
+  modelId: string = DEFAULT_MODEL,
+): LlmProvider {
   return {
-    id: MODEL_ID,
+    id: modelId,
     async complete(input: LlmCompleteInput): Promise<LlmCompleteResult> {
       const genAI = new GoogleGenerativeAI(requireGeminiApiKey());
       const model = genAI.getGenerativeModel({
-        model: MODEL_ID,
+        model: modelId,
         generationConfig: {
           temperature: input.temperature ?? 0.4,
           maxOutputTokens: input.maxOutputTokens ?? 8192,
@@ -51,7 +53,7 @@ export function createGeminiFlashProvider(): LlmProvider {
 
       return {
         text,
-        model: MODEL_ID,
+        model: modelId,
         usage: {
           inputTokens: usage?.promptTokenCount,
           outputTokens: usage?.candidatesTokenCount,
