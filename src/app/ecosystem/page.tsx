@@ -14,18 +14,18 @@ const categories = Array.from(
 
 export default function EcosystemPage() {
   return (
-    <AppShell>
-      <div className="space-y-8">
-        <section className="x09-card overflow-hidden rounded-[2rem] p-8">
+    <AppShell activeHref="/ecosystem">
+      <div className="space-y-8 px-5 py-8 md:px-8">
+        <section className="overflow-hidden rounded-[2rem] border border-zinc-200 bg-white p-8 shadow-sm">
           <div className="flex flex-col gap-8 xl:flex-row xl:items-end xl:justify-between">
             <div className="max-w-3xl space-y-4">
-              <p className="text-xs uppercase tracking-[0.28em] text-violet-300">
-                Ecossistema
+              <p className="text-xs uppercase tracking-[0.28em] text-violet-600">
+                Conectores
               </p>
-              <h1 className="text-4xl font-semibold tracking-[-0.04em] text-white md:text-5xl">
+              <h1 className="text-4xl font-semibold tracking-[-0.04em] text-zinc-900 md:text-5xl">
                 Conecte IA, dados, domínio e publicação em um só lugar.
               </h1>
-              <p className="text-sm leading-7 text-zinc-400">
+              <p className="text-sm leading-7 text-zinc-500">
                 Estrutura inspirada em Lovable e Base44: o usuário conversa com
                 o X09, enquanto conectores, chaves, deploy e automações ficam em
                 uma central simples.

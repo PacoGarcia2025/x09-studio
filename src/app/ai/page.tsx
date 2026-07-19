@@ -10,18 +10,18 @@ export default function AiModelsPage() {
   );
 
   return (
-    <AppShell>
-      <div className="space-y-8">
-        <section className="x09-card overflow-hidden rounded-[2rem] p-8">
+    <AppShell activeHref="/ai">
+      <div className="space-y-8 px-5 py-8 md:px-8">
+        <section className="overflow-hidden rounded-[2rem] border border-zinc-200 bg-white p-8 shadow-sm">
           <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
             <div className="max-w-3xl space-y-4">
-              <p className="text-xs uppercase tracking-[0.28em] text-violet-300">
-                IA Models Hub
+              <p className="text-xs uppercase tracking-[0.28em] text-violet-600">
+                Recursos
               </p>
-              <h1 className="text-4xl font-semibold tracking-[-0.04em] text-white md:text-5xl">
+              <h1 className="text-4xl font-semibold tracking-[-0.04em] text-zinc-900 md:text-5xl">
                 O cérebro multi-IA do X09 Studio
               </h1>
-              <p className="text-sm leading-7 text-zinc-400">
+              <p className="text-sm leading-7 text-zinc-500">
                 Base para operar modelos pagos e gratuitos no Planner, Builder,
                 Verify e Auto Fix, com fallback, custo por tarefa e qualidade por
                 tipo de produto.
