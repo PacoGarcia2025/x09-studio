@@ -15,12 +15,16 @@ function loadEnv() {
     return envVars;
   }
 
-  const content = fs.readFileSync(envPath, "utf-8");
-  for (const line of content.split("\n")) {
+  const content = fs.readFileSync(envPath, "utf-8").replace(/^\uFEFF/, "");
+  for (const line of content.split(/\r?\n/)) {
     const trimmed = line.trim();
     if (!trimmed || trimmed.startsWith("#")) continue;
 
-    const match = trimmed.match(/^([\w.-]+)\s*=\s*(.*)$/);
+    const withoutExport = trimmed.startsWith("export ")
+      ? trimmed.slice(7).trim()
+      : trimmed;
+
+    const match = withoutExport.match(/^([\w.-]+)\s*=\s*(.*)$/);
     if (!match) continue;
 
     const key = match[1];
@@ -31,8 +35,25 @@ function loadEnv() {
     ) {
       val = val.slice(1, -1);
     }
-    envVars[key] = val;
+    // Remove aspas escapadas residual e espaços
+    envVars[key] = val.trim();
   }
+
+  // Aliases → nome canônico usado no código
+  if (!envVars.OPENROUTER_API_KEY) {
+    envVars.OPENROUTER_API_KEY =
+      envVars.OPEN_ROUTER_API_KEY || envVars.OPENROUTER_KEY || "";
+    if (!envVars.OPENROUTER_API_KEY) delete envVars.OPENROUTER_API_KEY;
+  }
+
+  const present = [
+    "OPENROUTER_API_KEY",
+    "GROQ_API_KEY",
+    "OPENAI_API_KEY",
+    "ANTHROPIC_API_KEY",
+    "GEMINI_API_KEY",
+  ].filter((k) => Boolean(envVars[k]));
+  console.log(`[ecosystem] LLM keys carregadas: ${present.join(", ") || "(nenhuma)"}`);
 
   return envVars;
 }

@@ -1,30 +1,36 @@
 import { NextResponse } from "next/server";
 import { getLlmProvider } from "@/lib/llm/provider";
+import { listFastProviders, llmKeysStatus } from "@/lib/llm/resilient";
 
 export const dynamic = "force-dynamic";
 
 /**
- * Health do provider — não chama a API Gemini (evita custo).
- * Só valida se a chave está configurada.
+ * Health do LLM — mostra quais chaves existem e a ordem de fallback.
+ * Não chama APIs externas (sem custo).
  */
 export async function GET() {
-  const hasKey = Boolean(
-    process.env.GEMINI_API_KEY ?? process.env.GOOGLE_AI_API_KEY,
-  );
+  const keys = llmKeysStatus();
+  const chain = listFastProviders().map((p) => p.id);
 
   try {
     const provider = getLlmProvider();
     return NextResponse.json({
-      ok: true,
+      ok: chain.length > 0,
       provider: provider.id,
-      apiKeyConfigured: hasKey,
+      keys,
+      fallbackChain: chain,
+      hint:
+        keys.openrouter || keys.groq || keys.openai
+          ? "OpenRouter/Groq/OpenAI detectados — Gemini direto só como último recurso."
+          : "Só Gemini detectado. Adicione OPENROUTER_API_KEY no .env e pm2 restart x09-studio --update-env",
     });
   } catch (error) {
     return NextResponse.json(
       {
         ok: false,
         error: error instanceof Error ? error.message : "unknown",
-        apiKeyConfigured: hasKey,
+        keys,
+        fallbackChain: chain,
       },
       { status: 500 },
     );
