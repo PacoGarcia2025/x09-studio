@@ -1,6 +1,7 @@
 import type { LlmProvider } from "@/lib/llm/types";
 import {
   PLAN_JSON_SHAPE_HINT,
+  normalizePlannerPayload,
   studioPlanSchema,
   type StudioPlan,
 } from "@/lib/pipeline/plan-schema";
@@ -15,10 +16,12 @@ Regras obrigatórias:
 - NÃO escreva código-fonte completo (sem componentes React longos, sem SQL completo de dezenas de linhas).
 - Em "tasks.instruction", descreva O QUE fazer em 1–3 frases curtas. O Builder escreverá o código depois.
 - tasks devem ser pequenas, ordenáveis e tipadas (create_file, update_file, delete_file, run_command, sql_migration, env_set).
-- Entre 3 e 40 tasks. Preferir 8–20 para um CRM típico.
+- Entre 3 e 40 tasks. Preferir 8–20 para um CRM típico; 6–12 para landing page.
 - Cada task precisa de "id" único (ex: "t1", "t2") e "dependsOn" com ids anteriores quando houver dependência.
 - Para create_file/update_file, informe "path" relativo (ex: "src/app/page.tsx").
 - Inclua módulos, páginas, tabelas, APIs, auth e integrações relevantes ao pedido.
+- database.tables, auth.providers e auth.roles DEVEM ser arrays (nunca null, nunca string solta).
+- Mesmo em landing page sem login, use auth.providers: ["email"] e auth.roles: ["visitor"], e pelo menos 1 tabela (ex: contacts).
 - Integrações: cite só o necessário (ex: Supabase). PIX/Asaas só se o pedido pedir pagamentos.
 
 Formato JSON:
@@ -91,7 +94,7 @@ export async function runPlanner(
   });
 
   const parsed = extractJsonObject(completion.text);
-  const plan = studioPlanSchema.parse(parsed);
+  const plan = studioPlanSchema.parse(normalizePlannerPayload(parsed));
 
   return {
     plan,
