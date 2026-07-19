@@ -27,7 +27,7 @@ function extractImportedLocalFiles(source: string, fromFile: string): string[] {
     /import\s+(?:\{[^}]*\}|[\w*]+)\s+from\s+["'](\.[^"']+)["']/g;
   let match: RegExpExecArray | null;
   while ((match = re.exec(source))) {
-    let rel = match[1];
+    const rel = match[1];
     if (!rel.startsWith(".")) continue;
     // resolve relative to current file
     const joined = resolveRelative(dir, rel);
