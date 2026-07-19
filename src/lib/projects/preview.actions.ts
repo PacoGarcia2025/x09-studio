@@ -61,7 +61,7 @@ function flattenFiles(nodes: FileTreeNode[], out: string[] = []): string[] {
 }
 
 /** Mapeia arquivos do disco (Vite src/*) para paths virtuais do Sandpack. */
-export function toSandpackVirtualPath(relativePath: string): string | null {
+function toSandpackVirtualPath(relativePath: string): string | null {
   const normalized = relativePath.replace(/\\/g, "/").replace(/^\/+/, "");
   const base = normalized.split("/").pop() ?? "";
   if (SKIP_FILES.has(base)) return null;
