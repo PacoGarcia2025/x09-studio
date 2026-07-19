@@ -1,12 +1,12 @@
 import {
   Boxes,
   ChevronDown,
-  FolderKanban,
   Gift,
-  LayoutDashboard,
-  PanelLeft,
+  LayoutGrid,
+  MessageSquare,
+  PanelLeftClose,
+  Puzzle,
   Search,
-  Settings,
   Sparkles,
   Star,
   UserRound,
@@ -38,23 +38,23 @@ type SidebarNavProps = {
 const PRIMARY_NAV: Array<{
   id: AppNavId;
   label: string;
-  icon: typeof LayoutDashboard;
+  icon: typeof LayoutGrid;
   hint?: string;
 }> = [
-  { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { id: "search", label: "Search", icon: Search, hint: "Ctrl K" },
-  { id: "resources", label: "Resources", icon: Sparkles },
-  { id: "connectors", label: "Connectors", icon: Boxes },
+  { id: "dashboard", label: "Painel", icon: LayoutGrid },
+  { id: "search", label: "Procurar", icon: Search, hint: "Ctrl K" },
+  { id: "resources", label: "Recursos", icon: Sparkles },
+  { id: "connectors", label: "Conectores", icon: Puzzle },
 ];
 
 const PROJECT_NAV: Array<{
   id: AppNavId;
   label: string;
-  icon: typeof FolderKanban;
+  icon: typeof Boxes;
 }> = [
-  { id: "projects", label: "All projects", icon: FolderKanban },
-  { id: "starred", label: "Starred", icon: Star },
-  { id: "mine", label: "Created by me", icon: UserRound },
+  { id: "projects", label: "Todos os projetos", icon: Boxes },
+  { id: "starred", label: "Estrelado", icon: Star },
+  { id: "mine", label: "Criado por mim", icon: UserRound },
 ];
 
 export function SidebarNav({
@@ -68,48 +68,46 @@ export function SidebarNav({
   creditBalance,
 }: SidebarNavProps) {
   return (
-    <aside className="relative z-30 flex h-full w-[72px] shrink-0 flex-col border-r border-zinc-200/80 bg-[#F4F4F5] text-zinc-800 lg:w-[248px]">
-      <div className="flex items-center justify-between px-3 pb-2 pt-4 lg:px-4">
+    <aside className="relative z-30 flex h-full w-[72px] shrink-0 flex-col bg-[#F7F7F8] text-zinc-800 lg:w-[260px]">
+      {/* Logo + collapse */}
+      <div className="flex items-center justify-between px-3 pb-1 pt-3.5 lg:px-4">
         <button
           type="button"
           onClick={brandClick}
-          className="flex items-center gap-2.5"
+          className="flex items-center"
           title="Studio X09"
         >
-          <span className="grid h-9 w-9 place-items-center rounded-2xl bg-gradient-to-br from-violet-600 via-fuchsia-500 to-indigo-600 text-xs font-bold text-white shadow-[0_8px_20px_rgba(124,58,237,0.28)]">
+          <span className="grid h-8 w-8 place-items-center rounded-[10px] bg-gradient-to-br from-violet-600 via-fuchsia-500 to-indigo-500 text-[10px] font-bold tracking-tight text-white shadow-[0_6px_16px_rgba(124,58,237,0.35)]">
             X09
-          </span>
-          <span className="hidden text-sm font-semibold tracking-tight text-zinc-900 lg:inline">
-            Studio
           </span>
         </button>
         <button
           type="button"
-          className="hidden h-8 w-8 place-items-center rounded-lg text-zinc-400 transition hover:bg-zinc-200/70 hover:text-zinc-700 lg:grid"
-          title="Recolher"
+          className="hidden h-8 w-8 place-items-center rounded-lg text-zinc-400 transition hover:bg-zinc-200/80 hover:text-zinc-600 lg:grid"
+          title="Recolher menu"
+          tabIndex={-1}
         >
-          <PanelLeft className="h-4 w-4" />
+          <PanelLeftClose className="h-4 w-4" />
         </button>
       </div>
 
+      {/* Workspace switcher */}
       <button
         type="button"
         onClick={onProfile}
-        className="mx-2 mb-4 hidden items-center gap-2.5 rounded-xl border border-zinc-200 bg-white px-2.5 py-2 text-left shadow-sm transition hover:border-violet-300 lg:flex"
+        className="mx-3 mb-3 hidden items-center gap-2 rounded-xl px-2 py-2 text-left transition hover:bg-zinc-200/70 lg:flex"
       >
-        <span className="grid h-7 w-7 place-items-center rounded-full bg-gradient-to-br from-violet-600 to-fuchsia-500 text-[11px] font-semibold text-white">
+        <span className="grid h-6 w-6 place-items-center rounded-full bg-gradient-to-br from-violet-600 to-fuchsia-500 text-[10px] font-semibold text-white">
           {avatarLabel}
         </span>
-        <span className="min-w-0 flex-1">
-          <span className="block truncate text-sm font-medium text-zinc-900">
-            {workspaceName}
-          </span>
+        <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-zinc-800">
+          {workspaceName}
         </span>
-        <ChevronDown className="h-4 w-4 shrink-0 text-zinc-400" />
+        <ChevronDown className="h-3.5 w-3.5 shrink-0 text-zinc-400" />
       </button>
 
-      <nav className="flex flex-1 flex-col gap-5 overflow-y-auto px-2 lg:px-3">
-        <div className="space-y-1">
+      <nav className="flex flex-1 flex-col gap-5 overflow-y-auto px-2.5 lg:px-3">
+        <div className="space-y-0.5">
           {PRIMARY_NAV.map((item) => {
             const Icon = item.icon;
             const isActive = active === item.id;
@@ -120,25 +118,20 @@ export function SidebarNav({
                 onClick={() => onNavigate(item.id)}
                 title={item.label}
                 className={cn(
-                  "flex w-full items-center justify-center gap-3 rounded-xl px-0 py-2.5 text-sm font-medium transition lg:justify-start lg:px-3",
+                  "flex w-full items-center justify-center gap-2.5 rounded-xl px-0 py-2 text-[13px] font-medium transition lg:justify-start lg:px-2.5",
                   isActive
-                    ? "bg-white text-zinc-900 shadow-sm ring-1 ring-zinc-200"
-                    : "text-zinc-600 hover:bg-zinc-200/60 hover:text-zinc-900",
+                    ? "bg-zinc-200/90 text-zinc-900"
+                    : "text-zinc-600 hover:bg-zinc-200/50 hover:text-zinc-900",
                 )}
               >
-                <Icon
-                  className={cn(
-                    "h-[18px] w-[18px] shrink-0",
-                    isActive ? "text-violet-600" : "text-zinc-500",
-                  )}
-                />
+                <Icon className="h-[18px] w-[18px] shrink-0 text-zinc-600" />
                 <span className="hidden flex-1 text-left lg:inline">
                   {item.label}
                 </span>
                 {item.hint ? (
-                  <span className="hidden rounded-md bg-zinc-100 px-1.5 py-0.5 text-[10px] font-medium text-zinc-500 lg:inline">
+                  <kbd className="hidden rounded-md bg-zinc-100 px-1.5 py-0.5 text-[10px] font-medium text-zinc-500 lg:inline">
                     {item.hint}
-                  </span>
+                  </kbd>
                 ) : null}
               </button>
             );
@@ -146,10 +139,10 @@ export function SidebarNav({
         </div>
 
         <div>
-          <p className="mb-1.5 hidden px-3 text-[11px] font-semibold text-zinc-500 lg:block">
-            Projects
+          <p className="mb-1 hidden px-2.5 text-[11px] font-medium text-zinc-400 lg:block">
+            Projetos
           </p>
-          <div className="space-y-1">
+          <div className="space-y-0.5">
             {PROJECT_NAV.map((item) => {
               const Icon = item.icon;
               const isActive = active === item.id;
@@ -160,18 +153,13 @@ export function SidebarNav({
                   onClick={() => onNavigate(item.id)}
                   title={item.label}
                   className={cn(
-                    "flex w-full items-center justify-center gap-3 rounded-xl px-0 py-2.5 text-sm font-medium transition lg:justify-start lg:px-3",
+                    "flex w-full items-center justify-center gap-2.5 rounded-xl px-0 py-2 text-[13px] font-medium transition lg:justify-start lg:px-2.5",
                     isActive
-                      ? "bg-white text-zinc-900 shadow-sm ring-1 ring-zinc-200"
-                      : "text-zinc-600 hover:bg-zinc-200/60 hover:text-zinc-900",
+                      ? "bg-zinc-200/90 text-zinc-900"
+                      : "text-zinc-600 hover:bg-zinc-200/50 hover:text-zinc-900",
                   )}
                 >
-                  <Icon
-                    className={cn(
-                      "h-[18px] w-[18px] shrink-0",
-                      isActive ? "text-violet-600" : "text-zinc-500",
-                    )}
-                  />
+                  <Icon className="h-[18px] w-[18px] shrink-0 text-zinc-600" />
                   <span className="hidden lg:inline">{item.label}</span>
                 </button>
               );
@@ -180,56 +168,49 @@ export function SidebarNav({
         </div>
       </nav>
 
-      <div className="mt-auto space-y-2 p-2 lg:p-3">
-        <div className="hidden rounded-2xl border border-zinc-200 bg-white p-3 shadow-sm lg:block">
-          <div className="mb-1 flex items-center gap-2 text-sm font-semibold text-zinc-900">
+      <div className="mt-auto space-y-2 p-2.5 lg:p-3">
+        <div className="hidden rounded-2xl bg-white p-3 shadow-[0_1px_3px_rgba(0,0,0,0.06)] ring-1 ring-zinc-200/80 lg:block">
+          <div className="mb-0.5 flex items-center gap-2 text-[13px] font-semibold text-zinc-900">
             <Gift className="h-4 w-4 text-violet-600" />
             Indique o Studio
           </div>
-          <p className="text-xs leading-5 text-zinc-500">
-            Ganhe créditos quando um amigo assinar um pacote.
+          <p className="text-[11px] leading-4 text-zinc-500">
+            Créditos por indicação paga
           </p>
         </div>
 
         <button
           type="button"
           onClick={onUpgrade}
-          className="hidden w-full rounded-2xl border border-violet-200 bg-gradient-to-br from-violet-50 to-fuchsia-50 p-3 text-left shadow-sm transition hover:border-violet-300 lg:block"
+          className="hidden w-full rounded-2xl bg-white p-3 text-left shadow-[0_1px_3px_rgba(0,0,0,0.06)] ring-1 ring-zinc-200/80 transition hover:ring-violet-300 lg:block"
         >
-          <div className="mb-1 flex items-center gap-2 text-sm font-semibold text-zinc-900">
+          <div className="mb-0.5 flex items-center gap-2 text-[13px] font-semibold text-zinc-900">
             <Zap className="h-4 w-4 text-violet-600" />
-            Upgrade
+            Faça o upgrade
           </div>
-          <p className="text-xs leading-5 text-zinc-500">
+          <p className="text-[11px] leading-4 text-zinc-500">
             {creditBalance != null
-              ? `${creditBalance} créditos · desbloquear mais`
-              : "Desbloqueie mais créditos e recursos"}
+              ? `${creditBalance} créditos · mais recursos`
+              : "Desbloqueie mais recursos"}
           </p>
         </button>
 
-        <div className="flex items-center justify-between gap-2 rounded-xl px-1 py-1">
+        <div className="flex items-center justify-between px-0.5 pt-1">
           <button
             type="button"
             onClick={onProfile}
-            className="flex min-w-0 items-center gap-2 rounded-xl px-1 py-1 transition hover:bg-zinc-200/60"
-            title="Perfil"
+            className="grid h-8 w-8 place-items-center rounded-full bg-gradient-to-br from-violet-600 to-fuchsia-500 text-xs font-semibold text-white"
+            title="Conta"
           >
-            <span className="grid h-8 w-8 place-items-center rounded-full bg-gradient-to-br from-violet-600 to-fuchsia-500 text-xs font-semibold text-white">
-              {avatarLabel}
-            </span>
-            <span className="hidden min-w-0 lg:block">
-              <span className="block truncate text-xs font-medium text-zinc-800">
-                Conta
-              </span>
-            </span>
+            {avatarLabel}
           </button>
           <button
             type="button"
             onClick={() => onNavigate("settings")}
             className="grid h-8 w-8 place-items-center rounded-lg text-zinc-500 transition hover:bg-zinc-200/70 hover:text-zinc-800"
-            title="Configurações"
+            title="Inbox / configurações"
           >
-            <Settings className="h-4 w-4" />
+            <MessageSquare className="h-4 w-4" />
           </button>
         </div>
       </div>

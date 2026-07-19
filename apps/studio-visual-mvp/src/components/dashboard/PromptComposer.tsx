@@ -122,11 +122,11 @@ export function PromptComposer({
                   onClick={() => setModeOpen((v) => !v)}
                   className="inline-flex h-10 items-center gap-1.5 rounded-full bg-zinc-900 px-3.5 text-sm font-semibold text-white transition hover:bg-zinc-800"
                 >
-                  {buildMode === "build" ? "Build" : "Plan"}
+                  {buildMode === "build" ? "Construir" : "Planejar"}
                   <ChevronDown className="h-3.5 w-3.5 opacity-70" />
                 </button>
                 {modeOpen ? (
-                  <div className="absolute bottom-full right-0 z-30 mb-2 min-w-[128px] overflow-hidden rounded-xl border border-zinc-200 bg-white p-1 shadow-xl">
+                  <div className="absolute bottom-full right-0 z-30 mb-2 min-w-[140px] overflow-hidden rounded-xl border border-zinc-200 bg-white p-1 shadow-xl">
                     {(["build", "plan"] as const).map((mode) => (
                       <button
                         key={mode}
@@ -136,13 +136,13 @@ export function PromptComposer({
                           setModeOpen(false);
                         }}
                         className={cn(
-                          "block w-full rounded-lg px-3 py-2 text-left text-xs font-medium capitalize transition",
+                          "block w-full rounded-lg px-3 py-2 text-left text-xs font-medium transition",
                           buildMode === mode
                             ? "bg-violet-50 text-violet-700"
                             : "text-zinc-600 hover:bg-zinc-50",
                         )}
                       >
-                        {mode === "build" ? "Build" : "Plan"}
+                        {mode === "build" ? "Construir" : "Planejar"}
                       </button>
                     ))}
                   </div>

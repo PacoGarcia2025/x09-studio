@@ -260,7 +260,7 @@ export default function App() {
       nav === "mine");
 
   const workspaceLabel = name?.trim()
-    ? `${name.trim().split(/\s+/)[0]}'s Studio`
+    ? `Studio do ${name.trim().split(/\s+/)[0]}`
     : "Studio X09";
 
   const headerActions = (

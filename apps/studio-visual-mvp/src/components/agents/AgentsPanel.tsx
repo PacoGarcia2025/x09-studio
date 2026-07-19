@@ -62,7 +62,7 @@ export function AgentsPanel() {
               Orquestração multi-agent
             </p>
             <h1 className="text-3xl font-bold tracking-[-0.035em] text-zinc-900">
-              Resources
+              Recursos
             </h1>
             <p className="mt-3 text-sm leading-6 text-zinc-500">
               Agentes especializados trabalham em sequência para transformar
