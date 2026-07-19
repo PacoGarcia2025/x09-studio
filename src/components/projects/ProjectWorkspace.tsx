@@ -1,12 +1,14 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { BuilderPanel } from "@/components/builder/BuilderPanel";
 import { FixPanel } from "@/components/fix/FixPanel";
 import { PlannerPanel } from "@/components/planner/PlannerPanel";
 import { AutoPlanBootstrap } from "@/components/projects/AutoPlanBootstrap";
 import { ProjectFilesPanel } from "@/components/projects/ProjectFilesPanel";
+import { ProjectLivePreview } from "@/components/projects/ProjectLivePreview";
 import { SilentBuildRunner } from "@/components/projects/SilentBuildRunner";
 import { VerifyPanel } from "@/components/verify/VerifyPanel";
 import { generatePlanAction } from "@/lib/pipeline/actions";
@@ -64,12 +66,14 @@ export function ProjectWorkspace({
   autoStart = false,
   awaitApproval = true,
 }: Props) {
+  const router = useRouter();
   const [mainTab, setMainTab] = useState<MainTab>("preview");
   const [prompt, setPrompt] = useState("");
   const [busy, setBusy] = useState(false);
   const [isGenerating, setIsGenerating] = useState(
     autoStart || project.status === "generating",
   );
+  const [projectStatus, setProjectStatus] = useState(project.status);
   const [activePlanId, setActivePlanId] = useState(planId);
   const [activePlan, setActivePlan] = useState(initialPlan);
   const [activeModel, setActiveModel] = useState(initialModel);
@@ -104,14 +108,15 @@ export function ProjectWorkspace({
     if (planId) setActivePlanId(planId);
     if (initialPlan) setActivePlan(initialPlan);
     if (initialModel) setActiveModel(initialModel);
-  }, [initialModel, initialPlan, planId]);
+    setProjectStatus(project.status);
+  }, [initialModel, initialPlan, planId, project.status]);
 
   const statusLabel = useMemo(() => {
-    if (isGenerating || project.status === "generating") return "Gerando…";
-    if (project.status === "published") return "Publicado";
-    if (project.status === "ready") return "Pronto";
+    if (isGenerating) return "Gerando…";
+    if (projectStatus === "published") return "Publicado";
+    if (projectStatus === "ready") return "Pronto";
     return "Visualizando a última versão salva";
-  }, [isGenerating, project.status]);
+  }, [isGenerating, projectStatus]);
 
   const tabs = useMemo(() => {
     const base: Array<[MainTab, string]> = [
@@ -149,6 +154,7 @@ export function ProjectWorkspace({
   const approvePlan = useCallback((planItemId: string) => {
     setActivePlanId(planItemId);
     setIsGenerating(true);
+    setProjectStatus("generating");
     setBuildToken((t) => t + 1);
     setBuildEnabled(true);
     setChatLog((prev) => [
@@ -279,6 +285,7 @@ export function ProjectWorkspace({
           setBusy(false);
           setIsGenerating(false);
           setBuildEnabled(false);
+          setProjectStatus("ready");
           setPreviewKey((k) => k + 1);
           setVerifyToken((t) => t + 1);
           setChatLog((prev) => [
@@ -288,11 +295,13 @@ export function ProjectWorkspace({
               text: "Pronto! Seu app já está no preview. Peça ajustes pelo chat quando quiser.",
             },
           ]);
+          router.refresh();
         }}
         onError={(message) => {
           setBusy(false);
           setIsGenerating(false);
           setBuildEnabled(false);
+          setProjectStatus("error");
           setChatLog((prev) => [
             ...prev.filter((m) => !(m.kind === "ai" && m.working)),
             {
@@ -480,11 +489,9 @@ export function ProjectWorkspace({
 
         <section className="relative min-w-0 flex-1 overflow-hidden bg-zinc-100">
           {mainTab === "preview" ? (
-            <iframe
-              key={previewKey}
-              title={`Preview ${project.name}`}
-              src={`/api/projects/${project.id}/card-preview`}
-              className="absolute inset-0 h-full w-full border-0 bg-white"
+            <ProjectLivePreview
+              projectId={project.id}
+              refreshKey={previewKey}
             />
           ) : null}
 
@@ -520,8 +527,10 @@ export function ProjectWorkspace({
                 autoStart={false}
                 onBuildSuccess={() => {
                   setIsGenerating(false);
+                  setProjectStatus("ready");
                   setVerifyToken((t) => t + 1);
                   setPreviewKey((k) => k + 1);
+                  router.refresh();
                 }}
               />
               <VerifyPanel

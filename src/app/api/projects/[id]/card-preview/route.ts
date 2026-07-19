@@ -53,7 +53,7 @@ export async function GET(_request: Request, { params }: Params) {
     status: 200,
     headers: {
       "Content-Type": "text/html; charset=utf-8",
-      "Cache-Control": "private, max-age=60",
+      "Cache-Control": "private, no-store",
     },
   });
 }

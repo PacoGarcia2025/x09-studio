@@ -12,6 +12,7 @@
     "validate:supabase": "node scripts/validate-supabase.mjs"
   },
   "dependencies": {
+    "@codesandbox/sandpack-react": "^2.20.0",
     "@google/generative-ai": "^0.24.1",
     "@supabase/ssr": "^0.12.3",
     "@supabase/supabase-js": "^2.110.5",

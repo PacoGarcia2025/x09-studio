@@ -60,6 +60,9 @@ Responda APENAS JSON: { "content": string }
 - Gere só o conteúdo deste arquivo.
 - Não gere outros arquivos.
 - Não explique.
+- Stack: Vite + React + TypeScript (NÃO Next.js).
+- Use Tailwind via className (CDN no preview). Sem importar tailwindcss.
+- Se o path for src/pages/HomePage.tsx, entregue a landing completa (hero, seções, CTA) em JSX exportado.
 - Código em TypeScript/React/CSS conforme o path.
 - Seja completo para ESTE arquivo, mas curto (sem monólitos).`;
 
