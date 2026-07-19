@@ -1,7 +1,7 @@
 import { spawn } from "node:child_process";
 import path from "node:path";
 import type { LlmProvider } from "@/lib/llm/types";
-import { assertAllowedCommand } from "@/lib/pipeline/commands.allowlist";
+import { resolveAllowedCommands } from "@/lib/pipeline/commands.allowlist";
 import {
   generateTaskPayload,
   LANDING_APP_TSX,
@@ -27,16 +27,15 @@ export type BuilderApplyResult = {
   log: string;
 };
 
-async function runCommand(
+async function runSingleCommand(
   projectId: string,
   command: string,
 ): Promise<string> {
-  const allowed = assertAllowedCommand(command);
   const cwd = getProjectDir(projectId);
   const isWin = process.platform === "win32";
 
   return new Promise((resolve, reject) => {
-    const child = spawn(allowed, {
+    const child = spawn(command, {
       cwd,
       shell: true,
       windowsHide: isWin,
@@ -47,7 +46,7 @@ async function runCommand(
     let stderr = "";
     const timer = setTimeout(() => {
       child.kill();
-      reject(new Error(`Timeout no comando: ${allowed}`));
+      reject(new Error(`Timeout no comando: ${command}`));
     }, 180_000);
 
     child.stdout?.on("data", (d: Buffer) => {
@@ -63,10 +62,26 @@ async function runCommand(
     child.on("close", (code) => {
       clearTimeout(timer);
       const out = `${stdout}\n${stderr}`.trim().slice(-4000);
-      if (code === 0) resolve(out || `OK: ${allowed}`);
-      else reject(new Error(`Comando falhou (${code}): ${out || allowed}`));
+      if (code === 0) resolve(out || `OK: ${command}`);
+      else reject(new Error(`Comando falhou (${code}): ${out || command}`));
     });
   });
+}
+
+async function runCommand(
+  projectId: string,
+  rawCommand: string,
+): Promise<string> {
+  const allowed = resolveAllowedCommands(rawCommand);
+  if (allowed.length === 0) {
+    return `Comando ignorado (não permitido): "${rawCommand.trim()}". Sem impacto na geração dos arquivos.`;
+  }
+
+  const logs: string[] = [];
+  for (const cmd of allowed) {
+    logs.push(await runSingleCommand(projectId, cmd));
+  }
+  return logs.join("\n\n");
 }
 
 async function upsertEnv(

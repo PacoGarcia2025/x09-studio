@@ -197,13 +197,29 @@ export async function generateTaskPayload(
         await completeJson(
           provider,
           `Responda APENAS JSON {"command":"..."}.
-Comandos válidos: npm install, npm ci, npm run build, npm run typecheck, bun install, bun run build, bun run typecheck.
-Prefira npm install se a task for instalar dependências.`,
+Comando ÚNICO (sem &&). Válidos: npm install, npm ci, npm run build, npm run typecheck, bun install, bun run build, bun run typecheck.
+NÃO use migrate. Para landing page prefira pular comando — se precisar, use só "npm run build".`,
           base,
           1024,
         ),
       );
-      return { kind: "command", command: parsed.command };
+      // Normaliza cadeias inválidas para o primeiro comando permitido
+      const pieces = parsed.command
+        .split(/&&|;/)
+        .map((s) => s.trim().replace(/\s+/g, " "))
+        .filter(Boolean);
+      const allowedSet = new Set([
+        "npm install",
+        "npm ci",
+        "npm run build",
+        "npm run typecheck",
+        "npm run preview",
+        "bun install",
+        "bun run build",
+        "bun run typecheck",
+      ]);
+      const first = pieces.find((p) => allowedSet.has(p)) ?? "npm run build";
+      return { kind: "command", command: first };
     }
     case "env_set": {
       const parsed = envPayloadSchema.parse(
