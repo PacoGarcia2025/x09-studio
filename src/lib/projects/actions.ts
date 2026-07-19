@@ -281,7 +281,8 @@ export async function createProjectFromPrompt(
       .update({ status: "generating" })
       .eq("id", created.id);
 
-    revalidatePath("/projects");
+    // Não chamar revalidatePath aqui: createProjectFromPrompt roda no
+    // render de /projects/new (redirect). A lista atualiza no próximo GET.
     return { ok: true, projectId: created.id };
   } catch (error) {
     return {
