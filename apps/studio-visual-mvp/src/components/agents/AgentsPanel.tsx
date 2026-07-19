@@ -55,28 +55,28 @@ export function AgentsPanel() {
   return (
     <div className="min-h-0 flex-1 overflow-y-auto">
       <div className="mx-auto w-full max-w-5xl px-6 py-10">
-        <div className="flex flex-col gap-6 border-b border-[#27272A] pb-8 md:flex-row md:items-end md:justify-between">
+        <div className="flex flex-col gap-6 border-b border-zinc-200 pb-8 md:flex-row md:items-end md:justify-between">
           <div className="max-w-2xl">
-            <p className="mb-3 inline-flex items-center gap-2 rounded-full border border-violet-500/20 bg-violet-500/10 px-3 py-1 text-xs font-medium text-violet-200">
-              <Sparkles className="h-3.5 w-3.5 text-fuchsia-400" />
+            <p className="mb-3 inline-flex items-center gap-2 rounded-full border border-violet-200 bg-violet-50 px-3 py-1 text-xs font-medium text-violet-700">
+              <Sparkles className="h-3.5 w-3.5 text-fuchsia-600" />
               Orquestração multi-agent
             </p>
-            <h1 className="text-3xl font-bold tracking-[-0.035em] text-[#F8FAFC]">
-              Sua equipe de IA
+            <h1 className="text-3xl font-bold tracking-[-0.035em] text-zinc-900">
+              Resources
             </h1>
-            <p className="mt-3 text-sm leading-6 text-slate-400">
+            <p className="mt-3 text-sm leading-6 text-zinc-500">
               Agentes especializados trabalham em sequência para transformar
               uma ideia em código funcional, verificado e pronto para publicar.
             </p>
           </div>
-          <div className="rounded-2xl border border-[#27272A] bg-[#1A1A1F] px-5 py-4">
-            <p className="text-[11px] uppercase tracking-[0.18em] text-slate-500">
+          <div className="rounded-2xl border border-zinc-200 bg-white px-5 py-4 shadow-sm">
+            <p className="text-[11px] uppercase tracking-[0.18em] text-zinc-400">
               Estado atual
             </p>
             <p
               className={cn(
                 "mt-1 text-sm font-semibold",
-                isGenerating ? "text-violet-300" : "text-emerald-400",
+                isGenerating ? "text-violet-600" : "text-emerald-600",
               )}
             >
               {isGenerating ? phaseLabel || "Trabalhando…" : "Pronto para criar"}
@@ -99,10 +99,10 @@ export function AgentsPanel() {
               <article
                 key={agent.id}
                 className={cn(
-                  "relative overflow-hidden rounded-2xl border bg-[#1A1A1F]/80 p-5 transition",
+                  "relative overflow-hidden rounded-2xl border bg-white p-5 shadow-sm transition",
                   active
-                    ? "border-violet-500/50 ring-1 ring-violet-500/20"
-                    : "border-[#27272A]",
+                    ? "border-violet-300 ring-1 ring-violet-200"
+                    : "border-zinc-200",
                 )}
               >
                 <div className="flex items-start justify-between">
@@ -111,31 +111,31 @@ export function AgentsPanel() {
                       "grid h-11 w-11 place-items-center rounded-xl",
                       active
                         ? "bg-violet-600 text-white"
-                        : "bg-violet-600/15 text-violet-300",
+                        : "bg-violet-50 text-violet-600",
                     )}
                   >
                     <Icon className="h-5 w-5" />
                   </span>
-                  <span className="text-xs font-medium text-slate-600">
+                  <span className="text-xs font-medium text-zinc-400">
                     0{index + 1}
                   </span>
                 </div>
-                <h2 className="mt-5 text-base font-semibold text-slate-100">
+                <h2 className="mt-5 text-base font-semibold text-zinc-900">
                   {agent.name}
                 </h2>
-                <p className="mt-2 text-sm leading-6 text-slate-500">
+                <p className="mt-2 text-sm leading-6 text-zinc-500">
                   {agent.description}
                 </p>
                 <div className="mt-5 flex items-center gap-2 text-xs">
                   {active ? (
                     <>
-                      <Bot className="h-3.5 w-3.5 animate-pulse text-violet-300" />
-                      <span className="text-violet-300">Em execução</span>
+                      <Bot className="h-3.5 w-3.5 animate-pulse text-violet-600" />
+                      <span className="text-violet-600">Em execução</span>
                     </>
                   ) : (
                     <>
-                      <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />
-                      <span className="text-slate-500">Disponível</span>
+                      <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
+                      <span className="text-zinc-500">Disponível</span>
                     </>
                   )}
                 </div>
@@ -145,7 +145,7 @@ export function AgentsPanel() {
         </div>
 
         {metrics ? (
-          <div className="mt-8 grid gap-3 rounded-2xl border border-[#27272A] bg-[#111113]/80 p-5 sm:grid-cols-3">
+          <div className="mt-8 grid gap-3 rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm sm:grid-cols-3">
             <Metric
               label="Arquivos gerados"
               value={String(fileCount)}
@@ -167,9 +167,9 @@ export function AgentsPanel() {
 
 function Metric({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-xl bg-white/[0.025] px-4 py-3">
-      <p className="text-xs text-slate-500">{label}</p>
-      <p className="mt-1 text-lg font-semibold text-slate-100">{value}</p>
+    <div className="rounded-xl bg-zinc-50 px-4 py-3">
+      <p className="text-xs text-zinc-500">{label}</p>
+      <p className="mt-1 text-lg font-semibold text-zinc-900">{value}</p>
     </div>
   );
 }

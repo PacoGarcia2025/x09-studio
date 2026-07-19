@@ -79,6 +79,10 @@ export default function App() {
 
   const [shellView, setShellView] = useState<ShellView>("home");
   const [nav, setNav] = useState<AppNavId>("dashboard");
+  const [projectFilter, setProjectFilter] = useState<"all" | "starred" | "mine">(
+    "all",
+  );
+  const [focusPromptToken, setFocusPromptToken] = useState(0);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [isProjectsOpen, setIsProjectsOpen] = useState(false);
@@ -121,10 +125,31 @@ export default function App() {
   }, [setSession, fetchProfile, clearUser]);
 
   useEffect(() => {
-    if (isLoggedIn && (shellView === "home" || nav === "projects")) {
+    if (
+      isLoggedIn &&
+      shellView === "home" &&
+      (nav === "dashboard" ||
+        nav === "projects" ||
+        nav === "starred" ||
+        nav === "mine" ||
+        nav === "search")
+    ) {
       void fetchUserProjects();
     }
   }, [isLoggedIn, shellView, nav, fetchUserProjects]);
+
+  useEffect(() => {
+    function onKeyDown(event: KeyboardEvent) {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        setShellView("home");
+        setNav("search");
+        setFocusPromptToken((value) => value + 1);
+      }
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
 
   useEffect(() => {
     if (!isLoggedIn) {
@@ -139,7 +164,7 @@ export default function App() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get("github") === "connected") {
-      setNav("ecosystem");
+      setNav("connectors");
       setShellView("home");
       setSaveMessage("GitHub conectado!");
       window.setTimeout(() => setSaveMessage(null), 2500);
@@ -184,55 +209,73 @@ export default function App() {
   }
 
   function handleNav(id: AppNavId) {
-    if (id === "create") {
-      handleNewProject();
-      return;
-    }
     setNav(id);
+    setShellView("home");
+
     if (id === "dashboard") {
-      setShellView("home");
+      setProjectFilter("all");
       clearUpgradeRequired();
       return;
     }
+
+    if (id === "search") {
+      setProjectFilter("all");
+      setFocusPromptToken((value) => value + 1);
+      return;
+    }
+
     if (id === "projects") {
-      if (!isLoggedIn) {
-        setIsAuthOpen(true);
-        return;
-      }
-      setShellView("home");
-      setIsProjectsOpen(true);
+      setProjectFilter("all");
+      if (!isLoggedIn) setIsAuthOpen(true);
       return;
     }
-    if (id === "settings") {
-      if (!isLoggedIn) {
-        setIsAuthOpen(true);
-        return;
-      }
-      setShellView("home");
+
+    if (id === "starred") {
+      setProjectFilter("starred");
+      if (!isLoggedIn) setIsAuthOpen(true);
       return;
     }
-    if (id === "ecosystem") {
-      if (!isLoggedIn) {
-        setIsAuthOpen(true);
-        return;
-      }
-      setShellView("home");
+
+    if (id === "mine") {
+      setProjectFilter("mine");
+      if (!isLoggedIn) setIsAuthOpen(true);
+      return;
+    }
+
+    if (id === "resources") {
+      return;
+    }
+
+    if (id === "connectors" || id === "settings") {
+      if (!isLoggedIn) setIsAuthOpen(true);
     }
   }
+
+  const showLovableHome =
+    shellView === "home" &&
+    (nav === "dashboard" ||
+      nav === "search" ||
+      nav === "projects" ||
+      nav === "starred" ||
+      nav === "mine");
+
+  const workspaceLabel = name?.trim()
+    ? `${name.trim().split(/\s+/)[0]}'s Studio`
+    : "Studio X09";
 
   const headerActions = (
     <>
       <div className="min-w-0">
-        <p className="truncate text-sm font-medium text-white">
+        <p className="truncate text-sm font-semibold text-zinc-900">
           {shellView === "studio"
             ? currentProjectName || "Workspace"
-            : nav === "agents"
-              ? "Agentes"
-              : nav === "ecosystem"
-                ? "Ecossistema"
+            : nav === "resources"
+              ? "Resources"
+              : nav === "connectors"
+                ? "Connectors"
                 : nav === "settings"
                   ? "Configurações"
-                  : "Início"}
+                  : "Dashboard"}
         </p>
       </div>
       <div className="flex items-center gap-2">
@@ -240,7 +283,7 @@ export default function App() {
           <button
             type="button"
             onClick={() => handleNav("settings")}
-            className="hidden rounded-full border border-violet-500/20 bg-violet-500/10 px-3 py-1 text-xs font-medium text-violet-100 backdrop-blur-md sm:inline"
+            className="hidden rounded-full border border-violet-200 bg-violet-50 px-3 py-1 text-xs font-medium text-violet-700 sm:inline"
             title="Créditos"
           >
             {creditBalance} créditos
@@ -252,8 +295,8 @@ export default function App() {
               "hidden text-xs sm:inline",
               saveMessage === "Projeto salvo!" ||
                 saveMessage.includes("conectado")
-                ? "text-emerald-300"
-                : "text-red-300",
+                ? "text-emerald-600"
+                : "text-red-600",
             )}
           >
             {saveMessage}
@@ -264,12 +307,12 @@ export default function App() {
             <Button
               variant="ghost"
               size="icon"
-              className="h-9 w-9 rounded-full"
+              className="h-9 w-9 rounded-full text-zinc-600"
               onClick={() => setIsProfileOpen(true)}
               title="Perfil"
             >
               <Avatar className="h-8 w-8">
-                <AvatarFallback className="bg-violet-500/25 text-violet-100">
+                <AvatarFallback className="bg-violet-100 text-violet-700">
                   {avatarLabel}
                 </AvatarFallback>
               </Avatar>
@@ -277,7 +320,7 @@ export default function App() {
             <Button
               variant="ghost"
               size="icon"
-              className="h-9 w-9"
+              className="h-9 w-9 text-zinc-600"
               onClick={() => void signOut()}
               title="Sair"
             >
@@ -303,12 +346,20 @@ export default function App() {
       activeNav={nav}
       onNavigate={handleNav}
       onBrandClick={handleNewProject}
-      hideHeader={shellView === "studio"}
-      header={
-        <>
-          {headerActions}
-        </>
-      }
+      hideHeader={shellView === "studio" || showLovableHome}
+      lovableHome={showLovableHome}
+      workspaceName={workspaceLabel}
+      avatarLabel={avatarLabel}
+      onProfile={() => {
+        if (!isLoggedIn) {
+          setIsAuthOpen(true);
+          return;
+        }
+        setIsProfileOpen(true);
+      }}
+      onUpgrade={() => handleNav("settings")}
+      creditBalance={creditBalance}
+      header={<>{headerActions}</>}
     >
       <AuthModal open={isAuthOpen} onClose={() => setIsAuthOpen(false)} />
       <UserProfileModal
@@ -329,25 +380,29 @@ export default function App() {
         onClose={clearUpgradeRequired}
       />
 
-      {shellView === "home" && nav === "ecosystem" ? (
-        <ConnectorsPanel />
-      ) : shellView === "home" && nav === "agents" ? (
-        <AgentsPanel />
+      {shellView === "home" && nav === "connectors" ? (
+        <div className="min-h-0 flex-1 overflow-y-auto bg-[#F4F4F5]">
+          <ConnectorsPanel />
+        </div>
+      ) : shellView === "home" && nav === "resources" ? (
+        <div className="min-h-0 flex-1 overflow-y-auto bg-[#F4F4F5]">
+          <AgentsPanel />
+        </div>
       ) : shellView === "home" && nav === "settings" ? (
-        <div className="min-h-0 flex-1 overflow-y-auto">
+        <div className="min-h-0 flex-1 overflow-y-auto bg-[#F4F4F5]">
           <BillingSettings highlightUpgrade={upgradeRequired} />
           <div className="mx-auto max-w-3xl px-6 pb-10">
             <Button
               type="button"
               variant="ghost"
               onClick={() => setIsProfileOpen(true)}
-              className="text-zinc-400"
+              className="text-zinc-500"
             >
               Editar perfil
             </Button>
           </div>
         </div>
-      ) : shellView === "home" ? (
+      ) : showLovableHome ? (
         <DashboardHome
           buildMode={buildMode}
           onBuildModeChange={setBuildMode}
@@ -361,6 +416,9 @@ export default function App() {
           onRequestLogin={() => setIsAuthOpen(true)}
           creditBalance={creditBalance}
           onOpenBilling={() => handleNav("settings")}
+          userName={name || session?.user?.email || null}
+          projectFilter={projectFilter}
+          focusPromptToken={focusPromptToken}
         />
       ) : (
         <ResizablePanelGroup

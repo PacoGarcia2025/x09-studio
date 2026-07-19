@@ -1,109 +1,237 @@
 import {
-  Bot,
   Boxes,
+  ChevronDown,
   FolderKanban,
-  Home,
-  Plus,
+  Gift,
+  LayoutDashboard,
+  PanelLeft,
+  Search,
   Settings,
   Sparkles,
+  Star,
+  UserRound,
+  Zap,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export type AppNavId =
   | "dashboard"
-  | "create"
+  | "search"
+  | "resources"
+  | "connectors"
   | "projects"
-  | "agents"
-  | "ecosystem"
+  | "starred"
+  | "mine"
   | "settings";
 
-const NAV: Array<{
+type SidebarNavProps = {
+  active: AppNavId;
+  onNavigate: (id: AppNavId) => void;
+  brandClick: () => void;
+  workspaceName?: string;
+  avatarLabel?: string;
+  onProfile?: () => void;
+  onUpgrade?: () => void;
+  creditBalance?: number | null;
+};
+
+const PRIMARY_NAV: Array<{
   id: AppNavId;
   label: string;
-  icon: typeof Home;
-  featured?: boolean;
+  icon: typeof LayoutDashboard;
+  hint?: string;
 }> = [
-  { id: "dashboard", label: "Início", icon: Home },
-  { id: "create", label: "Criar App", icon: Plus, featured: true },
-  { id: "projects", label: "Meus Apps", icon: FolderKanban },
-  { id: "agents", label: "Agentes", icon: Bot },
-  { id: "ecosystem", label: "Ecossistema", icon: Boxes },
-  { id: "settings", label: "Configurações", icon: Settings },
+  { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { id: "search", label: "Search", icon: Search, hint: "Ctrl K" },
+  { id: "resources", label: "Resources", icon: Sparkles },
+  { id: "connectors", label: "Connectors", icon: Boxes },
+];
+
+const PROJECT_NAV: Array<{
+  id: AppNavId;
+  label: string;
+  icon: typeof FolderKanban;
+}> = [
+  { id: "projects", label: "All projects", icon: FolderKanban },
+  { id: "starred", label: "Starred", icon: Star },
+  { id: "mine", label: "Created by me", icon: UserRound },
 ];
 
 export function SidebarNav({
   active,
   onNavigate,
   brandClick,
-}: {
-  active: AppNavId;
-  onNavigate: (id: AppNavId) => void;
-  brandClick: () => void;
-}) {
+  workspaceName = "Studio X09",
+  avatarLabel = "X",
+  onProfile,
+  onUpgrade,
+  creditBalance,
+}: SidebarNavProps) {
   return (
-    <aside className="relative z-30 flex h-full w-[72px] shrink-0 flex-col items-center border-r border-[#27272A] bg-[#111113]/95 py-4 backdrop-blur-xl lg:w-[232px] lg:items-stretch lg:px-3">
+    <aside className="relative z-30 flex h-full w-[72px] shrink-0 flex-col border-r border-zinc-200/80 bg-[#F4F4F5] text-zinc-800 lg:w-[248px]">
+      <div className="flex items-center justify-between px-3 pb-2 pt-4 lg:px-4">
+        <button
+          type="button"
+          onClick={brandClick}
+          className="flex items-center gap-2.5"
+          title="Studio X09"
+        >
+          <span className="grid h-9 w-9 place-items-center rounded-2xl bg-gradient-to-br from-violet-600 via-fuchsia-500 to-indigo-600 text-xs font-bold text-white shadow-[0_8px_20px_rgba(124,58,237,0.28)]">
+            X09
+          </span>
+          <span className="hidden text-sm font-semibold tracking-tight text-zinc-900 lg:inline">
+            Studio
+          </span>
+        </button>
+        <button
+          type="button"
+          className="hidden h-8 w-8 place-items-center rounded-lg text-zinc-400 transition hover:bg-zinc-200/70 hover:text-zinc-700 lg:grid"
+          title="Recolher"
+        >
+          <PanelLeft className="h-4 w-4" />
+        </button>
+      </div>
+
       <button
         type="button"
-        onClick={brandClick}
-        className="mb-7 flex items-center gap-3 px-2 py-1 lg:px-3"
+        onClick={onProfile}
+        className="mx-2 mb-4 hidden items-center gap-2.5 rounded-xl border border-zinc-200 bg-white px-2.5 py-2 text-left shadow-sm transition hover:border-violet-300 lg:flex"
       >
-        <div className="grid h-10 w-10 place-items-center rounded-xl bg-gradient-to-br from-violet-600 via-fuchsia-600 to-indigo-600 text-sm font-bold text-white shadow-[0_0_24px_rgba(124,58,237,0.32)]">
-          X09
-        </div>
-        <div className="hidden min-w-0 text-left lg:block">
-          <p className="truncate text-sm font-semibold tracking-tight text-[#F8FAFC]">
-            Studio X09
-          </p>
-          <p className="truncate text-[11px] text-slate-400">AI app builder</p>
-        </div>
+        <span className="grid h-7 w-7 place-items-center rounded-full bg-gradient-to-br from-violet-600 to-fuchsia-500 text-[11px] font-semibold text-white">
+          {avatarLabel}
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block truncate text-sm font-medium text-zinc-900">
+            {workspaceName}
+          </span>
+        </span>
+        <ChevronDown className="h-4 w-4 shrink-0 text-zinc-400" />
       </button>
 
-      <p className="mb-2 hidden px-3 text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-600 lg:block">
-        Workspace
-      </p>
-      <nav className="flex flex-1 flex-col gap-1.5">
-        {NAV.map((item) => {
-          const Icon = item.icon;
-          const isActive = active === item.id;
-          return (
-            <button
-              key={item.id}
-              type="button"
-              onClick={() => onNavigate(item.id)}
-              title={item.label}
-              className={cn(
-                "group flex items-center justify-center gap-3 rounded-xl px-0 py-2.5 text-sm font-medium transition duration-200 lg:justify-start lg:px-3",
-                item.featured
-                  ? "my-1 bg-violet-600 text-white shadow-[0_8px_24px_rgba(124,58,237,0.24)] hover:bg-violet-700"
-                  : isActive
-                    ? "bg-violet-600/15 text-violet-100 ring-1 ring-inset ring-violet-500/25"
-                    : "text-slate-400 hover:bg-white/5 hover:text-white",
-              )}
-            >
-              <Icon
+      <nav className="flex flex-1 flex-col gap-5 overflow-y-auto px-2 lg:px-3">
+        <div className="space-y-1">
+          {PRIMARY_NAV.map((item) => {
+            const Icon = item.icon;
+            const isActive = active === item.id;
+            return (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => onNavigate(item.id)}
+                title={item.label}
                 className={cn(
-                  "h-5 w-5 shrink-0",
-                  item.featured
-                    ? "text-white"
-                    : isActive
-                      ? "text-violet-300"
-                      : "text-slate-500 group-hover:text-white",
+                  "flex w-full items-center justify-center gap-3 rounded-xl px-0 py-2.5 text-sm font-medium transition lg:justify-start lg:px-3",
+                  isActive
+                    ? "bg-white text-zinc-900 shadow-sm ring-1 ring-zinc-200"
+                    : "text-zinc-600 hover:bg-zinc-200/60 hover:text-zinc-900",
                 )}
-              />
-              <span className="hidden font-medium lg:inline">{item.label}</span>
-            </button>
-          );
-        })}
+              >
+                <Icon
+                  className={cn(
+                    "h-[18px] w-[18px] shrink-0",
+                    isActive ? "text-violet-600" : "text-zinc-500",
+                  )}
+                />
+                <span className="hidden flex-1 text-left lg:inline">
+                  {item.label}
+                </span>
+                {item.hint ? (
+                  <span className="hidden rounded-md bg-zinc-100 px-1.5 py-0.5 text-[10px] font-medium text-zinc-500 lg:inline">
+                    {item.hint}
+                  </span>
+                ) : null}
+              </button>
+            );
+          })}
+        </div>
+
+        <div>
+          <p className="mb-1.5 hidden px-3 text-[11px] font-semibold text-zinc-500 lg:block">
+            Projects
+          </p>
+          <div className="space-y-1">
+            {PROJECT_NAV.map((item) => {
+              const Icon = item.icon;
+              const isActive = active === item.id;
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => onNavigate(item.id)}
+                  title={item.label}
+                  className={cn(
+                    "flex w-full items-center justify-center gap-3 rounded-xl px-0 py-2.5 text-sm font-medium transition lg:justify-start lg:px-3",
+                    isActive
+                      ? "bg-white text-zinc-900 shadow-sm ring-1 ring-zinc-200"
+                      : "text-zinc-600 hover:bg-zinc-200/60 hover:text-zinc-900",
+                  )}
+                >
+                  <Icon
+                    className={cn(
+                      "h-[18px] w-[18px] shrink-0",
+                      isActive ? "text-violet-600" : "text-zinc-500",
+                    )}
+                  />
+                  <span className="hidden lg:inline">{item.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
       </nav>
 
-      <div className="mt-auto hidden rounded-xl border border-violet-500/15 bg-violet-500/[0.06] p-3 lg:block">
-        <div className="mb-1 flex items-center gap-2 text-xs font-medium text-violet-200">
-          <Sparkles className="h-3.5 w-3.5 text-fuchsia-400" />
-          X09 Agent
+      <div className="mt-auto space-y-2 p-2 lg:p-3">
+        <div className="hidden rounded-2xl border border-zinc-200 bg-white p-3 shadow-sm lg:block">
+          <div className="mb-1 flex items-center gap-2 text-sm font-semibold text-zinc-900">
+            <Gift className="h-4 w-4 text-violet-600" />
+            Indique o Studio
+          </div>
+          <p className="text-xs leading-5 text-zinc-500">
+            Ganhe créditos quando um amigo assinar um pacote.
+          </p>
         </div>
-        <p className="text-[11px] leading-relaxed text-slate-400">
-          Planeja, constrói, verifica e corrige seu app.
-        </p>
+
+        <button
+          type="button"
+          onClick={onUpgrade}
+          className="hidden w-full rounded-2xl border border-violet-200 bg-gradient-to-br from-violet-50 to-fuchsia-50 p-3 text-left shadow-sm transition hover:border-violet-300 lg:block"
+        >
+          <div className="mb-1 flex items-center gap-2 text-sm font-semibold text-zinc-900">
+            <Zap className="h-4 w-4 text-violet-600" />
+            Upgrade
+          </div>
+          <p className="text-xs leading-5 text-zinc-500">
+            {creditBalance != null
+              ? `${creditBalance} créditos · desbloquear mais`
+              : "Desbloqueie mais créditos e recursos"}
+          </p>
+        </button>
+
+        <div className="flex items-center justify-between gap-2 rounded-xl px-1 py-1">
+          <button
+            type="button"
+            onClick={onProfile}
+            className="flex min-w-0 items-center gap-2 rounded-xl px-1 py-1 transition hover:bg-zinc-200/60"
+            title="Perfil"
+          >
+            <span className="grid h-8 w-8 place-items-center rounded-full bg-gradient-to-br from-violet-600 to-fuchsia-500 text-xs font-semibold text-white">
+              {avatarLabel}
+            </span>
+            <span className="hidden min-w-0 lg:block">
+              <span className="block truncate text-xs font-medium text-zinc-800">
+                Conta
+              </span>
+            </span>
+          </button>
+          <button
+            type="button"
+            onClick={() => onNavigate("settings")}
+            className="grid h-8 w-8 place-items-center rounded-lg text-zinc-500 transition hover:bg-zinc-200/70 hover:text-zinc-800"
+            title="Configurações"
+          >
+            <Settings className="h-4 w-4" />
+          </button>
+        </div>
       </div>
     </aside>
   );
