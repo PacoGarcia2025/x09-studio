@@ -1,54 +1,75 @@
-/** Comandos permitidos pelo Builder (nunca shell livre). */
-const ALLOWED = new Set([
+/**
+ * Comandos que o Builder realmente executa no disco do projeto.
+ * Build/typecheck NÃO rodam aqui: o preview usa Sandpack e o VPS
+ * quase nunca tem node_modules do app gerado.
+ */
+const EXECUTABLE = new Set([
   "npm install",
   "npm ci",
+  "bun install",
+]);
+
+/** Aceitos no plano/prompt, mas ignorados com log (não falham o build). */
+const SKIPPED = new Set([
   "npm run build",
   "npm run typecheck",
   "npm run preview",
-  "bun install",
   "bun run build",
   "bun run typecheck",
 ]);
 
-const INSTALL_ONLY = new Set(["npm install", "npm ci", "bun install"]);
+const KNOWN = new Set([...EXECUTABLE, ...SKIPPED]);
 
 export function listAllowedCommands(): string[] {
-  return [...ALLOWED];
+  return [...KNOWN];
 }
 
 function normalizePiece(command: string): string {
   return command.trim().replace(/\s+/g, " ");
 }
 
+export type ResolvedCommands = {
+  run: string[];
+  skipped: string[];
+  ignored: string[];
+};
+
 /**
- * Aceita comando único ou cadeia com && / ; .
- * Se a IA misturar comandos inválidos (ex: migrate), ignora a cadeia
- * (ou só mantém install) — não derruba o build da landing.
+ * Separa o que pode rodar, o que pula (build/typecheck) e o que descarta (migrate etc.).
  */
-export function resolveAllowedCommands(command: string): string[] {
+export function resolveCommandPlan(command: string): ResolvedCommands {
   const pieces = command
     .split(/&&|;/)
     .map(normalizePiece)
     .filter(Boolean);
 
-  if (pieces.length === 0) return [];
+  const run: string[] = [];
+  const skipped: string[] = [];
+  const ignored: string[] = [];
 
-  const allowed = pieces.filter((p) => ALLOWED.has(p));
-  const hadDisallowed = pieces.some((p) => !ALLOWED.has(p));
-
-  if (hadDisallowed) {
-    return allowed.filter((p) => INSTALL_ONLY.has(p));
+  for (const piece of pieces) {
+    if (EXECUTABLE.has(piece)) run.push(piece);
+    else if (SKIPPED.has(piece)) skipped.push(piece);
+    else ignored.push(piece);
   }
 
-  return allowed;
+  return { run, skipped, ignored };
+}
+
+/** @deprecated Prefer resolveCommandPlan — mantido para callers antigos. */
+export function resolveAllowedCommands(command: string): string[] {
+  return resolveCommandPlan(command).run;
 }
 
 export function assertAllowedCommand(command: string): string {
-  const resolved = resolveAllowedCommands(command);
-  if (resolved.length === 0) {
+  const { run, skipped } = resolveCommandPlan(command);
+  if (run[0]) return run[0];
+  if (skipped[0]) {
     throw new Error(
-      `Comando não permitido: "${command}". Use apenas: ${[...ALLOWED].join(", ")}`,
+      `Comando "${skipped[0]}" é ignorado no Builder (preview via Sandpack).`,
     );
   }
-  return resolved[0]!;
+  throw new Error(
+    `Comando não permitido: "${command}". Use apenas: ${[...EXECUTABLE].join(", ")}`,
+  );
 }

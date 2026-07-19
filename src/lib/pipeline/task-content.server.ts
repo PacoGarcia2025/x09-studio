@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type { LlmProvider } from "@/lib/llm/types";
+import { resolveCommandPlan } from "@/lib/pipeline/commands.allowlist";
 import type { PlanTaskType } from "@/lib/pipeline/plan-schema";
 
 const filePayloadSchema = z.object({
@@ -197,29 +198,16 @@ export async function generateTaskPayload(
         await completeJson(
           provider,
           `Responda APENAS JSON {"command":"..."}.
-Comando ÚNICO (sem &&). Válidos: npm install, npm ci, npm run build, npm run typecheck, bun install, bun run build, bun run typecheck.
-NÃO use migrate. Para landing page prefira pular comando — se precisar, use só "npm run build".`,
+Comando ÚNICO. Preferir "npm install" se precisar instalar deps.
+NÃO use: migrate, build, typecheck, preview (o Studio previewa via Sandpack).
+Se a task não precisar instalar nada, use "npm install" mesmo assim ou a instrução será ignorada com segurança.`,
           base,
           1024,
         ),
       );
-      // Normaliza cadeias inválidas para o primeiro comando permitido
-      const pieces = parsed.command
-        .split(/&&|;/)
-        .map((s) => s.trim().replace(/\s+/g, " "))
-        .filter(Boolean);
-      const allowedSet = new Set([
-        "npm install",
-        "npm ci",
-        "npm run build",
-        "npm run typecheck",
-        "npm run preview",
-        "bun install",
-        "bun run build",
-        "bun run typecheck",
-      ]);
-      const first = pieces.find((p) => allowedSet.has(p)) ?? "npm run build";
-      return { kind: "command", command: first };
+      const plan = resolveCommandPlan(parsed.command);
+      const command = plan.run[0] ?? "npm install";
+      return { kind: "command", command };
     }
     case "env_set": {
       const parsed = envPayloadSchema.parse(

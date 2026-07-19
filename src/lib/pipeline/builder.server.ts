@@ -1,7 +1,7 @@
 import { spawn } from "node:child_process";
 import path from "node:path";
 import type { LlmProvider } from "@/lib/llm/types";
-import { resolveAllowedCommands } from "@/lib/pipeline/commands.allowlist";
+import { resolveCommandPlan } from "@/lib/pipeline/commands.allowlist";
 import {
   generateTaskPayload,
   LANDING_APP_TSX,
@@ -72,13 +72,27 @@ async function runCommand(
   projectId: string,
   rawCommand: string,
 ): Promise<string> {
-  const allowed = resolveAllowedCommands(rawCommand);
-  if (allowed.length === 0) {
-    return `Comando ignorado (não permitido): "${rawCommand.trim()}". Sem impacto na geração dos arquivos.`;
+  const { run, skipped, ignored } = resolveCommandPlan(rawCommand);
+  const notes: string[] = [];
+
+  if (ignored.length > 0) {
+    notes.push(`Ignorado (não permitido): ${ignored.join(", ")}`);
+  }
+  if (skipped.length > 0) {
+    notes.push(
+      `Pulado (preview usa Sandpack, sem build local): ${skipped.join(", ")}`,
+    );
   }
 
-  const logs: string[] = [];
-  for (const cmd of allowed) {
+  if (run.length === 0) {
+    return (
+      notes.join(" | ") ||
+      `Comando ignorado: "${rawCommand.trim()}". Sem impacto na geração.`
+    );
+  }
+
+  const logs: string[] = [...notes];
+  for (const cmd of run) {
     logs.push(await runSingleCommand(projectId, cmd));
   }
   return logs.join("\n\n");
