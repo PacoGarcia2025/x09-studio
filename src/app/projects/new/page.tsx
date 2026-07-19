@@ -21,8 +21,6 @@ export default async function NewProjectPage({
     );
   }
 
-  // Plano/build rodam no editor (evita timeout nesta rota).
-  redirect(
-    `/projects/${result.projectId}?autostart=1&q=${encodeURIComponent(prompt)}`,
-  );
+  // Prompt fica em projects.brief_prompt; plano/build rodam no editor.
+  redirect(`/projects/${result.projectId}?autostart=1`);
 }

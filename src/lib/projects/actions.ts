@@ -220,16 +220,38 @@ export async function createProjectFromPrompt(
       const suffix =
         attempt === 0 ? "" : `-${Date.now().toString(36).slice(-4)}${attempt}`;
       const slug = `${baseSlug.slice(0, Math.max(8, 48 - suffix.length))}${suffix}`;
-      const { data, error } = await supabase
+      const payload = {
+        workspace_id: workspaceId,
+        name,
+        slug,
+        status: "draft" as const,
+        brief_prompt: trimmed,
+      };
+      let { data, error } = await supabase
         .from("projects")
-        .insert({
-          workspace_id: workspaceId,
-          name,
-          slug,
-          status: "draft",
-        })
+        .insert(payload)
         .select("id")
         .single();
+
+      // Coluna ainda não migrada no ambiente: tenta sem brief_prompt.
+      if (
+        error &&
+        /brief_prompt/i.test(error.message) &&
+        error.code !== "23505"
+      ) {
+        const retry = await supabase
+          .from("projects")
+          .insert({
+            workspace_id: workspaceId,
+            name,
+            slug,
+            status: "draft",
+          })
+          .select("id")
+          .single();
+        data = retry.data;
+        error = retry.error;
+      }
 
       if (!error && data) created = data;
       else if (error?.code !== "23505") {

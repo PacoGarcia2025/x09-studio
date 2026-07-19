@@ -112,6 +112,19 @@ export async function generatePlanAction(
       };
     }
 
+    // Guarda o prompt no projeto para reabrir o chat sem digitar de novo.
+    const briefUpdate = await gate.supabase
+      .from("projects")
+      .update({ brief_prompt: trimmed, status: "generating" })
+      .eq("id", projectId);
+
+    if (briefUpdate.error && /brief_prompt/i.test(briefUpdate.error.message)) {
+      await gate.supabase
+        .from("projects")
+        .update({ status: "generating" })
+        .eq("id", projectId);
+    }
+
     revalidatePath(`/projects/${projectId}`);
 
     return {

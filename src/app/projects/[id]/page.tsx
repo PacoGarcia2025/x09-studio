@@ -20,11 +20,36 @@ export default async function ProjectDetailPage({ params, searchParams }: Props)
   } = await supabase.auth.getUser();
   if (!user) notFound();
 
-  const { data: project } = await supabase
-    .from("projects")
-    .select("id, name, slug, status, created_at, workspace_id")
-    .eq("id", id)
-    .maybeSingle();
+  let project:
+    | {
+        id: string;
+        name: string;
+        slug: string;
+        status: string;
+        created_at: string;
+        workspace_id: string;
+        brief_prompt?: string | null;
+      }
+    | null = null;
+
+  {
+    const withBrief = await supabase
+      .from("projects")
+      .select("id, name, slug, status, created_at, workspace_id, brief_prompt")
+      .eq("id", id)
+      .maybeSingle();
+
+    if (withBrief.error && /brief_prompt/i.test(withBrief.error.message)) {
+      const fallback = await supabase
+        .from("projects")
+        .select("id, name, slug, status, created_at, workspace_id")
+        .eq("id", id)
+        .maybeSingle();
+      project = fallback.data;
+    } else {
+      project = withBrief.data;
+    }
+  }
 
   if (!project) notFound();
 
@@ -37,16 +62,22 @@ export default async function ProjectDetailPage({ params, searchParams }: Props)
   if (!workspace || workspace.owner_id !== user.id) notFound();
 
   const latest = await getLatestPlan(project.id);
-  const bootstrapPrompt = q?.trim() || latest?.prompt || "";
+  const briefPrompt =
+    q?.trim() || project.brief_prompt?.trim() || latest?.prompt || "";
+
+  // Abre e já planeja: veio do Construir OU tem prompt salvo sem plano ainda.
+  const shouldAutoStart =
+    autostart === "1" || (Boolean(briefPrompt) && !latest);
 
   return (
     <ProjectWorkspace
       project={project}
       planId={latest?.id ?? null}
-      initialPrompt={bootstrapPrompt || undefined}
+      initialPrompt={briefPrompt || undefined}
       initialPlan={latest?.plan ?? null}
       initialModel={latest?.model}
-      autoStart={autostart === "1"}
+      autoStart={shouldAutoStart}
+      awaitApproval={!latest && shouldAutoStart}
     />
   );
 }

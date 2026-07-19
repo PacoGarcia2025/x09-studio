@@ -11,6 +11,7 @@ export type Project = {
   name: string;
   slug: string;
   status: ProjectStatus;
+  brief_prompt?: string | null;
   created_at: string;
   updated_at: string;
 };

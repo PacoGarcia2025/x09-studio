@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { generatePlanAction } from "@/lib/pipeline/actions";
 import type { StudioPlan } from "@/lib/pipeline/plan-schema";
@@ -32,17 +32,14 @@ export function AutoPlanBootstrap({
 }) {
   const router = useRouter();
   const startedRef = useRef(false);
-  const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     if (!enabled || hasPlan || !prompt.trim() || startedRef.current) return;
     startedRef.current = true;
-    setBusy(true);
     onStarted?.();
 
     void (async () => {
       const result = await generatePlanAction(projectId, prompt);
-      setBusy(false);
       if (!result.ok) {
         onError?.(result.error);
         return;
@@ -56,12 +53,5 @@ export function AutoPlanBootstrap({
     })();
   }, [enabled, hasPlan, onError, onReady, onStarted, projectId, prompt, router]);
 
-  if (!busy) return null;
-  return (
-    <div className="pointer-events-none absolute inset-x-0 top-14 z-20 flex justify-center px-4">
-      <div className="rounded-full border border-violet-200 bg-white/95 px-4 py-2 text-xs font-medium text-violet-700 shadow-sm">
-        Planejando o app com a IA…
-      </div>
-    </div>
-  );
+  return null;
 }
