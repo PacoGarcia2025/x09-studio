@@ -5,10 +5,14 @@ import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
-type Props = { params: Promise<{ id: string }> };
+type Props = {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ autostart?: string }>;
+};
 
-export default async function ProjectDetailPage({ params }: Props) {
+export default async function ProjectDetailPage({ params, searchParams }: Props) {
   const { id } = await params;
+  const { autostart } = await searchParams;
   const supabase = await createClient();
 
   const {
@@ -41,6 +45,7 @@ export default async function ProjectDetailPage({ params }: Props) {
       initialPrompt={latest?.prompt}
       initialPlan={latest?.plan ?? null}
       initialModel={latest?.model}
+      autoStart={autostart === "1"}
     />
   );
 }

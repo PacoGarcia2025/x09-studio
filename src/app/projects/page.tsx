@@ -39,7 +39,12 @@ const TEMPLATES = [
   },
 ] as const;
 
-export default async function ProjectsPage() {
+export default async function ProjectsPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ createError?: string }>;
+}) {
+  const params = searchParams ? await searchParams : {};
   const projects = await listProjects();
   const supabase = await createClient();
   const {
@@ -62,6 +67,13 @@ export default async function ProjectsPage() {
       activeHref="/projects"
     >
       <div className="min-h-full bg-[#F7F7F8]">
+        {params.createError ? (
+          <div className="px-4 pt-4">
+            <p className="mx-auto max-w-3xl rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+              {params.createError}
+            </p>
+          </div>
+        ) : null}
         {/* Hero Lovable */}
         <div className="px-3 pt-3 md:px-4 md:pt-4">
           <div className="relative overflow-hidden rounded-[28px] bg-[linear-gradient(135deg,#8B5CF6_0%,#D946EF_45%,#6366F1_100%)] px-4 pb-28 pt-10 md:px-8 md:pb-32 md:pt-14">
@@ -97,13 +109,13 @@ export default async function ProjectsPage() {
                     placeholder="Peça ao Studio X09 para criar uma landing page para o meu…"
                     className="min-w-0 flex-1 border-0 bg-transparent text-[15px] text-zinc-900 outline-none placeholder:text-zinc-400 md:text-[17px]"
                   />
-                  <Link
-                    href="/projects/new"
+                  <button
+                    type="submit"
                     className="inline-flex h-10 shrink-0 items-center gap-1.5 rounded-full bg-zinc-900 px-3.5 text-sm font-semibold text-white transition hover:bg-zinc-800"
                   >
                     Construir
                     <span className="opacity-70">▾</span>
-                  </Link>
+                  </button>
                 </div>
               </form>
             </div>

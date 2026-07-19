@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { BuilderPanel } from "@/components/builder/BuilderPanel";
 import { FixPanel } from "@/components/fix/FixPanel";
 import { PlannerPanel } from "@/components/planner/PlannerPanel";
@@ -10,6 +10,8 @@ import { VerifyPanel } from "@/components/verify/VerifyPanel";
 import type { StudioPlan } from "@/lib/pipeline/plan-schema";
 
 type MainTab = "preview" | "code" | "layers" | "pipeline";
+
+type ChatItem = { role: "user" | "ai"; text: string; working?: boolean };
 
 type Props = {
   project: {
@@ -23,6 +25,7 @@ type Props = {
   initialPrompt?: string;
   initialPlan?: StudioPlan | null;
   initialModel?: string | null;
+  autoStart?: boolean;
 };
 
 /**
@@ -34,22 +37,24 @@ export function ProjectWorkspace({
   initialPrompt,
   initialPlan,
   initialModel,
+  autoStart = false,
 }: Props) {
   const [mainTab, setMainTab] = useState<MainTab>("preview");
   const [prompt, setPrompt] = useState("");
-  const [chatLog, setChatLog] = useState<
-    Array<{ role: "user" | "ai"; text: string }>
-  >(() =>
-    initialPrompt
-      ? [
-          { role: "user", text: initialPrompt },
-          {
-            role: "ai",
-            text: "Entendi o pedido. Use Planner → Builder no painel de pipeline para gerar o app. O preview mostra a hero a partir dos arquivos do projeto.",
-          },
-        ]
-      : [],
-  );
+  const [isGenerating, setIsGenerating] = useState(autoStart);
+  const [chatLog, setChatLog] = useState<ChatItem[]>(() => {
+    if (!initialPrompt) return [];
+    return [
+      { role: "user", text: initialPrompt },
+      {
+        role: "ai",
+        working: autoStart,
+        text: autoStart
+          ? "Entendi seu pedido. Estou montando a estrutura e começando a geração agora…"
+          : "Entendi o pedido. Posso ajustar detalhes pelo chat ou iniciar a geração no Pipeline.",
+      },
+    ];
+  });
   const [verifyToken, setVerifyToken] = useState(0);
   const [fixToken, setFixToken] = useState(0);
   const [lastVerifyReportId, setLastVerifyReportId] = useState<string | null>(
@@ -58,11 +63,27 @@ export function ProjectWorkspace({
   const [developerMode, setDeveloperMode] = useState(false);
   const [previewKey, setPreviewKey] = useState(0);
 
+  useEffect(() => {
+    if (!autoStart || !initialPlan) return;
+    setChatLog((prev) => {
+      const already = prev.some((m) => m.text.includes("Plano pronto"));
+      if (already) return prev;
+      return [
+        ...prev.filter((m) => !m.working),
+        {
+          role: "ai",
+          text: `Plano pronto: ${initialPlan.summary.slice(0, 180)}. Estou gerando o preview…`,
+          working: true,
+        },
+      ];
+    });
+  }, [autoStart, initialPlan]);
+
   const statusLabel = useMemo(() => {
-    if (project.status === "generating") return "Gerando…";
+    if (isGenerating || project.status === "generating") return "Gerando…";
     if (project.status === "published") return "Publicado";
     return "Visualizando a última versão salva";
-  }, [project.status]);
+  }, [isGenerating, project.status]);
 
   function sendChat() {
     const value = prompt.trim();
@@ -72,7 +93,7 @@ export function ProjectWorkspace({
       { role: "user", text: value },
       {
         role: "ai",
-        text: "Recebido. Abra a aba Pipeline (ou ative o modo desenvolvedor) para rodar Planner/Builder com este pedido.",
+        text: "Recebido. Abra a aba Pipeline para aplicar essa alteração no Builder.",
       },
     ]);
     setPrompt("");
@@ -192,6 +213,11 @@ export function ProjectWorkspace({
                     }`}
                   >
                     {msg.text}
+                    {msg.working ? (
+                      <span className="mt-2 block text-xs text-violet-600">
+                        Trabalhando…
+                      </span>
+                    ) : null}
                   </div>
                 </div>
               ))
@@ -251,8 +277,11 @@ export function ProjectWorkspace({
             </div>
           ) : null}
 
-          {mainTab === "pipeline" ? (
-            <div className="absolute inset-0 space-y-4 overflow-y-auto bg-[#F7F7F8] p-4">
+          <div
+            className={`absolute inset-0 space-y-4 overflow-y-auto bg-[#F7F7F8] p-4 ${
+              mainTab === "pipeline" ? "block" : "hidden"
+            }`}
+          >
               <PlannerPanel
                 projectId={project.id}
                 initialPrompt={initialPrompt}
@@ -262,9 +291,18 @@ export function ProjectWorkspace({
               <BuilderPanel
                 planId={planId}
                 projectId={project.id}
+                autoStart={autoStart}
                 onBuildSuccess={() => {
+                  setIsGenerating(false);
                   setVerifyToken((t) => t + 1);
                   setPreviewKey((k) => k + 1);
+                  setChatLog((prev) => [
+                    ...prev.filter((m) => !m.working),
+                    {
+                      role: "ai",
+                      text: "A primeira versão foi gerada. Estou validando o resultado e o preview já foi atualizado.",
+                    },
+                  ]);
                 }}
               />
               <VerifyPanel
@@ -282,8 +320,7 @@ export function ProjectWorkspace({
                 verifyReportId={lastVerifyReportId}
                 autoStartToken={fixToken}
               />
-            </div>
-          ) : null}
+          </div>
         </section>
       </div>
     </div>

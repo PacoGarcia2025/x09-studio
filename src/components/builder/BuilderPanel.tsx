@@ -12,16 +12,23 @@ import {
 type Props = {
   planId: string | null;
   projectId: string;
+  autoStart?: boolean;
   /** Chamado quando o Builder termina com sucesso (hook → Verify). */
   onBuildSuccess?: () => void;
 };
 
-export function BuilderPanel({ planId, projectId, onBuildSuccess }: Props) {
+export function BuilderPanel({
+  planId,
+  projectId,
+  autoStart = false,
+  onBuildSuccess,
+}: Props) {
   const [state, setState] = useState<BuildState | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [running, setRunning] = useState(false);
   const [pending, startTransition] = useTransition();
   const runningRef = useRef(false);
+  const autoStartedRef = useRef(false);
 
   const refresh = useCallback(() => {
     if (!planId) return;
@@ -40,48 +47,57 @@ export function BuilderPanel({ planId, projectId, onBuildSuccess }: Props) {
     refresh();
   }, [refresh]);
 
-  async function runQueue(options: { reset: boolean } = { reset: true }) {
-    if (!planId || runningRef.current) return;
-    runningRef.current = true;
-    setRunning(true);
-    setError(null);
-
-    if (options.reset) {
-      const start = await startBuildAction(planId);
-      if (!start.ok) {
-        setError(start.error);
-        runningRef.current = false;
-        setRunning(false);
-        return;
-      }
-    }
-
-    let guard = 0;
-    let endedOk = false;
-    while (guard < 80) {
-      guard += 1;
-      const tick = await tickBuildAction(planId);
-      if (!tick.ok) {
-        setError(tick.error);
-        break;
-      }
-      await refreshState(planId);
-      if (tick.done) {
-        endedOk = !tick.failed;
-        break;
-      }
-    }
-
-    runningRef.current = false;
-    setRunning(false);
-    refresh();
-    if (endedOk) onBuildSuccess?.();
-  }
-
-  async function refreshState(id: string) {
+  const refreshState = useCallback(async (id: string) => {
     const result = await getBuildState(id);
     if (result.ok) setState(result.data);
-  }
+  }, []);
+
+  const runQueue = useCallback(
+    async (options: { reset: boolean } = { reset: true }) => {
+      if (!planId || runningRef.current) return;
+      runningRef.current = true;
+      setRunning(true);
+      setError(null);
+
+      if (options.reset) {
+        const start = await startBuildAction(planId);
+        if (!start.ok) {
+          setError(start.error);
+          runningRef.current = false;
+          setRunning(false);
+          return;
+        }
+      }
+
+      let guard = 0;
+      let endedOk = false;
+      while (guard < 80) {
+        guard += 1;
+        const tick = await tickBuildAction(planId);
+        if (!tick.ok) {
+          setError(tick.error);
+          break;
+        }
+        await refreshState(planId);
+        if (tick.done) {
+          endedOk = !tick.failed;
+          break;
+        }
+      }
+
+      runningRef.current = false;
+      setRunning(false);
+      refresh();
+      if (endedOk) onBuildSuccess?.();
+    },
+    [onBuildSuccess, planId, refresh, refreshState],
+  );
+
+  useEffect(() => {
+    if (!autoStart || !planId || autoStartedRef.current) return;
+    autoStartedRef.current = true;
+    void runQueue();
+  }, [autoStart, planId, runQueue]);
 
   async function requeueTask(taskId: string) {
     if (!planId || runningRef.current) return;
