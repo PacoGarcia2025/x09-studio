@@ -7,12 +7,12 @@ export const dynamic = "force-dynamic";
 
 type Props = {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ autostart?: string }>;
+  searchParams: Promise<{ autostart?: string; q?: string }>;
 };
 
 export default async function ProjectDetailPage({ params, searchParams }: Props) {
   const { id } = await params;
-  const { autostart } = await searchParams;
+  const { autostart, q } = await searchParams;
   const supabase = await createClient();
 
   const {
@@ -37,12 +37,13 @@ export default async function ProjectDetailPage({ params, searchParams }: Props)
   if (!workspace || workspace.owner_id !== user.id) notFound();
 
   const latest = await getLatestPlan(project.id);
+  const bootstrapPrompt = q?.trim() || latest?.prompt || "";
 
   return (
     <ProjectWorkspace
       project={project}
       planId={latest?.id ?? null}
-      initialPrompt={latest?.prompt}
+      initialPrompt={bootstrapPrompt || undefined}
       initialPlan={latest?.plan ?? null}
       initialModel={latest?.model}
       autoStart={autostart === "1"}

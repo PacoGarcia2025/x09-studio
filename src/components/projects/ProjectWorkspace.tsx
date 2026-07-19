@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { BuilderPanel } from "@/components/builder/BuilderPanel";
 import { FixPanel } from "@/components/fix/FixPanel";
 import { PlannerPanel } from "@/components/planner/PlannerPanel";
+import { AutoPlanBootstrap } from "@/components/projects/AutoPlanBootstrap";
 import { ProjectFilesPanel } from "@/components/projects/ProjectFilesPanel";
 import { VerifyPanel } from "@/components/verify/VerifyPanel";
 import type { StudioPlan } from "@/lib/pipeline/plan-schema";
@@ -42,6 +43,12 @@ export function ProjectWorkspace({
   const [mainTab, setMainTab] = useState<MainTab>("preview");
   const [prompt, setPrompt] = useState("");
   const [isGenerating, setIsGenerating] = useState(autoStart);
+  const [activePlanId, setActivePlanId] = useState(planId);
+  const [activePlan, setActivePlan] = useState(initialPlan);
+  const [activeModel, setActiveModel] = useState(initialModel);
+  const [buildAutoStart, setBuildAutoStart] = useState(
+    Boolean(autoStart && planId),
+  );
   const [chatLog, setChatLog] = useState<ChatItem[]>(() => {
     if (!initialPrompt) return [];
     return [
@@ -64,20 +71,11 @@ export function ProjectWorkspace({
   const [previewKey, setPreviewKey] = useState(0);
 
   useEffect(() => {
-    if (!autoStart || !initialPlan) return;
-    setChatLog((prev) => {
-      const already = prev.some((m) => m.text.includes("Plano pronto"));
-      if (already) return prev;
-      return [
-        ...prev.filter((m) => !m.working),
-        {
-          role: "ai",
-          text: `Plano pronto: ${initialPlan.summary.slice(0, 180)}. Estou gerando o preview…`,
-          working: true,
-        },
-      ];
-    });
-  }, [autoStart, initialPlan]);
+    if (planId) setActivePlanId(planId);
+    if (initialPlan) setActivePlan(initialPlan);
+    if (initialModel) setActiveModel(initialModel);
+    if (autoStart && planId) setBuildAutoStart(true);
+  }, [autoStart, initialModel, initialPlan, planId]);
 
   const statusLabel = useMemo(() => {
     if (isGenerating || project.status === "generating") return "Gerando…";
@@ -102,6 +100,48 @@ export function ProjectWorkspace({
 
   return (
     <div className="fixed inset-0 z-40 flex flex-col bg-[#F7F7F8]">
+      <AutoPlanBootstrap
+        projectId={project.id}
+        prompt={initialPrompt || ""}
+        enabled={autoStart}
+        hasPlan={Boolean(activePlanId)}
+        onStarted={() => {
+          setIsGenerating(true);
+          setChatLog((prev) => [
+            ...prev.filter((m) => !m.working),
+            {
+              role: "ai",
+              working: true,
+              text: "Entendi seu pedido. Estou montando o plano do app…",
+            },
+          ]);
+        }}
+        onReady={({ planId: nextPlanId, plan, model }) => {
+          setActivePlanId(nextPlanId);
+          setActivePlan(plan);
+          setActiveModel(model);
+          setBuildAutoStart(true);
+          setChatLog((prev) => [
+            ...prev.filter((m) => !m.working),
+            {
+              role: "ai",
+              working: true,
+              text: `Plano pronto: ${plan.summary.slice(0, 180)}. Começando a geração do preview…`,
+            },
+          ]);
+        }}
+        onError={(message) => {
+          setIsGenerating(false);
+          setChatLog((prev) => [
+            ...prev.filter((m) => !m.working),
+            {
+              role: "ai",
+              text: `Não consegui montar o plano agora: ${message}`,
+            },
+          ]);
+        }}
+      />
+
       {/* Top bar Lovable */}
       <header className="flex h-12 shrink-0 items-center gap-2 border-b border-zinc-200 bg-white px-3">
         <Link
@@ -190,7 +230,7 @@ export function ProjectWorkspace({
           <div className="border-b border-zinc-100 px-4 py-3">
             <p className="text-sm font-semibold text-zinc-900">Chat X09</p>
             <p className="mt-0.5 text-xs text-zinc-500">
-              IA: {initialModel ?? "X09 Router"}
+              IA: {activeModel ?? "X09 Router"}
             </p>
           </div>
 
@@ -285,13 +325,13 @@ export function ProjectWorkspace({
               <PlannerPanel
                 projectId={project.id}
                 initialPrompt={initialPrompt}
-                initialPlan={initialPlan}
-                initialModel={initialModel}
+                initialPlan={activePlan}
+                initialModel={activeModel}
               />
               <BuilderPanel
-                planId={planId}
+                planId={activePlanId}
                 projectId={project.id}
-                autoStart={autoStart}
+                autoStart={buildAutoStart}
                 onBuildSuccess={() => {
                   setIsGenerating(false);
                   setVerifyToken((t) => t + 1);
@@ -307,7 +347,7 @@ export function ProjectWorkspace({
               />
               <VerifyPanel
                 projectId={project.id}
-                planId={planId}
+                planId={activePlanId}
                 autoStartToken={verifyToken}
                 onVerifyComplete={(state) => {
                   setLastVerifyReportId(state.reportId);
@@ -316,7 +356,7 @@ export function ProjectWorkspace({
               />
               <FixPanel
                 projectId={project.id}
-                planId={planId}
+                planId={activePlanId}
                 verifyReportId={lastVerifyReportId}
                 autoStartToken={fixToken}
               />

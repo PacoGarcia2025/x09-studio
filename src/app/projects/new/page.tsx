@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { createProjectFromPrompt } from "@/lib/projects/actions";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 export default async function NewProjectPage({
   searchParams,
@@ -15,10 +16,13 @@ export default async function NewProjectPage({
 
   const result = await createProjectFromPrompt(prompt);
   if (!result.ok) {
-    redirect(`/projects?createError=${encodeURIComponent(result.error)}#prompt`);
+    redirect(
+      `/projects?createError=${encodeURIComponent(result.error)}#prompt`,
+    );
   }
 
+  // Plano/build rodam no editor (evita timeout nesta rota).
   redirect(
-    `/projects/${result.projectId}?autostart=${result.planReady ? "1" : "0"}`,
+    `/projects/${result.projectId}?autostart=1&q=${encodeURIComponent(prompt)}`,
   );
 }

@@ -2,7 +2,6 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { generatePlanAction } from "@/lib/pipeline/actions";
 import { createClient } from "@/lib/supabase/server";
 import { scaffoldProject } from "@/lib/projects/scaffold.server";
 import { isValidSlug, slugify, type Project } from "@/lib/projects/types";
@@ -159,74 +158,118 @@ export async function createProject(
   }
 }
 
+function nameFromPrompt(prompt: string): string {
+  const cleaned = prompt
+    .replace(/[^a-zA-ZÀ-ÿ0-9\s-]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  const stop = new Set([
+    "crie",
+    "criar",
+    "uma",
+    "um",
+    "para",
+    "o",
+    "a",
+    "de",
+    "da",
+    "do",
+    "que",
+    "com",
+    "na",
+    "no",
+    "em",
+    "meu",
+    "minha",
+    "landing",
+    "page",
+  ]);
+  const words = cleaned
+    .split(" ")
+    .filter((w) => w.length > 1 && !stop.has(w.toLowerCase()))
+    .slice(0, 4);
+  const name = words.join(" ").slice(0, 56);
+  return name || "Novo projeto";
+}
+
+/**
+ * Cria projeto + scaffold rápido (sem LLM).
+ * O plano/build rodam no editor para evitar timeout em /projects/new.
+ */
 export async function createProjectFromPrompt(
   prompt: string,
-): Promise<
-  | { ok: true; projectId: string; planReady: boolean }
-  | { ok: false; error: string }
-> {
-  const trimmed = prompt.trim();
-  if (trimmed.length < 3) {
-    return { ok: false, error: "Descreva o projeto com pelo menos 3 caracteres." };
-  }
-
-  const { supabase, user } = await requireUser();
-  if (!user) return { ok: false, error: "Faça login para criar um projeto." };
-
-  const workspaceId = await ensureWorkspace(supabase, user.id);
-  const words = trimmed
-    .replace(/[^\p{L}\p{N}\s-]/gu, " ")
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 5);
-  const name = words.join(" ").slice(0, 56) || "Novo projeto";
-  const baseSlug = slugify(name) || "novo-projeto";
-
-  let created: { id: string } | null = null;
-  for (let attempt = 0; attempt < 6 && !created; attempt += 1) {
-    const suffix = attempt === 0 ? "" : `-${Date.now().toString(36).slice(-4)}${attempt}`;
-    const slug = `${baseSlug.slice(0, 48 - suffix.length)}${suffix}`;
-    const { data, error } = await supabase
-      .from("projects")
-      .insert({
-        workspace_id: workspaceId,
-        name,
-        slug,
-        status: "generating",
-      })
-      .select("id")
-      .single();
-
-    if (!error && data) created = data;
-    else if (error?.code !== "23505") {
-      return { ok: false, error: error?.message ?? "Falha ao criar projeto." };
-    }
-  }
-
-  if (!created) {
-    return { ok: false, error: "Não foi possível criar um nome único." };
-  }
-
+): Promise<{ ok: true; projectId: string } | { ok: false; error: string }> {
   try {
-    await scaffoldProject(created.id);
-  } catch (error) {
-    await supabase.from("projects").delete().eq("id", created.id);
-    return {
-      ok: false,
-      error: error instanceof Error ? error.message : "Falha ao criar arquivos.",
-    };
-  }
+    const trimmed = prompt.trim();
+    if (trimmed.length < 3) {
+      return {
+        ok: false,
+        error: "Descreva o projeto com pelo menos 3 caracteres.",
+      };
+    }
 
-  const plan = await generatePlanAction(created.id, trimmed);
-  if (!plan.ok) {
+    const { supabase, user } = await requireUser();
+    if (!user) return { ok: false, error: "Faça login para criar um projeto." };
+
+    const workspaceId = await ensureWorkspace(supabase, user.id);
+    const name = nameFromPrompt(trimmed);
+    const baseSlug = slugify(name) || "novo-projeto";
+
+    let created: { id: string } | null = null;
+    for (let attempt = 0; attempt < 6 && !created; attempt += 1) {
+      const suffix =
+        attempt === 0 ? "" : `-${Date.now().toString(36).slice(-4)}${attempt}`;
+      const slug = `${baseSlug.slice(0, Math.max(8, 48 - suffix.length))}${suffix}`;
+      const { data, error } = await supabase
+        .from("projects")
+        .insert({
+          workspace_id: workspaceId,
+          name,
+          slug,
+          status: "draft",
+        })
+        .select("id")
+        .single();
+
+      if (!error && data) created = data;
+      else if (error?.code !== "23505") {
+        return { ok: false, error: error?.message ?? "Falha ao criar projeto." };
+      }
+    }
+
+    if (!created) {
+      return { ok: false, error: "Não foi possível criar um nome único." };
+    }
+
+    try {
+      await scaffoldProject(created.id);
+    } catch (error) {
+      await supabase.from("projects").delete().eq("id", created.id);
+      return {
+        ok: false,
+        error:
+          error instanceof Error
+            ? error.message
+            : "Falha ao criar arquivos do projeto.",
+      };
+    }
+
     await supabase
       .from("projects")
-      .update({ status: "draft" })
+      .update({ status: "generating" })
       .eq("id", created.id);
-  }
 
-  revalidatePath("/projects");
-  return { ok: true, projectId: created.id, planReady: plan.ok };
+    revalidatePath("/projects");
+    return { ok: true, projectId: created.id };
+  } catch (error) {
+    return {
+      ok: false,
+      error:
+        error instanceof Error
+          ? error.message
+          : "Erro inesperado ao criar o projeto.",
+    };
+  }
 }
 
 export async function signOut() {
