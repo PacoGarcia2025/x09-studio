@@ -17,8 +17,9 @@ const INDEX_HTML = `<!DOCTYPE html>
     <title>Preview</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-      html, body, #root { margin: 0; padding: 0; min-height: 100%; }
-      body { font-family: ui-sans-serif, system-ui, sans-serif; }
+      html, body { margin: 0; padding: 0; min-height: 100%; height: 100%; }
+      #root { min-height: 100%; }
+      body { font-family: ui-sans-serif, system-ui, sans-serif; background: #fff; }
     </style>
   </head>
   <body>
@@ -132,12 +133,13 @@ export function ProjectLivePreview({ projectId, refreshKey = 0 }: Props) {
   }
 
   return (
-    <div className="absolute inset-0 bg-white [&_.sp-wrapper]:h-full [&_.sp-layout]:h-full [&_.sp-preview-container]:h-full">
+    <div className="absolute inset-0 overflow-hidden bg-white">
       <SandpackProvider
         key={`${projectId}-${refreshKey}`}
         template="react-ts"
         theme="light"
         files={sandpackFiles}
+        style={{ height: "100%", width: "100%" }}
         customSetup={{
           dependencies: {
             "@supabase/supabase-js": "^2.50.2",
@@ -149,16 +151,24 @@ export function ProjectLivePreview({ projectId, refreshKey = 0 }: Props) {
           recompileMode: "immediate",
           recompileDelay: 300,
           externalResources: ["https://cdn.tailwindcss.com"],
+          classes: {
+            "sp-wrapper": "x09-sp-fill",
+            "sp-layout": "x09-sp-fill",
+            "sp-stack": "x09-sp-fill",
+          },
         }}
       >
-        <SandpackLayout style={{ height: "100%", border: "none" }}>
-          <SandpackPreview
-            showNavigator={false}
-            showOpenInCodeSandbox={false}
-            showRefreshButton={false}
-            style={{ height: "100%" }}
-          />
-        </SandpackLayout>
+        <div className="sandpack-preview-host h-full w-full">
+          <SandpackLayout style={{ height: "100%", border: "none" }}>
+            <SandpackPreview
+              showNavigator={false}
+              showOpenInCodeSandbox={false}
+              showRefreshButton={false}
+              showOpenNewtab={false}
+              style={{ height: "100%", flex: 1 }}
+            />
+          </SandpackLayout>
+        </div>
       </SandpackProvider>
     </div>
   );
