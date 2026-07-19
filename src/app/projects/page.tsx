@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { AppShell } from "@/components/AppShell";
+import { ProjectHeroCard } from "@/components/projects/ProjectHeroCard";
 import { listProjects } from "@/lib/projects/actions";
 import { createClient } from "@/lib/supabase/server";
 
@@ -68,7 +69,7 @@ export default async function ProjectsPage() {
 
             <div className="relative mx-auto flex max-w-3xl flex-col items-center text-center">
               <Link
-                href="/ecosystem"
+                href="/billing"
                 className="mb-7 inline-flex items-center gap-2 rounded-full bg-[#1e3a5f]/90 px-3.5 py-1.5 text-xs font-medium text-white shadow-sm backdrop-blur transition hover:bg-[#1e3a5f]"
               >
                 <span className="rounded-full bg-white/20 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide">
@@ -126,10 +127,10 @@ export default async function ProjectsPage() {
                 Modelos X09
               </span>
               <Link
-                href="/projects"
-                className="ml-auto text-sm font-medium text-zinc-500 transition hover:text-zinc-800"
+                href="/billing"
+                className="ml-auto text-sm font-medium text-violet-700 transition hover:text-violet-800"
               >
-                Veja tudo →
+                Planos →
               </Link>
             </div>
 
@@ -164,7 +165,10 @@ export default async function ProjectsPage() {
                       href={`/projects/${project.id}`}
                       className="group text-left"
                     >
-                      <HeroPreview title={project.name} hue={hue} />
+                      <ProjectHeroCard
+                        projectId={project.id}
+                        title={project.name}
+                      />
                       <CardMeta
                         title={project.name}
                         subtitle={`Criado ${formatCreated(project.created_at)}`}
