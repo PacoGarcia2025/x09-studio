@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { formatLlmUserError } from "@/lib/llm/resilient";
 import { getLlmProvider } from "@/lib/llm/provider";
 import { runPlanner } from "@/lib/pipeline/planner.server";
 import type { StudioPlan } from "@/lib/pipeline/plan-schema";
@@ -63,7 +64,7 @@ export async function generatePlanAction(
   }
 
   try {
-    const provider = getLlmProvider();
+    const provider = getLlmProvider("resilient-fast");
     const result = await runPlanner(provider, {
       prompt: trimmed,
       projectName: gate.project.name,
@@ -152,8 +153,7 @@ export async function generatePlanAction(
       };
     }
 
-    const message =
-      err instanceof Error ? err.message : "Falha ao gerar o plano";
+    const message = formatLlmUserError(err);
     return { ok: false, error: message };
   }
 }

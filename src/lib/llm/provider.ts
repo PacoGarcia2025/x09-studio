@@ -6,15 +6,21 @@ import {
   createClaudeViaOpenRouter,
   createGeminiViaOpenRouter,
 } from "./openrouter";
+import { createResilientFastProvider } from "./resilient";
 
 export type StudioLlmId =
   | "gemini-2.5-flash"
   | "gemini-openrouter"
   | "claude-sonnet"
-  | "groq-llama";
+  | "groq-llama"
+  | "resilient-fast";
 
-export function getLlmProvider(id: StudioLlmId = "gemini-2.5-flash"): LlmProvider {
+export function getLlmProvider(
+  id: StudioLlmId = "resilient-fast",
+): LlmProvider {
   switch (id) {
+    case "resilient-fast":
+      return createResilientFastProvider();
     case "gemini-2.5-flash":
       return createGeminiFlashProvider();
     case "gemini-openrouter":
@@ -32,7 +38,7 @@ export function getLlmProvider(id: StudioLlmId = "gemini-2.5-flash"): LlmProvide
 
 /**
  * Edit/premium/repair → Claude (aplica código de verdade).
- * Plan/fast → Gemini.
+ * Plan/fast → Gemini com fallback (OpenRouter / Groq).
  */
 export function getProviderForMode(mode: GenerationMode): LlmProvider {
   try {
@@ -42,23 +48,16 @@ export function getProviderForMode(mode: GenerationMode): LlmProvider {
       case "repair":
         return createClaudeViaOpenRouter();
       case "plan":
-        return getFallbackFast();
+        return createResilientFastProvider();
       case "fast":
       default:
-        return getFallbackFast();
+        return createResilientFastProvider();
     }
   } catch (error) {
     try {
-      return createGeminiFlashProvider();
+      return createResilientFastProvider();
     } catch {
       throw error;
     }
   }
-}
-
-function getFallbackFast(): LlmProvider {
-  if (process.env.OPENROUTER_API_KEY) {
-    return createGeminiViaOpenRouter();
-  }
-  return createGeminiFlashProvider();
 }
