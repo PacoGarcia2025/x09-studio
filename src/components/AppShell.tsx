@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { signOut } from "@/lib/projects/actions";
 
-const PRIMARY = [
+  const PRIMARY = [
   { href: "/projects", label: "Painel", icon: "▦" },
   { href: "/projects#prompt", label: "Procurar", icon: "⌕", hint: "Ctrl K" },
   { href: "/ai", label: "Recursos", icon: "✦" },
@@ -112,7 +112,7 @@ export function AppShell({
           </div>
 
           <Link
-            href="/ecosystem"
+            href="/billing"
             className="block w-full rounded-2xl bg-white p-3 text-left shadow-[0_1px_3px_rgba(0,0,0,0.06)] ring-1 ring-zinc-200/80 transition hover:ring-violet-300"
           >
             <div className="mb-0.5 flex items-center gap-2 text-[13px] font-semibold text-zinc-900">
