@@ -1,6 +1,4 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
-import { AppShell } from "@/components/AppShell";
 import { ProjectWorkspace } from "@/components/projects/ProjectWorkspace";
 import { getLatestPlan } from "@/lib/pipeline/actions";
 import { createClient } from "@/lib/supabase/server";
@@ -37,22 +35,12 @@ export default async function ProjectDetailPage({ params }: Props) {
   const latest = await getLatestPlan(project.id);
 
   return (
-    <AppShell>
-      <div className="space-y-5">
-        <Link
-          href="/projects"
-          className="inline-flex text-sm text-zinc-500 transition hover:text-violet-200"
-        >
-          ← Projetos
-        </Link>
-        <ProjectWorkspace
-          project={project}
-          planId={latest?.id ?? null}
-          initialPrompt={latest?.prompt}
-          initialPlan={latest?.plan ?? null}
-          initialModel={latest?.model}
-        />
-      </div>
-    </AppShell>
+    <ProjectWorkspace
+      project={project}
+      planId={latest?.id ?? null}
+      initialPrompt={latest?.prompt}
+      initialPlan={latest?.plan ?? null}
+      initialModel={latest?.model}
+    />
   );
 }

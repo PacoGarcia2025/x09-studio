@@ -1,23 +1,8 @@
-import { SandpackProvider } from "@codesandbox/sandpack-react";
-import {
-  ArrowLeft,
-  Code2,
-  Loader2,
-  LogOut,
-  Monitor,
-  MonitorPlay,
-  Rocket,
-  Save,
-  Smartphone,
-  Tablet,
-  Terminal,
-  User,
-} from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+﻿import { LogOut, User } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { AuthModal } from "@/components/auth/AuthModal";
 import { AgentsPanel } from "@/components/agents/AgentsPanel";
 import { UpgradeModal } from "@/components/billing/UpgradeModal";
-import { ChatPanel } from "@/components/chat/ChatPanel";
 import { ConnectorsPanel } from "@/components/connectors/ConnectorsPanel";
 import { DashboardHome } from "@/components/dashboard/DashboardHome";
 import { AppShell } from "@/components/layout/AppShell";
@@ -26,24 +11,12 @@ import { UserProfileModal } from "@/components/profile/UserProfileModal";
 import { DeployPublishModal } from "@/components/projects/DeployPublishModal";
 import { MyProjectsModal } from "@/components/projects/MyProjectsModal";
 import { BillingSettings } from "@/components/settings/BillingSettings";
+import { LovableStudio } from "@/components/workspace/LovableStudio";
 import { fetchBillingMe } from "@/lib/api-client";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import {
-  ResizableHandle,
-  ResizablePanel,
-  ResizablePanelGroup,
-} from "@/components/ui/resizable";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { CodeEditor } from "@/components/workspace/CodeEditor";
-import { ConsoleRender } from "@/components/workspace/ConsoleRender";
-import { PreviewRender } from "@/components/workspace/PreviewRender";
-import { SandpackErrorBridge } from "@/components/workspace/SandpackErrorBridge";
-import { Timeline } from "@/components/workspace/Timeline";
-import { toSandpackFiles } from "@/components/workspace/sandpack-files";
-import { sandpackCustomSetup } from "@/components/workspace/sandpack-setup";
-import { supabase } from "@/lib/supabase";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/lib/supabase";
 import { useProjectStore } from "@/store/project-store";
 import { useStudioStore } from "@/store/studio-store";
 import { useUserStore } from "@/store/user-store";
@@ -122,34 +95,7 @@ export default function App() {
       mounted = false;
       subscription.unsubscribe();
     };
-  }, [setSession, fetchProfile, clearUser]);
-
-  useEffect(() => {
-    if (
-      isLoggedIn &&
-      shellView === "home" &&
-      (nav === "dashboard" ||
-        nav === "projects" ||
-        nav === "starred" ||
-        nav === "mine" ||
-        nav === "search")
-    ) {
-      void fetchUserProjects();
-    }
-  }, [isLoggedIn, shellView, nav, fetchUserProjects]);
-
-  useEffect(() => {
-    function onKeyDown(event: KeyboardEvent) {
-      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
-        event.preventDefault();
-        setShellView("home");
-        setNav("search");
-        setFocusPromptToken((value) => value + 1);
-      }
-    }
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, []);
+  }, [clearUser, fetchProfile, setSession]);
 
   useEffect(() => {
     if (!isLoggedIn) {
@@ -159,28 +105,24 @@ export default function App() {
     void fetchBillingMe()
       .then((snap) => setCreditBalance(snap.wallet.balance))
       .catch(() => setCreditBalance(null));
-  }, [isLoggedIn, isGenerating, nav]);
+  }, [isLoggedIn, upgradeRequired]);
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    if (params.get("github") === "connected") {
-      setNav("connectors");
-      setShellView("home");
-      setSaveMessage("GitHub conectado!");
-      window.setTimeout(() => setSaveMessage(null), 2500);
-      window.history.replaceState({}, "", window.location.pathname);
-    }
-  }, []);
+    if (isLoggedIn) void fetchUserProjects();
+  }, [fetchUserProjects, isLoggedIn]);
 
-  async function handleSave() {
-    if (!isLoggedIn) {
-      setIsAuthOpen(true);
-      return;
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setNav("search");
+        setShellView("home");
+        setFocusPromptToken((v) => v + 1);
+      }
     }
-    const result = await saveProject();
-    setSaveMessage(result.error ?? "Projeto salvo!");
-    window.setTimeout(() => setSaveMessage(null), 2500);
-  }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
   function goHome() {
     setShellView("home");
@@ -189,14 +131,25 @@ export default function App() {
 
   function handleNewProject() {
     createNewProject();
-    setSaveMessage(null);
-    goHome();
+    setShellView("home");
+    setNav("dashboard");
+    setFocusPromptToken((v) => v + 1);
   }
 
   async function handleStartFromPrompt(prompt: string) {
+    if (!isLoggedIn) {
+      setIsAuthOpen(true);
+      return;
+    }
+    createNewProject();
     setShellView("studio");
-    setNav("dashboard");
     await sendMessage(prompt);
+  }
+
+  async function handleSave() {
+    const result = await saveProject();
+    setSaveMessage(result.error ? result.error : "Projeto salvo!");
+    window.setTimeout(() => setSaveMessage(null), 2800);
   }
 
   async function handleOpenProject(id: string) {
@@ -267,15 +220,13 @@ export default function App() {
     <>
       <div className="min-w-0">
         <p className="truncate text-sm font-semibold text-zinc-900">
-          {shellView === "studio"
-            ? currentProjectName || "Workspace"
-            : nav === "resources"
-              ? "Resources"
-              : nav === "connectors"
-                ? "Connectors"
-                : nav === "settings"
-                  ? "Configurações"
-                  : "Dashboard"}
+          {nav === "resources"
+            ? "Recursos"
+            : nav === "connectors"
+              ? "Conectores"
+              : nav === "settings"
+                ? "Configurações"
+                : "Dashboard"}
         </p>
       </div>
       <div className="flex items-center gap-2">
@@ -342,25 +293,7 @@ export default function App() {
   );
 
   return (
-    <AppShell
-      activeNav={nav}
-      onNavigate={handleNav}
-      onBrandClick={handleNewProject}
-      hideHeader={shellView === "studio" || showLovableHome}
-      lovableHome={showLovableHome}
-      workspaceName={workspaceLabel}
-      avatarLabel={avatarLabel}
-      onProfile={() => {
-        if (!isLoggedIn) {
-          setIsAuthOpen(true);
-          return;
-        }
-        setIsProfileOpen(true);
-      }}
-      onUpgrade={() => handleNav("settings")}
-      creditBalance={creditBalance}
-      header={<>{headerActions}</>}
-    >
+    <>
       <AuthModal open={isAuthOpen} onClose={() => setIsAuthOpen(false)} />
       <UserProfileModal
         open={isProfileOpen}
@@ -375,355 +308,90 @@ export default function App() {
         open={isDeployOpen}
         onClose={() => setIsDeployOpen(false)}
       />
-      <UpgradeModal
-        open={upgradeRequired}
-        onClose={clearUpgradeRequired}
-      />
+      <UpgradeModal open={upgradeRequired} onClose={clearUpgradeRequired} />
 
-      {shellView === "home" && nav === "connectors" ? (
-        <div className="min-h-0 flex-1 overflow-y-auto bg-[#F4F4F5]">
-          <ConnectorsPanel />
-        </div>
-      ) : shellView === "home" && nav === "resources" ? (
-        <div className="min-h-0 flex-1 overflow-y-auto bg-[#F4F4F5]">
-          <AgentsPanel />
-        </div>
-      ) : shellView === "home" && nav === "settings" ? (
-        <div className="min-h-0 flex-1 overflow-y-auto bg-[#F4F4F5]">
-          <BillingSettings highlightUpgrade={upgradeRequired} />
-          <div className="mx-auto max-w-3xl px-6 pb-10">
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={() => setIsProfileOpen(true)}
-              className="text-zinc-500"
-            >
-              Editar perfil
-            </Button>
-          </div>
-        </div>
-      ) : showLovableHome ? (
-        <DashboardHome
-          buildMode={buildMode}
-          onBuildModeChange={setBuildMode}
-          onSubmitPrompt={handleStartFromPrompt}
-          isGenerating={isGenerating}
-          onStop={stopGeneration}
-          projects={projectsList}
-          isLoadingProjects={isLoadingList}
-          onOpenProject={(id) => void handleOpenProject(id)}
-          isLoggedIn={isLoggedIn}
-          onRequestLogin={() => setIsAuthOpen(true)}
+      {shellView === "studio" ? (
+        <LovableStudio
+          projectName={currentProjectName}
+          onBack={goHome}
+          onSave={() => void handleSave()}
+          isSaving={isSaving}
+          onDeploy={() => setIsDeployOpen(true)}
           creditBalance={creditBalance}
-          onOpenBilling={() => handleNav("settings")}
-          userName={name || session?.user?.email || null}
-          projectFilter={projectFilter}
-          focusPromptToken={focusPromptToken}
+          onOpenBilling={() => {
+            setShellView("home");
+            handleNav("settings");
+          }}
+          isLoggedIn={isLoggedIn}
+          avatarLabel={avatarLabel}
+          onProfile={() => setIsProfileOpen(true)}
+          onSignOut={() => void signOut()}
+          onLogin={() => setIsAuthOpen(true)}
+          saveMessage={saveMessage}
         />
       ) : (
-        <ResizablePanelGroup
-          direction="horizontal"
-          className="min-h-0 w-full flex-1 overflow-hidden"
+        <AppShell
+          activeNav={nav}
+          onNavigate={handleNav}
+          onBrandClick={handleNewProject}
+          hideHeader={showLovableHome}
+          lovableHome={showLovableHome}
+          workspaceName={workspaceLabel}
+          avatarLabel={avatarLabel}
+          onProfile={() => {
+            if (!isLoggedIn) {
+              setIsAuthOpen(true);
+              return;
+            }
+            setIsProfileOpen(true);
+          }}
+          onUpgrade={() => handleNav("settings")}
+          creditBalance={creditBalance}
+          header={<>{headerActions}</>}
         >
-          <ResizablePanel
-            id="chat"
-            defaultSize="28"
-            minSize="20"
-            maxSize="40"
-            className="min-w-0 overflow-hidden"
-          >
-            <div className="relative z-20 h-full min-w-0 overflow-hidden border-r border-white/10 bg-white/[0.02] backdrop-blur-md">
-              <ChatPanel compact />
+          {nav === "connectors" ? (
+            <div className="min-h-0 flex-1 overflow-y-auto bg-[#F4F4F5]">
+              <ConnectorsPanel />
             </div>
-          </ResizablePanel>
-          <ResizableHandle withHandle className="z-30 bg-white/5" />
-          <ResizablePanel
-            id="workspace"
-            defaultSize="72"
-            minSize="55"
-            className="min-w-0 overflow-hidden"
-          >
-            <WorkspacePanel
-              projectName={currentProjectName}
-              onBack={goHome}
-              onSave={() => void handleSave()}
-              isSaving={isSaving}
-              onDeploy={() => setIsDeployOpen(true)}
+          ) : nav === "resources" ? (
+            <div className="min-h-0 flex-1 overflow-y-auto bg-[#F4F4F5]">
+              <AgentsPanel />
+            </div>
+          ) : nav === "settings" ? (
+            <div className="min-h-0 flex-1 overflow-y-auto bg-[#F4F4F5]">
+              <BillingSettings highlightUpgrade={upgradeRequired} />
+              <div className="mx-auto max-w-3xl px-6 pb-10">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => setIsProfileOpen(true)}
+                  className="text-zinc-500"
+                >
+                  Editar perfil
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <DashboardHome
+              buildMode={buildMode}
+              onBuildModeChange={setBuildMode}
+              onSubmitPrompt={handleStartFromPrompt}
+              isGenerating={isGenerating}
+              onStop={stopGeneration}
+              projects={projectsList}
+              isLoadingProjects={isLoadingList}
+              onOpenProject={(id) => void handleOpenProject(id)}
+              isLoggedIn={isLoggedIn}
+              onRequestLogin={() => setIsAuthOpen(true)}
               creditBalance={creditBalance}
               onOpenBilling={() => handleNav("settings")}
-              isLoggedIn={isLoggedIn}
-              avatarLabel={avatarLabel}
-              onProfile={() => setIsProfileOpen(true)}
-              onSignOut={() => void signOut()}
-              onLogin={() => setIsAuthOpen(true)}
-              saveMessage={saveMessage}
+              userName={name || session?.user?.email || null}
+              projectFilter={projectFilter}
+              focusPromptToken={focusPromptToken}
             />
-          </ResizablePanel>
-        </ResizablePanelGroup>
-      )}
-    </AppShell>
-  );
-}
-
-function WorkspacePanel({
-  projectName,
-  onBack,
-  onSave,
-  isSaving,
-  onDeploy,
-  creditBalance,
-  onOpenBilling,
-  isLoggedIn,
-  avatarLabel,
-  onProfile,
-  onSignOut,
-  onLogin,
-  saveMessage,
-}: {
-  projectName: string | null;
-  onBack: () => void;
-  onSave: () => void;
-  isSaving: boolean;
-  onDeploy: () => void;
-  creditBalance: number | null;
-  onOpenBilling: () => void;
-  isLoggedIn: boolean;
-  avatarLabel: string;
-  onProfile: () => void;
-  onSignOut: () => void;
-  onLogin: () => void;
-  saveMessage: string | null;
-}) {
-  const files = useStudioStore((state) => state.files);
-  const activeFile = useStudioStore((state) => state.activeFile);
-  const agentPhaseLabel = useStudioStore((state) => state.agentPhaseLabel);
-  const [previewViewport, setPreviewViewport] = useState<
-    "desktop" | "tablet" | "mobile"
-  >("desktop");
-  const sandpackFiles = useMemo(() => toSandpackFiles(files), [files]);
-  const visibleFiles = useMemo(() => {
-    const paths = Object.keys(files)
-      .filter(
-        (p) =>
-          !p.startsWith("/components/ui/") &&
-          p !== "/design-tokens.ts" &&
-          p !== "/package.json" &&
-          p !== "/lib/mock-data.ts",
-      )
-      .sort();
-    return paths.length > 0 ? paths : ["/App.tsx"];
-  }, [files]);
-
-  return (
-    <Tabs
-      defaultValue="preview"
-      className="flex h-full min-h-0 flex-col bg-transparent"
-    >
-      {/* Única barra superior do Preview — sem chrome extra */}
-      <div className="flex h-12 shrink-0 items-center justify-between gap-2 border-b border-[#27272A] bg-[#111113]/90 px-3 backdrop-blur-xl">
-        <div className="flex min-w-0 items-center gap-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onBack}
-            className="h-8 gap-1.5 px-2 text-xs text-zinc-400 hover:text-white"
-          >
-            <ArrowLeft className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline">Dashboard</span>
-          </Button>
-          <span className="hidden h-4 w-px bg-white/10 sm:block" />
-          <p className="hidden max-w-[140px] truncate text-xs font-medium text-zinc-300 md:inline">
-            {projectName || "Workspace"}
-          </p>
-          <TabsList className="ml-1 h-8 gap-0.5 rounded-full border border-white/10 bg-white/[0.04] p-0.5">
-            <TabsTrigger
-              value="preview"
-              className="h-7 rounded-full px-3 text-xs data-[state=active]:bg-violet-600/25 data-[state=active]:text-violet-100"
-            >
-              <MonitorPlay className="mr-1.5 h-3.5 w-3.5" />
-              Preview
-            </TabsTrigger>
-            <TabsTrigger
-              value="code"
-              className="h-7 rounded-full px-3 text-xs data-[state=active]:bg-violet-600/25 data-[state=active]:text-violet-100"
-            >
-              <Code2 className="mr-1.5 h-3.5 w-3.5" />
-              Code
-            </TabsTrigger>
-            <TabsTrigger
-              value="console"
-              className="h-7 rounded-full px-3 text-xs data-[state=active]:bg-violet-600/25 data-[state=active]:text-violet-100"
-            >
-              <Terminal className="mr-1.5 h-3.5 w-3.5" />
-              Console
-            </TabsTrigger>
-          </TabsList>
-          <div className="ml-1 hidden items-center gap-0.5 rounded-full border border-white/10 bg-black/20 p-0.5 lg:flex">
-            {(
-              [
-                ["desktop", Monitor, "Desktop"],
-                ["tablet", Tablet, "Tablet"],
-                ["mobile", Smartphone, "Mobile"],
-              ] as const
-            ).map(([id, Icon, label]) => (
-              <button
-                key={id}
-                type="button"
-                onClick={() => setPreviewViewport(id)}
-                title={label}
-                className={cn(
-                  "grid h-7 w-8 place-items-center rounded-full transition",
-                  previewViewport === id
-                    ? "bg-violet-600/25 text-violet-200"
-                    : "text-slate-500 hover:text-white",
-                )}
-              >
-                <Icon className="h-3.5 w-3.5" />
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="flex min-w-0 items-center gap-1.5">
-          {agentPhaseLabel ? (
-            <span className="mr-1 hidden max-w-[160px] truncate text-[11px] text-violet-200/80 lg:inline">
-              {agentPhaseLabel}
-            </span>
-          ) : null}
-          {saveMessage ? (
-            <span className="mr-1 hidden text-[11px] text-emerald-300 xl:inline">
-              {saveMessage}
-            </span>
-          ) : null}
-          {isLoggedIn && creditBalance !== null ? (
-            <button
-              type="button"
-              onClick={onOpenBilling}
-              className="hidden rounded-full border border-violet-500/20 bg-violet-500/10 px-2.5 py-1 text-[11px] font-medium text-violet-100 md:inline"
-            >
-              {creditBalance}
-            </button>
-          ) : null}
-          <Button
-            variant="ghost"
-            size="sm"
-            disabled={isSaving}
-            onClick={onSave}
-            className="h-8 px-2 text-xs text-zinc-400 hover:text-white"
-          >
-            {isSaving ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            ) : (
-              <Save className="h-3.5 w-3.5" />
-            )}
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onDeploy}
-            className="h-8 px-2 text-xs text-zinc-400 hover:text-white"
-            title="Deploy"
-          >
-            <Rocket className="h-3.5 w-3.5" />
-          </Button>
-          {isLoggedIn ? (
-            <>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 rounded-full"
-                onClick={onProfile}
-              >
-                <Avatar className="h-7 w-7">
-                  <AvatarFallback className="bg-violet-500/25 text-[11px] text-violet-100">
-                    {avatarLabel}
-                  </AvatarFallback>
-                </Avatar>
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8"
-                onClick={onSignOut}
-              >
-                <LogOut className="h-3.5 w-3.5" />
-              </Button>
-            </>
-          ) : (
-            <Button
-              size="sm"
-              onClick={onLogin}
-              className="h-8 rounded-full bg-violet-600 px-3 text-xs text-white hover:bg-violet-700"
-            >
-              Entrar
-            </Button>
           )}
-        </div>
-      </div>
-
-      <div className="relative min-h-0 w-full min-w-0 flex-1 overflow-hidden bg-zinc-950/40">
-        <SandpackProvider
-          template="react-ts"
-          theme="dark"
-          files={sandpackFiles}
-          style={{
-            height: "100%",
-            width: "100%",
-            maxWidth: "100%",
-            minWidth: 0,
-            overflow: "hidden",
-          }}
-          options={{
-            activeFile: visibleFiles.includes(activeFile)
-              ? activeFile
-              : "/App.tsx",
-            visibleFiles,
-            externalResources: ["https://cdn.tailwindcss.com"],
-          }}
-          customSetup={sandpackCustomSetup}
-        >
-          <SandpackErrorBridge />
-          <div className="relative h-full w-full min-w-0 overflow-hidden">
-            <TabsContent
-              value="preview"
-              forceMount
-              className="absolute inset-0 m-0 mt-0 flex h-full max-w-full min-h-0 min-w-0 items-stretch justify-center overflow-hidden bg-[#0A0A0B] p-0 data-[state=inactive]:hidden lg:p-3"
-            >
-              <div
-                className={cn(
-                  "h-full min-w-0 overflow-hidden bg-white transition-[width,border-radius] duration-300",
-                  previewViewport !== "desktop" &&
-                    "rounded-xl border border-white/10",
-                )}
-                style={{
-                  width:
-                    previewViewport === "mobile"
-                      ? 390
-                      : previewViewport === "tablet"
-                        ? 768
-                        : "100%",
-                  maxWidth: "100%",
-                }}
-              >
-                <PreviewRender />
-              </div>
-            </TabsContent>
-            <TabsContent
-              value="code"
-              className="absolute inset-0 m-0 mt-0 h-full max-w-full min-h-0 min-w-0 overflow-hidden data-[state=inactive]:hidden"
-            >
-              <CodeEditor />
-            </TabsContent>
-            <TabsContent
-              value="console"
-              className="absolute inset-0 m-0 mt-0 h-full max-w-full min-h-0 min-w-0 overflow-hidden data-[state=inactive]:hidden"
-            >
-              <ConsoleRender />
-            </TabsContent>
-          </div>
-        </SandpackProvider>
-      </div>
-      <Timeline />
-    </Tabs>
+        </AppShell>
+      )}
+    </>
   );
 }
