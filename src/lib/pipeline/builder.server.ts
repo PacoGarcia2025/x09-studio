@@ -2,7 +2,10 @@ import { spawn } from "node:child_process";
 import path from "node:path";
 import type { LlmProvider } from "@/lib/llm/types";
 import { assertAllowedCommand } from "@/lib/pipeline/commands.allowlist";
-import { generateTaskPayload } from "@/lib/pipeline/task-content.server";
+import {
+  generateTaskPayload,
+  LANDING_APP_TSX,
+} from "@/lib/pipeline/task-content.server";
 import type { PlanTaskType } from "@/lib/pipeline/plan-schema";
 import {
   deleteProjectFile,
@@ -91,6 +94,11 @@ async function upsertEnv(
   return `env ${key} atualizado em ${envPath}`;
 }
 
+function isHomePagePath(filePath: string): boolean {
+  const p = filePath.replace(/\\/g, "/");
+  return /\/pages\/HomePage\.tsx?$/i.test(p) || p === "src/pages/HomePage.tsx";
+}
+
 /**
  * Aplica UMA task no FileSystem do projeto.
  * O LLM só gera o payload; o Builder escreve no disco.
@@ -119,9 +127,16 @@ export async function applyBuilderTask(
     case "file": {
       if (!task.path) throw new Error("path obrigatório");
       await writeProjectFile(projectId, task.path, payload.content);
-      return {
-        log: `${task.type} → ${task.path} (${payload.content.length} chars)`,
-      };
+
+      let log = `${task.type} → ${task.path} (${payload.content.length} chars)`;
+
+      // Landing: remove o chrome "Meu App / Início / Entrar" do template.
+      if (isHomePagePath(task.path)) {
+        await writeProjectFile(projectId, "src/App.tsx", LANDING_APP_TSX);
+        log += " + App.tsx sem AppShell";
+      }
+
+      return { log };
     }
     case "delete": {
       if (!task.path) throw new Error("path obrigatório");

@@ -42,6 +42,7 @@ async function completeJson(
   provider: LlmProvider,
   system: string,
   user: string,
+  maxOutputTokens = 8192,
 ): Promise<unknown> {
   const result = await provider.complete({
     messages: [
@@ -49,8 +50,8 @@ async function completeJson(
       { role: "user", content: user },
     ],
     responseJsonSchema: { type: "object" },
-    temperature: 0.25,
-    maxOutputTokens: 8192,
+    temperature: 0.35,
+    maxOutputTokens,
   });
   return extractJson(result.text);
 }
@@ -62,9 +63,66 @@ Responda APENAS JSON: { "content": string }
 - Não explique.
 - Stack: Vite + React + TypeScript (NÃO Next.js).
 - Use Tailwind via className (CDN no preview). Sem importar tailwindcss.
-- Se o path for src/pages/HomePage.tsx, entregue a landing completa (hero, seções, CTA) em JSX exportado.
-- Código em TypeScript/React/CSS conforme o path.
-- Seja completo para ESTE arquivo, mas curto (sem monólitos).`;
+- Código em TypeScript/React/CSS conforme o path.`;
+
+const HOME_PAGE_SYSTEM = `Você gera a HomePage completa de um app Vite + React + TypeScript.
+Responda APENAS JSON: { "content": string } com o arquivo TSX inteiro.
+
+Regras OBRIGATÓRIAS:
+- export function HomePage() { ... } (named export).
+- NÃO use AppShell, router, next/*, nem "Meu App".
+- Landing visualmente rica, pronta para conversão, em português do Brasil.
+- Use Tailwind (className). Sem importar CSS/tailwindcss.
+- Pode usar lucide-react para ícones.
+- Sem imagens remotas quebradas: use gradientes, placeholders com divs coloridas, ou https://images.unsplash.com com URLs reais.
+- Conteúdo REAL (textos específicos do negócio do usuário), nunca "Lorem ipsum", nunca "Bem-vindo", nunca página vazia.
+- Estrutura mínima (todas obrigatórias):
+  1) Header sticky com nome da marca + 3 links âncora + botão CTA
+  2) Hero full-width com headline forte, subtítulo, 2 CTAs, e bloco visual
+  3) Seção de benefícios/serviços (3+ cards)
+  4) Seção de prova social ou galeria (3+ itens)
+  5) Seção CTA final
+  6) Footer com contato
+- O arquivo deve ter NO MÍNIMO ~80 linhas de JSX útil (não um único retângulo colorido).
+- Cores: violeta/fúcsia (#7C3AED / #C026D3) como acento, tipografia forte, bom espaçamento.`;
+
+const APP_TSX_SYSTEM = `Você gera src/App.tsx de um app Vite + React.
+Responda APENAS JSON: { "content": string }.
+
+Para landing page:
+- NÃO use AppShell.
+- NÃO mostre header "Meu App" / Início / Entrar.
+- Apenas:
+import { HomePage } from "./pages/HomePage";
+export default function App() {
+  return <HomePage />;
+}
+`;
+
+/** Detecta landing fraca (template ou retângulo vazio). */
+export function isWeakHomePage(content: string): boolean {
+  const trimmed = content.trim();
+  if (trimmed.length < 1500) return true;
+  if (/Bem-vindo|Este app foi gerado pelo X09/i.test(trimmed)) return true;
+  if (!/export\s+(function|const)\s+HomePage/.test(trimmed)) return true;
+  const sectionCount = (trimmed.match(/<section\b/gi) ?? []).length;
+  const headingCount = (trimmed.match(/<h[12]\b/gi) ?? []).length;
+  if (sectionCount < 2 && headingCount < 2) return true;
+  const words = trimmed.match(/[A-Za-zÀ-ÿ]{4,}/g) ?? [];
+  if (words.length < 60) return true;
+  return false;
+}
+
+function systemForPath(path: string): { system: string; maxTokens: number } {
+  const p = path.replace(/\\/g, "/");
+  if (p.endsWith("pages/HomePage.tsx") || p.endsWith("pages/HomePage.jsx")) {
+    return { system: HOME_PAGE_SYSTEM, maxTokens: 12288 };
+  }
+  if (p.endsWith("App.tsx") || p.endsWith("App.jsx")) {
+    return { system: APP_TSX_SYSTEM, maxTokens: 2048 };
+  }
+  return { system: FILE_SYSTEM, maxTokens: 8192 };
+}
 
 /**
  * Gera o payload tipado da task via LlmProvider (nunca importa Gemini).
@@ -102,19 +160,35 @@ export async function generateTaskPayload(
     case "create_file":
     case "update_file": {
       if (!task.path) throw new Error("Task de arquivo exige path");
+      const { system, maxTokens } = systemForPath(task.path);
       const user = [
         base,
         task.type === "update_file" && context.existingFileContent != null
-          ? `Arquivo atual:\n\`\`\`\n${context.existingFileContent.slice(0, 12000)}\n\`\`\``
+          ? `Arquivo atual (pode ignorar se for template fraco):\n\`\`\`\n${context.existingFileContent.slice(0, 4000)}\n\`\`\``
           : null,
         'Retorne JSON {"content":"..."} com o arquivo completo.',
       ]
         .filter(Boolean)
         .join("\n\n");
-      const parsed = filePayloadSchema.parse(
-        await completeJson(provider, FILE_SYSTEM, user),
-      );
-      return { kind: "file", content: parsed.content };
+
+      let content = filePayloadSchema.parse(
+        await completeJson(provider, system, user, maxTokens),
+      ).content;
+
+      const isHome =
+        /pages\/HomePage\.tsx?$/i.test(task.path.replace(/\\/g, "/"));
+      if (isHome && isWeakHomePage(content)) {
+        const retryUser = [
+          base,
+          "A versão anterior ficou FRACA (quase vazia). Reescreva a landing COMPLETA com hero, 3+ seções, textos reais e CTAs.",
+          'Retorne JSON {"content":"..."} com HomePage.tsx completo e denso.',
+        ].join("\n\n");
+        content = filePayloadSchema.parse(
+          await completeJson(provider, HOME_PAGE_SYSTEM, retryUser, 12288),
+        ).content;
+      }
+
+      return { kind: "file", content };
     }
     case "delete_file":
       return { kind: "delete" };
@@ -126,6 +200,7 @@ export async function generateTaskPayload(
 Comandos válidos: npm install, npm ci, npm run build, npm run typecheck, bun install, bun run build, bun run typecheck.
 Prefira npm install se a task for instalar dependências.`,
           base,
+          1024,
         ),
       );
       return { kind: "command", command: parsed.command };
@@ -136,6 +211,7 @@ Prefira npm install se a task for instalar dependências.`,
           provider,
           'Responda APENAS JSON {"key":"VAR","value":"..."}. Use placeholders se for segredo.',
           base,
+          1024,
         ),
       );
       return { kind: "env", key: parsed.key, value: parsed.value };
@@ -146,6 +222,7 @@ Prefira npm install se a task for instalar dependências.`,
           provider,
           'Responda APENAS JSON {"filename":"nome_curto.sql","content":"-- sql..."}. filename sem timestamp.',
           base,
+          4096,
         ),
       );
       return {
@@ -160,3 +237,11 @@ Prefira npm install se a task for instalar dependências.`,
     }
   }
 }
+
+/** App.tsx mínimo sem o chrome "Meu App". */
+export const LANDING_APP_TSX = `import { HomePage } from "./pages/HomePage";
+
+export default function App() {
+  return <HomePage />;
+}
+`;
