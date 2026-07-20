@@ -11,7 +11,7 @@ function publishDomain(): string {
   );
 }
 
-export function publicSiteUrl(slug: string): string {
+function publicSiteUrl(slug: string): string {
   const domain = publishDomain().replace(/\/$/, "");
   return `https://${domain}/sites/${slug}`;
 }
