@@ -28,7 +28,7 @@ async function assertProjectOwner(projectId: string) {
 
   const { data: project } = await supabase
     .from("projects")
-    .select("id, name, slug, workspace_id")
+    .select("id, name, slug, workspace_id, status, brief_prompt")
     .eq("id", projectId)
     .maybeSingle();
 
@@ -189,4 +189,129 @@ export async function getLatestPlan(
     model: data.model,
     created_at: data.created_at,
   };
+}
+
+export type ChatTurnResult =
+  | {
+      ok: true;
+      intent: "create";
+      planId: string;
+      plan: StudioPlan;
+      model: string;
+    }
+  | {
+      ok: true;
+      intent: "edit";
+      summary: string;
+      paths: string[];
+      model: string;
+    }
+  | {
+      ok: true;
+      intent: "ask";
+      answer: string;
+      model: string;
+    }
+  | { ok: false; error: string };
+
+/**
+ * Entrada única do chat: classifica intenção e executa create/edit/ask.
+ */
+export async function chatProjectAction(
+  projectId: string,
+  message: string,
+): Promise<ChatTurnResult> {
+  const gate = await assertProjectOwner(projectId);
+  if (gate.error || !gate.project) {
+    return { ok: false, error: gate.error ?? "Erro ao validar projeto" };
+  }
+
+  const trimmed = message.trim();
+  if (trimmed.length < 2) {
+    return { ok: false, error: "Escreva uma mensagem." };
+  }
+
+  try {
+    const provider = getLlmProvider("resilient-fast");
+    const latest = await getLatestPlan(projectId);
+    const hasExistingApp =
+      Boolean(latest) ||
+      gate.project.status === "ready" ||
+      gate.project.status === "published" ||
+      gate.project.status === "generating";
+
+    const { classifyChatIntent } = await import(
+      "@/lib/pipeline/chat-intent.server"
+    );
+    const intent = await classifyChatIntent(provider, {
+      message: trimmed,
+      hasExistingApp,
+      projectName: gate.project.name,
+    });
+
+    if (intent === "ask") {
+      const brief =
+        (gate.project as { brief_prompt?: string | null }).brief_prompt ??
+        latest?.prompt ??
+        "";
+      const answer = await provider.complete({
+        messages: [
+          {
+            role: "system",
+            content: `Você é o assistente do X09 Studio. Responda em português, curto e útil, sobre o projeto do usuário. Não invente código longo. Projeto: ${gate.project.name}. Brief: ${brief.slice(0, 400)}`,
+          },
+          { role: "user", content: trimmed },
+        ],
+        temperature: 0.4,
+        maxOutputTokens: 800,
+      });
+      return {
+        ok: true,
+        intent: "ask",
+        answer: answer.text.trim(),
+        model: answer.model,
+      };
+    }
+
+    if (intent === "edit" && hasExistingApp) {
+      const { applyChatEditPatch } = await import(
+        "@/lib/pipeline/edit-patch.server"
+      );
+      const patch = await applyChatEditPatch(provider, {
+        projectId,
+        projectName: gate.project.name,
+        briefPrompt:
+          (gate.project as { brief_prompt?: string | null }).brief_prompt ??
+          latest?.prompt,
+        message: trimmed,
+      });
+
+      await gate.supabase
+        .from("projects")
+        .update({ status: "ready" })
+        .eq("id", projectId);
+
+      revalidatePath(`/projects/${projectId}`);
+      return {
+        ok: true,
+        intent: "edit",
+        summary: patch.summary,
+        paths: patch.paths,
+        model: patch.model,
+      };
+    }
+
+    // create (ou edit sem app ainda)
+    const created = await generatePlanAction(projectId, trimmed);
+    if (!created.ok) return created;
+    return {
+      ok: true,
+      intent: "create",
+      planId: created.planId,
+      plan: created.plan,
+      model: created.model,
+    };
+  } catch (err) {
+    return { ok: false, error: formatLlmUserError(err) };
+  }
 }

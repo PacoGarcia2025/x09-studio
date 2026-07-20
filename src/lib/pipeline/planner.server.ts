@@ -17,14 +17,15 @@ Regras obrigatórias:
 - Paths reais do template (use estes):
   - src/App.tsx
   - src/pages/HomePage.tsx  (página principal — SEMPRE)
-  - src/pages/LoginPage.tsx (login/signup — SEMPRE)
+  - src/pages/LoginPage.tsx (login/signup — SEMPRE, com getSupabase().auth)
+  - src/pages/DashboardPage.tsx (obrigatório se SaaS/CRM/painel/admin)
   - src/lib/supabase.ts
   - src/index.css
 - App COMPLETO (não só uma página):
-  - Task #1: update_file src/App.tsx — navegação Home + Login (useState), SEM AppShell, SEM "Meu App".
+  - Task #1: update_file src/App.tsx — navegação Home + Login (+ Dashboard se SaaS), SEM AppShell, SEM "Meu App".
   - Task #2: update_file src/pages/HomePage.tsx — página principal COMPLETA com copy real do negócio.
-  - Task #3: update_file src/pages/LoginPage.tsx — tela de login/cadastro completa (email, senha, CTA, link voltar).
-  - Se for SaaS/CRM/dashboard: inclua também DashboardPage ou equivalente.
+  - Task #3: update_file src/pages/LoginPage.tsx — auth real via getSupabase().auth.signInWithPassword / signUp.
+  - SaaS/CRM/dashboard/painel: Task DashboardPage com lista + formulário CRUD (supabase.from).
   - Evite tasks de migrate/build/typecheck.
 - NÃO escreva o código-fonte completo no JSON do plano (só instruções).
 - Em "tasks.instruction", descreva seções e tom em 3–6 frases para Home/Login.
@@ -159,9 +160,12 @@ function ensureFullAppTasks(plan: StudioPlan, prompt: string): StudioPlan {
   const appId = ensureTask({
     id: "t_app_nav",
     path: "src/App.tsx",
-    title: "App com navegação Home + Login",
-    instruction:
-      "Reescreva App.tsx com useState para páginas home|login. Renderize HomePage e LoginPage. SEM AppShell e SEM texto Meu App. Inclua forma de ir para login a partir da home (callback ou prop).",
+    title: needsDashboardApp(prompt)
+      ? "App com Home + Login + Dashboard"
+      : "App com navegação Home + Login",
+    instruction: needsDashboardApp(prompt)
+      ? "Reescreva App.tsx com useState home|login|app. Renderize HomePage, LoginPage e DashboardPage. SEM AppShell. Login navega para app após sucesso."
+      : "Reescreva App.tsx com useState para páginas home|login. Renderize HomePage e LoginPage. SEM AppShell e SEM texto Meu App. Inclua forma de ir para login a partir da home (callback ou prop).",
     dependsOn: [],
     insertAt: 0,
   });
@@ -175,16 +179,38 @@ function ensureFullAppTasks(plan: StudioPlan, prompt: string): StudioPlan {
     insertAt: 1,
   });
 
-  ensureTask({
+  const loginId = ensureTask({
     id: "t_login_full",
     path: "src/pages/LoginPage.tsx",
-    title: "Login e cadastro completos",
-    instruction: `Tela de autenticação completa alinhada ao produto (${prompt.slice(0, 200)}). Tabs ou toggle Entrar/Criar conta, campos email e senha, validação visual, botão submit, link voltar para home via onNavigateHome?.(). Visual premium com Tailwind. NÃO deixe stub.`,
+    title: "Login e cadastro com Supabase Auth",
+    instruction: `Tela de autenticação completa para: ${prompt.slice(0, 200)}. Toggle Entrar/Criar conta, email+senha, busy/error. Use getSupabase() de ../lib/supabase e chame auth.signInWithPassword / auth.signUp de verdade. Após sucesso, chame onNavigateApp?.() se existir, senão onNavigateHome?.(). Visual premium Tailwind. NÃO stub.`,
     dependsOn: [homeId],
     insertAt: 2,
   });
 
-  // Páginas do plano devem citar home + login
+  if (needsDashboardApp(prompt)) {
+    ensureTask({
+      id: "t_dashboard_crud",
+      path: "src/pages/DashboardPage.tsx",
+      title: "Dashboard com CRUD",
+      instruction: `Crie DashboardPage para: ${prompt.slice(0, 300)}. Layout com sidebar/topbar, título do produto, lista de registros (useState + getSupabase().from se houver tabela; senão estado local com mock inicial). Formulário para criar/editar (nome + campos relevantes), botões salvar/excluir, estados loading/empty/error. Após login o usuário cai aqui. Props: onNavigateHome?: () => void, onSignOut?: () => void. Português, UI densa e útil — NÃO página vazia.`,
+      dependsOn: [loginId],
+      insertAt: 3,
+    });
+
+    // Reforça App.tsx com rota dashboard
+    const appIdx = pathOf("src/App.tsx");
+    if (appIdx >= 0) {
+      const current = tasks[appIdx]!;
+      tasks[appIdx] = {
+        ...current,
+        title: "App com Home + Login + Dashboard",
+        instruction: `${current.instruction} Inclua rota "app"/dashboard: após login bem-sucedido mostre DashboardPage. Import DashboardPage. Estados: home | login | app.`,
+      };
+    }
+  }
+
+  // Páginas do plano devem citar home + login (+ dashboard)
   const pages = [...plan.pages];
   if (!pages.some((p) => p.path === "/" || p.path === "/home")) {
     pages.unshift({
@@ -200,8 +226,24 @@ function ensureFullAppTasks(plan: StudioPlan, prompt: string): StudioPlan {
       description: "Entrar e criar conta",
     });
   }
+  if (
+    needsDashboardApp(prompt) &&
+    !pages.some((p) => /dashboard|app|painel|admin/i.test(p.path) || /dashboard|painel/i.test(p.name))
+  ) {
+    pages.push({
+      path: "/app",
+      name: "Dashboard",
+      description: "Área logada com CRUD",
+    });
+  }
 
   return { ...plan, pages, tasks: tasks.slice(0, 40) };
+}
+
+function needsDashboardApp(prompt: string): boolean {
+  return /saas|crm|dashboard|painel|admin|gest[aã]o|backoffice|erp|sistema de|plataforma de|\bcrud\b|cadastro de|agenda|kanban|inbox|financeiro|assinatura|multi[- ]?tenant/i.test(
+    prompt,
+  );
 }
 
 /** Corrige paths Next.js → template Vite React. */

@@ -95,23 +95,43 @@ Obrigatório:
 - import { useState } from "react"
 - import { HomePage } from "./pages/HomePage"
 - import { LoginPage } from "./pages/LoginPage"
-- Navegação useState<"home" | "login">
-- HomePage recebe onNavigateToLogin={() => setPage("login")}
-- LoginPage recebe onNavigateHome={() => setPage("home")}
+- Se a instrução citar Dashboard/app logado: import { DashboardPage } from "./pages/DashboardPage"
+- Navegação useState<"home" | "login" | "app"> (use "app" só se houver Dashboard)
+- HomePage: onNavigateToLogin={() => setPage("login")}
+- LoginPage: onNavigateHome={() => setPage("home")} e onNavigateApp={() => setPage("app")} se houver Dashboard
+- DashboardPage: onNavigateHome + onSignOut voltando para home/login
 - NÃO use AppShell
 - NÃO mostre header "Meu App" / Início / Entrar do template
 `;
 
-const LOGIN_PAGE_SYSTEM = `Você gera LoginPage completa (Vite + React + TypeScript).
+const LOGIN_PAGE_SYSTEM = `Você gera LoginPage completa (Vite + React + TypeScript + Supabase Auth).
 Responda APENAS JSON: { "content": string }.
 
 Regras:
-- export function LoginPage({ onNavigateHome }: { onNavigateHome?: () => void })
+- export function LoginPage({ onNavigateHome, onNavigateApp }: { onNavigateHome?: () => void; onNavigateApp?: () => void })
+- import { getSupabase } from "../lib/supabase"
 - UI premium Tailwind: card central, marca, toggle Entrar / Criar conta
-- Campos email + senha, botão submit, mensagens de erro/sucesso locais (useState)
+- Campos email + senha, botão submit, estados busy/error/success (useState)
+- No submit: supabase.auth.signInWithPassword ou signUp de verdade
+- Após sucesso: onNavigateApp?.() ?? onNavigateHome?.()
 - Link/botão "Voltar" chama onNavigateHome?.()
 - Textos em português do Brasil, alinhados ao produto
 - NUNCA deixe stub ("próximas sprints")
+- Sem next/*, sem AppShell
+`;
+
+const DASHBOARD_PAGE_SYSTEM = `Você gera DashboardPage (área logada) Vite + React + TypeScript + Supabase.
+Responda APENAS JSON: { "content": string }.
+
+Regras:
+- export function DashboardPage({ onNavigateHome, onSignOut }: { onNavigateHome?: () => void; onSignOut?: () => void })
+- import { getSupabase } from "../lib/supabase" e useState/useEffect
+- Layout: topbar ou sidebar com nome do produto, botão Sair, conteúdo principal
+- CRUD útil: lista de itens + formulário criar/editar + excluir
+- Preferir supabase.from("...") com select/insert/update/delete; se falhar, manter estado local com seed
+- Estados: loading, empty, error, busy no submit
+- UI densa Tailwind, textos em português específicos do domínio
+- NÃO página vazia / "em breve" / stub
 - Sem next/*, sem AppShell
 `;
 
@@ -137,6 +157,23 @@ export function isWeakLoginPage(content: string): boolean {
     return true;
   if (!/export\s+(function|const)\s+LoginPage/.test(trimmed)) return true;
   if (!/email/i.test(trimmed) || !/password|senha/i.test(trimmed)) return true;
+  if (
+    !/getSupabase|signInWithPassword|signUp/.test(trimmed) &&
+    !/supabase\.auth/.test(trimmed)
+  ) {
+    return true;
+  }
+  return false;
+}
+
+export function isWeakDashboardPage(content: string): boolean {
+  const trimmed = content.trim();
+  if (trimmed.length < 1200) return true;
+  if (/em breve|próximas sprints|coming soon|placeholder/i.test(trimmed))
+    return true;
+  if (!/export\s+(function|const)\s+DashboardPage/.test(trimmed)) return true;
+  if (!/useState/.test(trimmed)) return true;
+  if (!/onChange|onSubmit|insert|from\(|map\(/.test(trimmed)) return true;
   return false;
 }
 
@@ -147,6 +184,12 @@ function systemForPath(path: string): { system: string; maxTokens: number } {
   }
   if (p.endsWith("pages/LoginPage.tsx") || p.endsWith("pages/LoginPage.jsx")) {
     return { system: LOGIN_PAGE_SYSTEM, maxTokens: 8192 };
+  }
+  if (
+    p.endsWith("pages/DashboardPage.tsx") ||
+    p.endsWith("pages/DashboardPage.jsx")
+  ) {
+    return { system: DASHBOARD_PAGE_SYSTEM, maxTokens: 12288 };
   }
   if (p.endsWith("App.tsx") || p.endsWith("App.jsx")) {
     return { system: APP_TSX_SYSTEM, maxTokens: 4096 };
@@ -205,10 +248,10 @@ export async function generateTaskPayload(
         await completeJson(provider, system, user, maxTokens),
       ).content;
 
-      const isHome =
-        /pages\/HomePage\.tsx?$/i.test(task.path.replace(/\\/g, "/"));
-      const isLogin =
-        /pages\/LoginPage\.tsx?$/i.test(task.path.replace(/\\/g, "/"));
+      const normalizedPath = task.path.replace(/\\/g, "/");
+      const isHome = /pages\/HomePage\.tsx?$/i.test(normalizedPath);
+      const isLogin = /pages\/LoginPage\.tsx?$/i.test(normalizedPath);
+      const isDashboard = /pages\/DashboardPage\.tsx?$/i.test(normalizedPath);
 
       if (isHome && isWeakHomePage(content)) {
         const retryUser = [
@@ -224,11 +267,22 @@ export async function generateTaskPayload(
       if (isLogin && isWeakLoginPage(content)) {
         const retryUser = [
           base,
-          "A versão anterior é stub/fraca. Reescreva LoginPage COMPLETA com email, senha, toggle cadastro e visual premium.",
+          "A versão anterior é stub/fraca. Reescreva LoginPage COMPLETA com getSupabase().auth (signInWithPassword/signUp), email, senha, toggle cadastro e visual premium.",
           'Retorne JSON {"content":"..."} .',
         ].join("\n\n");
         content = filePayloadSchema.parse(
           await completeJson(provider, LOGIN_PAGE_SYSTEM, retryUser, 8192),
+        ).content;
+      }
+
+      if (isDashboard && isWeakDashboardPage(content)) {
+        const retryUser = [
+          base,
+          "A versão anterior é fraca/vazia. Reescreva DashboardPage COM lista + formulário CRUD + loading/empty, usando getSupabase() quando possível.",
+          'Retorne JSON {"content":"..."} .',
+        ].join("\n\n");
+        content = filePayloadSchema.parse(
+          await completeJson(provider, DASHBOARD_PAGE_SYSTEM, retryUser, 12288),
         ).content;
       }
 
@@ -285,20 +339,82 @@ Se a task não precisar instalar nada, use "npm install" mesmo assim ou a instru
   }
 }
 
-/** App.tsx com Home + Login (sem chrome Meu App). */
+/** App.tsx com Home + Login + Dashboard (sem chrome Meu App). */
 export const LANDING_APP_TSX = `import { useState } from "react";
 import { HomePage } from "./pages/HomePage";
 import { LoginPage } from "./pages/LoginPage";
+import { DashboardPage } from "./pages/DashboardPage";
 
-type Page = "home" | "login";
+type Page = "home" | "login" | "app";
 
 export default function App() {
   const [page, setPage] = useState<Page>("home");
 
   if (page === "login") {
-    return <LoginPage onNavigateHome={() => setPage("home")} />;
+    return (
+      <LoginPage
+        onNavigateHome={() => setPage("home")}
+        onNavigateApp={() => setPage("app")}
+      />
+    );
+  }
+
+  if (page === "app") {
+    return (
+      <DashboardPage
+        onNavigateHome={() => setPage("home")}
+        onSignOut={() => setPage("home")}
+      />
+    );
   }
 
   return <HomePage onNavigateToLogin={() => setPage("login")} />;
+}
+`;
+
+/** Fallback se o projeto antigo não tiver DashboardPage.tsx */
+export const MINIMAL_DASHBOARD_PAGE_TSX = `import { FormEvent, useState } from "react";
+
+type Item = { id: string; title: string };
+
+export function DashboardPage({
+  onNavigateHome,
+  onSignOut,
+}: {
+  onNavigateHome?: () => void;
+  onSignOut?: () => void;
+}) {
+  const [items, setItems] = useState<Item[]>([
+    { id: "1", title: "Primeiro item" },
+  ]);
+  const [title, setTitle] = useState("");
+
+  function onSubmit(e: FormEvent) {
+    e.preventDefault();
+    if (!title.trim()) return;
+    setItems((prev) => [{ id: crypto.randomUUID(), title: title.trim() }, ...prev]);
+    setTitle("");
+  }
+
+  return (
+    <div className="min-h-screen bg-zinc-50 p-6">
+      <header className="mb-6 flex items-center justify-between">
+        <h1 className="text-xl font-semibold text-zinc-900">Dashboard</h1>
+        <div className="flex gap-2">
+          <button type="button" onClick={() => onNavigateHome?.()} className="text-sm text-zinc-600">Site</button>
+          <button type="button" onClick={() => onSignOut?.()} className="rounded-full bg-zinc-900 px-3 py-1.5 text-sm text-white">Sair</button>
+        </div>
+      </header>
+      <form onSubmit={onSubmit} className="mb-6 flex gap-2">
+        <input value={title} onChange={(e) => setTitle(e.target.value)} className="flex-1 rounded-xl border border-zinc-200 px-3 py-2" placeholder="Novo item" />
+        <button type="submit" className="rounded-full bg-violet-600 px-4 py-2 text-sm font-medium text-white">Adicionar</button>
+      </form>
+      <ul className="space-y-2">
+        {items.map((item) => (
+          <li key={item.id} className="rounded-xl bg-white px-4 py-3 ring-1 ring-zinc-200">{item.title}</li>
+        ))}
+      </ul>
+    </div>
+  );
 }
 `;

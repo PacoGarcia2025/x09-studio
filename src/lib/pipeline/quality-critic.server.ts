@@ -96,6 +96,16 @@ export async function critiqueGeneratedApp(
       });
       score -= 25;
     }
+    if (
+      !/getSupabase|signInWithPassword|supabase\.auth/.test(login)
+    ) {
+      issues.push({
+        code: "login_no_auth",
+        message: "Login não chama Supabase Auth",
+        severity: "error",
+      });
+      score -= 20;
+    }
     if (!/type=["']email["']|type=\{?["']email["']\}?/i.test(login) && !/email/i.test(login)) {
       issues.push({
         code: "login_no_email",
@@ -108,6 +118,22 @@ export async function critiqueGeneratedApp(
       issues.push({
         code: "thin_login",
         message: "Login incompleto",
+        severity: "warn",
+      });
+      score -= 10;
+    }
+  }
+
+  const dashboardExists = await fileExists(
+    projectId,
+    "src/pages/DashboardPage.tsx",
+  );
+  if (dashboardExists) {
+    const dash = await readProjectFile(projectId, "src/pages/DashboardPage.tsx");
+    if (dash.length < 1000 || /em breve|próximas sprints/i.test(dash)) {
+      issues.push({
+        code: "thin_dashboard",
+        message: "Dashboard raso ou stub",
         severity: "warn",
       });
       score -= 10;

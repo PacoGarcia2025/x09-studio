@@ -5,6 +5,7 @@ import { resolveCommandPlan } from "@/lib/pipeline/commands.allowlist";
 import {
   generateTaskPayload,
   LANDING_APP_TSX,
+  MINIMAL_DASHBOARD_PAGE_TSX,
 } from "@/lib/pipeline/task-content.server";
 import type { PlanTaskType } from "@/lib/pipeline/plan-schema";
 import {
@@ -162,6 +163,13 @@ export async function applyBuilderTask(
       // Landing: remove o chrome "Meu App / Início / Entrar" do template.
       if (isHomePagePath(task.path)) {
         await writeProjectFile(projectId, "src/App.tsx", LANDING_APP_TSX);
+        if (!(await fileExists(projectId, "src/pages/DashboardPage.tsx"))) {
+          await writeProjectFile(
+            projectId,
+            "src/pages/DashboardPage.tsx",
+            MINIMAL_DASHBOARD_PAGE_TSX,
+          );
+        }
         log += " + App.tsx sem AppShell";
       }
 

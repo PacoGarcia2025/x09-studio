@@ -11,7 +11,7 @@ import { ProjectFilesPanel } from "@/components/projects/ProjectFilesPanel";
 import { ProjectLivePreview } from "@/components/projects/ProjectLivePreview";
 import { SilentBuildRunner } from "@/components/projects/SilentBuildRunner";
 import { VerifyPanel } from "@/components/verify/VerifyPanel";
-import { generatePlanAction } from "@/lib/pipeline/actions";
+import { chatProjectAction } from "@/lib/pipeline/actions";
 import type { StudioPlan } from "@/lib/pipeline/plan-schema";
 import { publishProjectAction } from "@/lib/projects/publish.actions";
 
@@ -186,12 +186,12 @@ export function ProjectWorkspace({
         {
           kind: "ai",
           working: true,
-          text: "Entendi. Estou preparando a estrutura do app…",
+          text: "Entendi. Estou analisando o melhor caminho…",
         },
       ]);
       setPrompt("");
 
-      const result = await generatePlanAction(project.id, value);
+      const result = await chatProjectAction(project.id, value);
       setPlanning(false);
 
       if (!result.ok) {
@@ -207,9 +207,38 @@ export function ProjectWorkspace({
         return;
       }
 
+      if (result.intent === "ask") {
+        setBusy(false);
+        setIsGenerating(false);
+        setActiveModel(result.model);
+        setChatLog((prev) => [
+          ...prev.filter((m) => !(m.kind === "ai" && m.working)),
+          { kind: "ai", text: result.answer },
+        ]);
+        return;
+      }
+
+      if (result.intent === "edit") {
+        setBusy(false);
+        setIsGenerating(false);
+        setProjectStatus("ready");
+        setActiveModel(result.model);
+        setPreviewKey((k) => k + 1);
+        setChatLog((prev) => [
+          ...prev.filter((m) => !(m.kind === "ai" && m.working)),
+          {
+            kind: "ai",
+            text: `${result.summary}\n\nArquivos atualizados: ${result.paths.join(", ")}. O preview já foi atualizado.`,
+          },
+        ]);
+        router.refresh();
+        return;
+      }
+
+      // create → plano para OK
       presentPlanForApproval(result);
     },
-    [busy, planning, presentPlanForApproval, project.id],
+    [busy, planning, presentPlanForApproval, project.id, router],
   );
 
   async function handlePublish() {
