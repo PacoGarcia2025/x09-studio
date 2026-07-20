@@ -1,7 +1,8 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
-const url = import.meta.env.VITE_SUPABASE_URL as string | undefined;
-const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
+// Preview Sandpack: undefined → mock. Vite local: preencha via .env + env_set do Builder.
+const url: string | undefined = undefined;
+const anonKey: string | undefined = undefined;
 
 let client: SupabaseClient | null = null;
 
@@ -23,7 +24,7 @@ function mockQuery() {
 
 /**
  * Cliente Supabase do app gerado.
- * Sem env (preview Sandpack): devolve mock para a UI não quebrar.
+ * Sem credenciais: devolve mock para a UI não quebrar no preview.
  */
 export function getSupabase(): SupabaseClient {
   if (client) return client;

@@ -8,6 +8,7 @@ import {
   type SandpackFiles,
 } from "@codesandbox/sandpack-react";
 import { getProjectPreviewFiles } from "@/lib/projects/preview.actions";
+import { ensureAppDefaultExport, sanitizeCodeForSandpack } from "@/lib/projects/preview-map";
 
 const INDEX_HTML = `<!DOCTYPE html>
 <html lang="pt-BR">
@@ -27,24 +28,6 @@ const INDEX_HTML = `<!DOCTYPE html>
   </body>
 </html>`;
 
-function sanitizeCode(code: string): string {
-  return code
-    .replace(/^\s*import\s+['"]tailwindcss(?:\/[^'"]*)?['"]\s*;?\s*$/gm, "")
-    .replace(
-      /^\s*import\s+['"]\.\/(?:index|styles|globals|app)\.css['"]\s*;?\s*$/gm,
-      "",
-    )
-    .replace(/\n{3,}/g, "\n\n");
-}
-
-function ensureAppDefaultExport(code: string): string {
-  if (/export\s+default\b/.test(code)) return code;
-  if (/function\s+App\s*\(/.test(code) || /const\s+App\s*=/.test(code)) {
-    return `${code.trimEnd()}\n\nexport default App;\n`;
-  }
-  return code;
-}
-
 function toSandpackFiles(raw: Record<string, string>): SandpackFiles {
   const mapped: SandpackFiles = {};
 
@@ -53,8 +36,8 @@ function toSandpackFiles(raw: Record<string, string>): SandpackFiles {
     mapped[virtual] = {
       code:
         virtual === "/App.tsx" || virtual === "/App.jsx"
-          ? ensureAppDefaultExport(sanitizeCode(code))
-          : sanitizeCode(code),
+          ? ensureAppDefaultExport(sanitizeCodeForSandpack(code))
+          : sanitizeCodeForSandpack(code),
     };
   }
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { prepareSandpackFileContent } from "@/lib/projects/preview-map";
 import {
   SandpackLayout,
   SandpackPreview,
@@ -27,7 +28,7 @@ function toSandpackFiles(raw: Record<string, string>): SandpackFiles {
   const mapped: SandpackFiles = {};
   for (const [path, code] of Object.entries(raw)) {
     const virtual = path.startsWith("/") ? path : `/${path}`;
-    mapped[virtual] = { code };
+    mapped[virtual] = { code: prepareSandpackFileContent(virtual, code) };
   }
   if (!mapped["/App.tsx"] && !mapped["/App.jsx"]) {
     mapped["/App.tsx"] = {

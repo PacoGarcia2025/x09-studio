@@ -7,7 +7,7 @@ import {
   type FileTreeNode,
 } from "@/lib/projects/fs.server";
 import { ensureProjectScaffold } from "@/lib/projects/scaffold.server";
-import { toSandpackVirtualPath } from "@/lib/projects/preview-map";
+import { toSandpackVirtualPath, parseDotEnv, patchSupabaseEnvInCode, prepareSandpackFileContent } from "@/lib/projects/preview-map";
 
 async function assertOwner(projectId: string) {
   const supabase = await createClient();
@@ -82,9 +82,27 @@ export async function getProjectPreviewFiles(
 `;
     }
 
+    let env: Record<string, string> = {};
+    for (const rel of [".env.local", ".env"]) {
+      try {
+        Object.assign(env, parseDotEnv(await readProjectFile(projectId, rel)));
+      } catch {
+        // ignore
+      }
+    }
+
+    const prepared: Record<string, string> = {};
+    for (const [path, code] of Object.entries(files)) {
+      if (path === "/lib/supabase.ts" || path === "/lib/supabase.tsx") {
+        prepared[path] = patchSupabaseEnvInCode(code, env);
+      } else {
+        prepared[path] = prepareSandpackFileContent(path, code);
+      }
+    }
+
     return {
       ok: true,
-      files,
+      files: prepared,
       updatedAt: new Date().toISOString(),
     };
   } catch (err) {

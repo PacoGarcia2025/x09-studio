@@ -64,6 +64,7 @@ Responda APENAS JSON: { "content": string }
 - Não explique.
 - Stack: Vite + React + TypeScript (NÃO Next.js).
 - Use Tailwind via className (CDN no preview). Sem importar tailwindcss.
+- NÃO use import.meta.env (quebra o preview Sandpack). Use getSupabase() para Supabase.
 - Código em TypeScript/React/CSS conforme o path.`;
 
 const HOME_PAGE_SYSTEM = `Você gera a HomePage completa de um app Vite + React + TypeScript.

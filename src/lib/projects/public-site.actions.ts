@@ -5,7 +5,7 @@ import {
   readProjectFile,
   type FileTreeNode,
 } from "@/lib/projects/fs.server";
-import { toSandpackVirtualPath } from "@/lib/projects/preview-map";
+import { toSandpackVirtualPath, parseDotEnv, patchSupabaseEnvInCode, prepareSandpackFileContent } from "@/lib/projects/preview-map";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 function flattenFiles(nodes: FileTreeNode[], out: string[] = []): string[] {
@@ -79,10 +79,28 @@ export async function getPublishedSiteFiles(slug: string): Promise<
 `;
     }
 
+    let env: Record<string, string> = {};
+    for (const rel of [".env.local", ".env"]) {
+      try {
+        Object.assign(env, parseDotEnv(await readProjectFile(project.id, rel)));
+      } catch {
+        // ignore
+      }
+    }
+
+    const prepared: Record<string, string> = {};
+    for (const [path, code] of Object.entries(files)) {
+      if (path === "/lib/supabase.ts" || path === "/lib/supabase.tsx") {
+        prepared[path] = patchSupabaseEnvInCode(code, env);
+      } else {
+        prepared[path] = prepareSandpackFileContent(path, code);
+      }
+    }
+
     return {
       ok: true,
       project: { id: project.id, name: project.name, slug: project.slug },
-      files,
+      files: prepared,
     };
   } catch (err) {
     return {
