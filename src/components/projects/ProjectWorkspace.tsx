@@ -13,6 +13,7 @@ import { SilentBuildRunner } from "@/components/projects/SilentBuildRunner";
 import { VerifyPanel } from "@/components/verify/VerifyPanel";
 import { generatePlanAction } from "@/lib/pipeline/actions";
 import type { StudioPlan } from "@/lib/pipeline/plan-schema";
+import { publishProjectAction } from "@/lib/projects/publish.actions";
 
 type MainTab = "preview" | "code" | "layers" | "pipeline";
 
@@ -102,6 +103,8 @@ export function ProjectWorkspace({
   );
   const [developerMode, setDeveloperMode] = useState(false);
   const [previewKey, setPreviewKey] = useState(0);
+  const [publishing, setPublishing] = useState(false);
+  const [publishedUrl, setPublishedUrl] = useState<string | null>(null);
   const [planning, setPlanning] = useState(false);
 
   useEffect(() => {
@@ -208,6 +211,36 @@ export function ProjectWorkspace({
     },
     [busy, planning, presentPlanForApproval, project.id],
   );
+
+  async function handlePublish() {
+    if (publishing) return;
+    setPublishing(true);
+    try {
+      const result = await publishProjectAction(project.id);
+      if (!result.ok) {
+        setChatLog((prev) => [
+          ...prev,
+          {
+            kind: "ai",
+            text: `Não consegui publicar: ${result.error}`,
+          },
+        ]);
+        return;
+      }
+      setPublishedUrl(result.url);
+      setProjectStatus("published");
+      setChatLog((prev) => [
+        ...prev,
+        {
+          kind: "ai",
+          text: `Publicado! Seu link público: ${result.url}`,
+        },
+      ]);
+      window.open(result.url, "_blank", "noopener,noreferrer");
+    } finally {
+      setPublishing(false);
+    }
+  }
 
   function sendChat() {
     const value = prompt.trim();
@@ -373,14 +406,15 @@ export function ProjectWorkspace({
           >
             Dev
           </button>
-          <a
-            href={`https://${project.slug}.studio.x09.com.br`}
-            target="_blank"
-            rel="noreferrer"
-            className="rounded-full bg-sky-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-sky-700"
+          <button
+            type="button"
+            onClick={() => void handlePublish()}
+            disabled={publishing}
+            className="rounded-full bg-sky-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-sky-700 disabled:opacity-60"
+            title={publishedUrl ?? "Publicar e abrir link público"}
           >
-            Publicar
-          </a>
+            {publishing ? "Publicando…" : "Publicar"}
+          </button>
         </div>
       </header>
 

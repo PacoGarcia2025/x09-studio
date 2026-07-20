@@ -7,19 +7,7 @@ import {
   type FileTreeNode,
 } from "@/lib/projects/fs.server";
 import { ensureProjectScaffold } from "@/lib/projects/scaffold.server";
-
-const TEXT_EXT =
-  /\.(tsx?|jsx?|css|json|html|md|svg|txt|mjs|cjs)$/i;
-
-const SKIP_FILES = new Set([
-  "package-lock.json",
-  "pnpm-lock.yaml",
-  "yarn.lock",
-  "tsconfig.node.json",
-  "vite.config.ts",
-  "eslint.config.js",
-  "README.md",
-]);
+import { toSandpackVirtualPath } from "@/lib/projects/preview-map";
 
 async function assertOwner(projectId: string) {
   const supabase = await createClient();
@@ -60,32 +48,6 @@ function flattenFiles(nodes: FileTreeNode[], out: string[] = []): string[] {
   return out;
 }
 
-/** Mapeia arquivos do disco (Vite src/*) para paths virtuais do Sandpack. */
-function toSandpackVirtualPath(relativePath: string): string | null {
-  const normalized = relativePath.replace(/\\/g, "/").replace(/^\/+/, "");
-  const base = normalized.split("/").pop() ?? "";
-  if (SKIP_FILES.has(base)) return null;
-  if (!TEXT_EXT.test(normalized)) return null;
-
-  // Entrypoints do Vite não entram no Sandpack react-ts
-  if (
-    normalized === "src/main.tsx" ||
-    normalized === "src/main.jsx" ||
-    normalized === "index.html" ||
-    normalized === "src/vite-env.d.ts"
-  ) {
-    return null;
-  }
-
-  if (normalized.startsWith("src/")) {
-    return `/${normalized.slice(4)}`;
-  }
-
-  if (normalized === "package.json") return null;
-
-  return `/${normalized}`;
-}
-
 export async function getProjectPreviewFiles(
   projectId: string,
 ): Promise<
@@ -108,11 +70,10 @@ export async function getProjectPreviewFiles(
         const content = await readProjectFile(projectId, rel);
         files[virtual] = content;
       } catch {
-        // ignora arquivo ilegível
+        // ignora
       }
     }
 
-    // Stub de supabase para o preview não quebrar sem env
     if (!files["/lib/supabase.ts"] && !files["/lib/supabase.tsx"]) {
       files["/lib/supabase.ts"] = `export const supabase = {
   from() { return { select: async () => ({ data: [], error: null }), insert: async () => ({ data: null, error: null }) }; },

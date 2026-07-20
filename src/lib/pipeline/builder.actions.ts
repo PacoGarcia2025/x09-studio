@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { tickBuilderQueue } from "@/lib/pipeline/queue.server";
+import { critiqueGeneratedApp } from "@/lib/pipeline/quality-critic.server";
 import { createClient } from "@/lib/supabase/server";
 
 async function assertPlanOwner(planId: string) {
@@ -217,6 +218,27 @@ export async function tickBuildAction(planId: string): Promise<
     });
 
     if (tick.done && !tick.failed) {
+      const quality = await critiqueGeneratedApp(gate.project.id);
+      if (!quality.ok) {
+        const detail = quality.issues
+          .filter((i) => i.severity === "error")
+          .slice(0, 3)
+          .map((i) => i.message)
+          .join("; ");
+        await gate.supabase
+          .from("projects")
+          .update({ status: "error" })
+          .eq("id", gate.project.id);
+        return {
+          ok: true,
+          done: true,
+          failed: true,
+          message: `Qualidade insuficiente (score ${quality.score}/100): ${detail || "gere de novo pelo chat"}`,
+          currentTaskKey: null,
+          counts: tick.counts,
+        };
+      }
+
       await gate.supabase
         .from("projects")
         .update({ status: "ready" })

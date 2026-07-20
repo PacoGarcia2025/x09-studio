@@ -77,8 +77,9 @@ Regras OBRIGATÓRIAS:
 - Pode usar lucide-react para ícones.
 - Sem imagens remotas quebradas: use gradientes, placeholders com divs coloridas, ou https://images.unsplash.com com URLs reais.
 - Conteúdo REAL (textos específicos do negócio do usuário), nunca "Lorem ipsum", nunca "Bem-vindo", nunca página vazia.
+- Aceite prop opcional onNavigateToLogin?: () => void e use no CTA "Entrar".
 - Estrutura mínima (todas obrigatórias):
-  1) Header sticky com nome da marca + 3 links âncora + botão CTA
+  1) Header sticky com nome da marca + 3 links âncora + botão Entrar/CTA
   2) Hero full-width com headline forte, subtítulo, 2 CTAs, e bloco visual
   3) Seção de benefícios/serviços (3+ cards)
   4) Seção de prova social ou galeria (3+ itens)
@@ -90,21 +91,36 @@ Regras OBRIGATÓRIAS:
 const APP_TSX_SYSTEM = `Você gera src/App.tsx de um app Vite + React.
 Responda APENAS JSON: { "content": string }.
 
-Para landing page:
-- NÃO use AppShell.
-- NÃO mostre header "Meu App" / Início / Entrar.
-- Apenas:
-import { HomePage } from "./pages/HomePage";
-export default function App() {
-  return <HomePage />;
-}
+Obrigatório:
+- import { useState } from "react"
+- import { HomePage } from "./pages/HomePage"
+- import { LoginPage } from "./pages/LoginPage"
+- Navegação useState<"home" | "login">
+- HomePage recebe onNavigateToLogin={() => setPage("login")}
+- LoginPage recebe onNavigateHome={() => setPage("home")}
+- NÃO use AppShell
+- NÃO mostre header "Meu App" / Início / Entrar do template
+`;
+
+const LOGIN_PAGE_SYSTEM = `Você gera LoginPage completa (Vite + React + TypeScript).
+Responda APENAS JSON: { "content": string }.
+
+Regras:
+- export function LoginPage({ onNavigateHome }: { onNavigateHome?: () => void })
+- UI premium Tailwind: card central, marca, toggle Entrar / Criar conta
+- Campos email + senha, botão submit, mensagens de erro/sucesso locais (useState)
+- Link/botão "Voltar" chama onNavigateHome?.()
+- Textos em português do Brasil, alinhados ao produto
+- NUNCA deixe stub ("próximas sprints")
+- Sem next/*, sem AppShell
 `;
 
 /** Detecta landing fraca (template ou retângulo vazio). */
 export function isWeakHomePage(content: string): boolean {
   const trimmed = content.trim();
   if (trimmed.length < 1500) return true;
-  if (/Bem-vindo|Este app foi gerado pelo X09/i.test(trimmed)) return true;
+  if (/Bem-vindo|Este app foi gerado pelo X09|Lorem ipsum/i.test(trimmed))
+    return true;
   if (!/export\s+(function|const)\s+HomePage/.test(trimmed)) return true;
   const sectionCount = (trimmed.match(/<section\b/gi) ?? []).length;
   const headingCount = (trimmed.match(/<h[12]\b/gi) ?? []).length;
@@ -114,13 +130,26 @@ export function isWeakHomePage(content: string): boolean {
   return false;
 }
 
+export function isWeakLoginPage(content: string): boolean {
+  const trimmed = content.trim();
+  if (trimmed.length < 800) return true;
+  if (/próximas sprints|Auth Supabase será configurado/i.test(trimmed))
+    return true;
+  if (!/export\s+(function|const)\s+LoginPage/.test(trimmed)) return true;
+  if (!/email/i.test(trimmed) || !/password|senha/i.test(trimmed)) return true;
+  return false;
+}
+
 function systemForPath(path: string): { system: string; maxTokens: number } {
   const p = path.replace(/\\/g, "/");
   if (p.endsWith("pages/HomePage.tsx") || p.endsWith("pages/HomePage.jsx")) {
     return { system: HOME_PAGE_SYSTEM, maxTokens: 12288 };
   }
+  if (p.endsWith("pages/LoginPage.tsx") || p.endsWith("pages/LoginPage.jsx")) {
+    return { system: LOGIN_PAGE_SYSTEM, maxTokens: 8192 };
+  }
   if (p.endsWith("App.tsx") || p.endsWith("App.jsx")) {
-    return { system: APP_TSX_SYSTEM, maxTokens: 2048 };
+    return { system: APP_TSX_SYSTEM, maxTokens: 4096 };
   }
   return { system: FILE_SYSTEM, maxTokens: 8192 };
 }
@@ -178,6 +207,9 @@ export async function generateTaskPayload(
 
       const isHome =
         /pages\/HomePage\.tsx?$/i.test(task.path.replace(/\\/g, "/"));
+      const isLogin =
+        /pages\/LoginPage\.tsx?$/i.test(task.path.replace(/\\/g, "/"));
+
       if (isHome && isWeakHomePage(content)) {
         const retryUser = [
           base,
@@ -186,6 +218,17 @@ export async function generateTaskPayload(
         ].join("\n\n");
         content = filePayloadSchema.parse(
           await completeJson(provider, HOME_PAGE_SYSTEM, retryUser, 12288),
+        ).content;
+      }
+
+      if (isLogin && isWeakLoginPage(content)) {
+        const retryUser = [
+          base,
+          "A versão anterior é stub/fraca. Reescreva LoginPage COMPLETA com email, senha, toggle cadastro e visual premium.",
+          'Retorne JSON {"content":"..."} .',
+        ].join("\n\n");
+        content = filePayloadSchema.parse(
+          await completeJson(provider, LOGIN_PAGE_SYSTEM, retryUser, 8192),
         ).content;
       }
 
@@ -242,10 +285,20 @@ Se a task não precisar instalar nada, use "npm install" mesmo assim ou a instru
   }
 }
 
-/** App.tsx mínimo sem o chrome "Meu App". */
-export const LANDING_APP_TSX = `import { HomePage } from "./pages/HomePage";
+/** App.tsx com Home + Login (sem chrome Meu App). */
+export const LANDING_APP_TSX = `import { useState } from "react";
+import { HomePage } from "./pages/HomePage";
+import { LoginPage } from "./pages/LoginPage";
+
+type Page = "home" | "login";
 
 export default function App() {
-  return <HomePage />;
+  const [page, setPage] = useState<Page>("home");
+
+  if (page === "login") {
+    return <LoginPage onNavigateHome={() => setPage("home")} />;
+  }
+
+  return <HomePage onNavigateToLogin={() => setPage("login")} />;
 }
 `;
