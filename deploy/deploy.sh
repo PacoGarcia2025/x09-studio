@@ -21,6 +21,10 @@ if [ -d public ]; then
   rm -rf .next/standalone/public
   cp -R public .next/standalone/public
 fi
+if [ -d templates ]; then
+  rm -rf .next/standalone/templates
+  cp -R templates .next/standalone/templates
+fi
 
 if pm2 describe x09-studio >/dev/null 2>&1; then
   pm2 delete x09-studio

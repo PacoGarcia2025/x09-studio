@@ -72,6 +72,7 @@ module.exports = {
         NODE_ENV: "production",
         PORT: 3001,
         HOSTNAME: "0.0.0.0",
+        STUDIO_APP_ROOT: APP_ROOT,
       },
       error_file: "/var/log/x09-studio/error.log",
       out_file: "/var/log/x09-studio/out.log",

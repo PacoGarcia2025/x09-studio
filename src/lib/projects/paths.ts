@@ -1,4 +1,39 @@
+import fs from "node:fs";
 import path from "node:path";
+
+function dirExists(p: string): boolean {
+  try {
+    return fs.statSync(p).isDirectory();
+  } catch {
+    return false;
+  }
+}
+
+/** Raiz do app no disco (repo ou standalone). */
+export function getAppRoot(): string {
+  const explicit = process.env.STUDIO_APP_ROOT?.trim();
+  if (
+    explicit &&
+    dirExists(path.join(path.resolve(explicit), "templates", "react-supabase-starter"))
+  ) {
+    return path.resolve(explicit);
+  }
+
+  const candidates = [
+    process.cwd(),
+    path.resolve(process.cwd(), ".."),
+    path.resolve(process.cwd(), "../.."),
+    path.resolve(process.cwd(), "../../.."),
+  ];
+
+  for (const root of candidates) {
+    if (dirExists(path.join(root, "templates", "react-supabase-starter"))) {
+      return root;
+    }
+  }
+
+  return explicit ? path.resolve(explicit) : process.cwd();
+}
 
 /**
  * Raiz dos projetos no disco — obrigatório via env.
@@ -24,5 +59,5 @@ export function getProjectDir(projectId: string): string {
 
 /** Template oficial versionado no repositório. */
 export function getTemplateDir(templateId = "react-supabase-starter"): string {
-  return path.join(process.cwd(), "templates", templateId);
+  return path.join(getAppRoot(), "templates", templateId);
 }
