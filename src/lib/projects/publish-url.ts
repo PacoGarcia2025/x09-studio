@@ -16,6 +16,32 @@ export function buildProjectSubdomainUrl(slug: string): string {
   return `https://${buildProjectSubdomainHost(slug)}`;
 }
 
+/** URL por path — funciona sem SSL wildcard (*.studio.x09.com.br). */
+export function buildProjectPathUrl(slug: string): string {
+  return `https://${getPublishBaseDomain()}/sites/${slug}`;
+}
+
+/** true quando VPS tem DNS wildcard + certificado *.studio.x09.com.br. */
+export function isSubdomainPublishReady(): boolean {
+  const flag =
+    (typeof process !== "undefined" &&
+      (process.env.STUDIO_PUBLISH_SUBDOMAIN_SSL ||
+        process.env.NEXT_PUBLIC_PUBLISH_SUBDOMAIN_SSL)) ||
+    "";
+  return flag === "true" || flag === "1";
+}
+
+/** Link que o usuário deve copiar/compartilhar agora. */
+export function resolvePublicShareUrl(
+  slug: string,
+  stored?: string | null,
+): string {
+  if (isSubdomainPublishReady()) {
+    return resolveProjectPublishUrl(slug, stored);
+  }
+  return buildProjectPathUrl(slug);
+}
+
 /** Converte URL legada (/sites/{slug}) para subdomínio canônico. */
 export function resolveProjectPublishUrl(
   slug: string,

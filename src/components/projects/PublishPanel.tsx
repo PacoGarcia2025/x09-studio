@@ -3,8 +3,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   buildProjectSubdomainHost,
-  buildProjectSubdomainUrl,
+  buildProjectPathUrl,
+  isSubdomainPublishReady,
   resolveProjectPublishUrl,
+  resolvePublicShareUrl,
 } from "@/lib/projects/publish-url";
 import { publishProjectAction } from "@/lib/projects/publish.actions";
 
@@ -28,8 +30,9 @@ export function PublishPanel({
   onPublished,
 }: Props) {
   const panelRef = useRef<HTMLDivElement>(null);
-  const canonicalUrl = resolveProjectPublishUrl(projectSlug, initialUrl);
-  const [url, setUrl] = useState(canonicalUrl);
+  const subdomainReady = isSubdomainPublishReady();
+  const shareUrl = resolvePublicShareUrl(projectSlug, initialUrl);
+  const [url, setUrl] = useState(shareUrl);
   const [host, setHost] = useState(buildProjectSubdomainHost(projectSlug));
   const [published, setPublished] = useState(isPublished);
   const [busy, setBusy] = useState(false);
@@ -40,7 +43,7 @@ export function PublishPanel({
 
   useEffect(() => {
     if (!open) return;
-    setUrl(resolveProjectPublishUrl(projectSlug, initialUrl));
+    setUrl(resolvePublicShareUrl(projectSlug, initialUrl));
     setHost(buildProjectSubdomainHost(projectSlug));
     setPublished(isPublished);
     setError(null);
@@ -68,14 +71,18 @@ export function PublishPanel({
         setError(result.error);
         return;
       }
-      setUrl(result.url);
+      setUrl(
+        subdomainReady
+          ? result.url
+          : buildProjectPathUrl(projectSlug),
+      );
       setHost(buildProjectSubdomainHost(projectSlug));
       setPublished(true);
       onPublished(result.url);
     } finally {
       setBusy(false);
     }
-  }, [onPublished, projectId, projectSlug]);
+  }, [onPublished, projectId, projectSlug, subdomainReady]);
 
   useEffect(() => {
     if (!open) {
@@ -131,7 +138,7 @@ export function PublishPanel({
 
         <div className="mt-2 flex items-center gap-2 rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2.5">
           <span className="min-w-0 flex-1 truncate text-sm text-zinc-800">
-            {host}
+            {subdomainReady ? host : url.replace(/^https:\/\//, "")}
           </span>
           <button
             type="button"
@@ -142,6 +149,26 @@ export function PublishPanel({
             {copied ? "✓" : "⎘"}
           </button>
         </div>
+
+        {!subdomainReady ? (
+          <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-xs text-amber-900">
+            <p className="font-medium">Subdomínio: {host}</p>
+            <p className="mt-1 text-amber-800">
+              Falta certificado SSL wildcard{" "}
+              <code className="rounded bg-white/70 px-1">*.studio.x09.com.br</code>.
+              O link copiado acima funciona agora via{" "}
+              <code className="rounded bg-white/70 px-1">/sites/</code>.
+            </p>
+            <a
+              href={url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-2 inline-block font-medium text-sky-700 hover:underline"
+            >
+              Abrir site publicado
+            </a>
+          </div>
+        ) : null}
       </div>
 
       {showDomainSettings ? (

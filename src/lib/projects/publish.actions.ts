@@ -6,7 +6,9 @@ import {
   buildProjectSubdomainHost,
   buildProjectSubdomainUrl,
   isLegacyPublishedUrl,
+  isSubdomainPublishReady,
   resolveProjectPublishUrl,
+  resolvePublicShareUrl,
 } from "@/lib/projects/publish-url";
 
 function publicSiteUrl(slug: string): string {
@@ -56,7 +58,9 @@ export async function publishProjectAction(
   const gate = await assertOwner(projectId);
   if (!gate.ok) return { ok: false, error: gate.error };
 
-  const url = publicSiteUrl(gate.project.slug);
+  const url = isSubdomainPublishReady()
+    ? publicSiteUrl(gate.project.slug)
+    : resolvePublicShareUrl(gate.project.slug, gate.project.published_url);
 
   // Corrige URL legada /sites/{slug} gravada antes do subdomínio
   if (isLegacyPublishedUrl(gate.project.slug, gate.project.published_url)) {

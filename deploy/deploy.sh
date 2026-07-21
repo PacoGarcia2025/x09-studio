@@ -49,6 +49,13 @@ echo
 curl -sf "http://127.0.0.1:4173/" | head -c 120
 echo
 echo "OK deploy x09-studio (API:3001) + x09-mvp (UI:4173)"
+echo ""
+echo "Publish subdomínio (*.studio.x09.com.br):"
+echo "  1) DNS: *.studio.x09.com.br → IP desta VPS"
+echo "  2) SSL wildcard (certbot DNS): studio.x09.com.br + *.studio.x09.com.br"
+echo "  3) nginx: cp deploy/nginx-studio.conf && nginx -t && reload"
+echo "  4) .env: STUDIO_PUBLISH_SUBDOMAIN_SSL=true + rebuild (npm run build)"
+echo "Se o SSL wildcard ainda não existir, o Studio copia /sites/{slug} (funciona hoje)."
 echo "Se a UI ainda estiver antiga no domínio, aplique o nginx:"
 echo "  sudo cp deploy/nginx-studio.conf /etc/nginx/sites-available/x09-studio"
 echo "  sudo nginx -t && sudo systemctl reload nginx"
