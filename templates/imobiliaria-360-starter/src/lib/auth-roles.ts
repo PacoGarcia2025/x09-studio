@@ -1,4 +1,5 @@
 import { getSupabase } from "./supabase";
+import { DEFAULT_ORG_ID } from "./properties";
 
 export type UserRole = "buyer" | "broker" | "owner" | "admin";
 
@@ -12,7 +13,13 @@ export async function getCurrentRole(): Promise<UserRole | null> {
   }
 }
 
-export function roleDashboardPage(role: UserRole | null): "broker" | "owner" | "admin" | null {
+export function getCurrentOrgId(): string {
+  return DEFAULT_ORG_ID;
+}
+
+export function roleDashboardPage(
+  role: UserRole | null,
+): "broker" | "owner" | "admin" | null {
   if (role === "broker") return "broker";
   if (role === "owner") return "owner";
   if (role === "admin") return "admin";
@@ -23,10 +30,15 @@ export async function signUpWithRole(
   email: string,
   password: string,
   role: UserRole,
+  orgId: string = DEFAULT_ORG_ID,
 ) {
   return getSupabase().auth.signUp({
     email,
     password,
-    options: { data: { role } },
+    options: { data: { role, org_id: orgId } },
   });
+}
+
+export async function signInWithRole(email: string, password: string) {
+  return getSupabase().auth.signInWithPassword({ email, password });
 }

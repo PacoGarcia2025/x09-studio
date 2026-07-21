@@ -138,6 +138,49 @@ function escapeHtml(s: string): string {
     .replace(/"/g, "&quot;");
 }
 
+export function isCrawlerUserAgent(ua: string | null): boolean {
+  if (!ua) return false;
+  return /googlebot|bingbot|facebookexternalhit|whatsapp|telegrambot|twitterbot|linkedinbot|slackbot|discordbot/i.test(
+    ua,
+  );
+}
+
+export type CrawlerSeoPayload = {
+  title: string;
+  description: string;
+  og_image?: string | null;
+  price_brl?: number | null;
+  json_ld?: unknown | null;
+};
+
+export function buildCrawlerHtml(
+  seo: CrawlerSeoPayload,
+  originUrl: string,
+): string {
+  const image =
+    seo.og_image ??
+    "https://images.unsplash.com/photo-1613490493576-7fde63acd811?w=1200&fm=webp&q=80";
+
+  return `<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>${escapeHtml(seo.title)}</title>
+  <meta name="description" content="${escapeHtml(seo.description)}" />
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="${escapeHtml(seo.title)}" />
+  <meta property="og:description" content="${escapeHtml(seo.description)}" />
+  <meta property="og:url" content="${escapeHtml(originUrl)}" />
+  <meta property="og:image" content="${escapeHtml(image)}" />
+  <meta name="twitter:card" content="summary_large_image" />
+  ${seo.json_ld ? `<script type="application/ld+json">${JSON.stringify(seo.json_ld)}</script>` : ""}
+  <meta http-equiv="refresh" content="0;url=${escapeHtml(originUrl)}" />
+</head>
+<body><p>Redirecionando…</p></body>
+</html>`;
+}
+
 export function inferDescriptionFromBrief(
   brief: string | null | undefined,
   projectName: string,

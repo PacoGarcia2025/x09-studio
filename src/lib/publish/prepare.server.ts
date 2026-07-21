@@ -15,6 +15,7 @@ import {
   inferDescriptionFromBrief,
   optimizeUnsplashUrlsInSource,
 } from "@/lib/publish/seo-meta";
+import { syncPublishedSeoPages } from "@/lib/publish/seo-pages.server";
 import { isImobiliaria360 } from "@/lib/skills/detect";
 import {
   buildProjectSubdomainUrl,
@@ -79,6 +80,15 @@ export async function prepareProjectForPublish(input: {
   const sitemapPaths = isImobiliaria360(input.briefPrompt ?? "")
     ? ["/", "/imoveis", "/login"]
     : ["/", "/login"];
+
+  if (await fileExists(input.projectId, "src/lib/properties.ts")) {
+    const props = await readProjectFile(input.projectId, "src/lib/properties.ts");
+    const idRe = /id:\s*["']([^"']+)["']/g;
+    for (const m of props.matchAll(idRe)) {
+      sitemapPaths.push(`/imovel/${m[1]}`);
+    }
+  }
+
   await writeProjectFile(
     input.projectId,
     "public/sitemap.xml",
@@ -120,6 +130,20 @@ export async function prepareProjectForPublish(input: {
   }
   if (optimized > 0) {
     log.push(`WebP Unsplash em ${optimized} arquivo(s)`);
+  }
+
+  try {
+    const count = await syncPublishedSeoPages({
+      projectId: input.projectId,
+      projectSlug: input.slug,
+      projectName: input.projectName,
+      siteUrl,
+      briefDescription: description,
+    });
+    log.push(`SEO dinâmico Supabase (${count} rotas)`);
+  } catch (syncErr) {
+    console.warn("[publish] sync SEO pages skipped", syncErr);
+    log.push("SEO dinâmico: migration pending ou Supabase indisponível");
   }
 
   return { log };

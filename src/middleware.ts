@@ -6,7 +6,9 @@ export async function middleware(request: NextRequest) {
   const slug = extractPublishSlugFromHost(request.headers.get("host") ?? "");
   if (slug) {
     const url = request.nextUrl.clone();
-    url.pathname = `/sites/${slug}`;
+    const subPath =
+      url.pathname === "/" ? "" : url.pathname.replace(/\/$/, "");
+    url.pathname = `/sites/${slug}${subPath}`;
     return NextResponse.rewrite(url);
   }
 

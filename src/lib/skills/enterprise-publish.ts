@@ -16,8 +16,9 @@ PERFORMANCE & IMAGENS (grátis):
 - preconnect apenas se necessário — evite fontes externas bloqueantes.
 
 MAPA REAL (zero API key):
-- Use componente OsmMap (iframe OpenStreetMap) — NÃO Mapbox/Google pagos.
-- Property com lat/lng opcional para centralizar mapa.
+- Use PropertyMap (Leaflet + CartoDB Positron) — NÃO iframe OsmMap.
+- ListingsPage: split grid + PropertyMap; hover card destaca pin; move map filtra grid.
+- Property com lat/lng obrigatório para pins.
 
 SEO RUNTIME:
 - SeoHead em App.tsx: title, description, og via useEffect + JSON-LD script.

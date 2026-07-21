@@ -157,12 +157,16 @@ export function ProjectLivePreview({ projectId, refreshKey = 0 }: Props) {
             "@supabase/supabase-js": "^2.50.2",
             "lucide-react": "^0.468.0",
             "framer-motion": "^11.15.0",
+            leaflet: "^1.9.4",
           },
         }}
         options={{
           recompileMode: "immediate",
           recompileDelay: 300,
-          externalResources: ["https://cdn.tailwindcss.com"],
+          externalResources: [
+            "https://cdn.tailwindcss.com",
+            "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css",
+          ],
           classes: {
             "sp-wrapper": "x09-sp-fill",
             "sp-layout": "x09-sp-fill",

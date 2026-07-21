@@ -74,7 +74,7 @@ export function ensureImobiliaria360Tasks(
       id: "t_imob_listings",
       path: "src/pages/ListingsPage.tsx",
       title: "Catálogo + filtros + mapa mock",
-      instruction: `ListingsPage: grid infinito + filtros laterais (amenidades, preço slider, tags lifestyle) + mapa mock com pins de preço. MOCK_PROPERTIES. onSelectProperty(id). Ordenação preço/recentes.`,
+      instruction: `ListingsPage: grid + filtros + PropertyMap Leaflet (hover sync, bounds filter). MOCK_PROPERTIES com lat/lng. onSelectProperty(id).`,
       dependsOn: [propsId, homeId],
     },
     2,
@@ -133,6 +133,17 @@ export function ensureImobiliaria360Tasks(
       dependsOn: [loginId],
     },
     7,
+  );
+
+  upsert(
+    {
+      id: "t_imob_property_map",
+      path: "src/components/PropertyMap.tsx",
+      title: "Mapa Leaflet CartoDB",
+      instruction: `PropertyMap com Leaflet + tiles CartoDB Positron. Pins com preço, highlight no hover, onBoundsChange, onSelect. Import dinâmico leaflet.`,
+      dependsOn: [],
+    },
+    8,
   );
 
   upsert(

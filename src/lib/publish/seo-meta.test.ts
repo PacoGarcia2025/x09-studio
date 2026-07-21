@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
+  buildCrawlerHtml,
   buildPublishIndexHtml,
   buildRobotsTxt,
   buildSitemapXml,
   extractListingsJsonLd,
+  isCrawlerUserAgent,
   optimizeUnsplashUrlsInSource,
 } from "@/lib/publish/seo-meta";
 
@@ -37,5 +39,24 @@ describe("publish seo-meta", () => {
       'const u = "https://images.unsplash.com/photo-123?w=800";',
     );
     expect(out).toMatch(/fm=webp/);
+  });
+
+  it("detects WhatsApp crawler", () => {
+    expect(isCrawlerUserAgent("WhatsApp/2.0")).toBe(true);
+    expect(isCrawlerUserAgent("Mozilla/5.0 Chrome")).toBe(false);
+  });
+
+  it("builds crawler HTML with OG tags", () => {
+    const html = buildCrawlerHtml(
+      {
+        title: "Cobertura Jardins",
+        description: "Imóvel exclusivo",
+        og_image: "https://example.com/img.webp",
+        json_ld: { "@type": "RealEstateListing" },
+      },
+      "https://demo.studio.x09.com.br/imovel/1",
+    );
+    expect(html).toMatch(/og:title/);
+    expect(html).toMatch(/RealEstateListing/);
   });
 });

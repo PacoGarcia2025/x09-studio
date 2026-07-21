@@ -12,6 +12,16 @@ body {
   margin: 0;
 }
 
+/* Leaflet */
+.leaflet-container {
+  font-family: inherit;
+  z-index: 0;
+}
+.leaflet-div-icon {
+  background: transparent !important;
+  border: none !important;
+}
+
 a {
   color: inherit;
 }

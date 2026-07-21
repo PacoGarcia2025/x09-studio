@@ -21,7 +21,7 @@ Responda APENAS JSON: { "content": string }.
 - export function ListingsPage({ onNavigateHome, onSelectProperty }: { onNavigateHome?: () => void; onSelectProperty?: (id: string) => void })
 - import { MOCK_PROPERTIES, type Property } from "../lib/properties"
 - Layout split: grid de cards + painel lateral de filtros (tipo, quartos, preço slider, tags lifestyle).
-- Mapa REAL: import { OsmMap } from "../components/OsmMap" — split screen listagem + OsmMap com lat/lng do imóvel selecionado.
+- Mapa REAL: import { PropertyMap } from "../components/PropertyMap" — split screen listagem + PropertyMap com lat/lng; hover sync bidirecional; moveend filtra grid.
 - Ordenação: Menor preço | Maior preço | Mais recentes.
 - Cards: foto Unsplash, badge Exclusividade, metragem, quartos, vagas, preço formatado BRL.
 - Skeleton loaders ao filtrar (animate-pulse).
@@ -35,7 +35,7 @@ Responda APENAS JSON: { "content": string }.
 - Embed Matterport/YouTube: iframe com src do brief quando citado (matterport.com/show, youtube.com/embed) — title acessível.
 - Calculadora financiamento: sliders entrada + prazo → parcela estimada (useState).
 - Ficha técnica: IPTU, condomínio, área, suítes, vagas (ícones lucide).
-- Mapa localização: OsmMap com property.lat/lng + POIs em lista abaixo.
+- Mapa localização: PropertyMap ou OsmMap fallback com property.lat/lng + POIs em lista abaixo.
 - SeoHead + buildPropertyJsonLd (RealEstateListing) do imóvel atual.
 - Sticky sidebar: foto corretor, Agendar Visita (date input), WhatsApp 1-clique (wa.me), Simular Proposta.
 - TSX válido (~150+ linhas).`;
