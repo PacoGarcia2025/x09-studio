@@ -57,6 +57,12 @@ export function getProjectDir(projectId: string): string {
   return path.join(getProjectsRoot(), projectId);
 }
 
+/** Raiz dos sites estáticos publicados — Nginx serve /var/www/html/clients/{slug}. */
+export function getStaticClientsRoot(): string {
+  const root = process.env.STUDIO_STATIC_CLIENTS_ROOT?.trim();
+  return root ? path.resolve(root) : "/var/www/html/clients";
+}
+
 /** Template oficial versionado no repositório. */
 export function getTemplateDir(templateId = "react-supabase-starter"): string {
   return path.join(getAppRoot(), "templates", templateId);

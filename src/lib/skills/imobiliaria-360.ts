@@ -21,7 +21,7 @@ Responda APENAS JSON: { "content": string }.
 - export function ListingsPage({ onNavigateHome, onSelectProperty }: { onNavigateHome?: () => void; onSelectProperty?: (id: string) => void })
 - import { MOCK_PROPERTIES, type Property } from "../lib/properties"
 - Layout split: grid de cards + painel lateral de filtros (tipo, quartos, preço slider, tags lifestyle).
-- Mapa REAL: import { PropertyMap } from "../components/PropertyMap" — split screen listagem + PropertyMap com lat/lng; hover sync bidirecional; moveend filtra grid.
+- Mapa REAL: import { PropertyMap } from "../components/PropertyMap" — split screen listagem + PropertyMap com lat/lng; pins formatPriceShort (R$ 2,5M); leaflet.markercluster; hover sync bidirecional; moveend filtra grid.
 - Ordenação: Menor preço | Maior preço | Mais recentes.
 - Cards: foto Unsplash, badge Exclusividade, metragem, quartos, vagas, preço formatado BRL.
 - Skeleton loaders ao filtrar (animate-pulse).
@@ -37,7 +37,7 @@ Responda APENAS JSON: { "content": string }.
 - Ficha técnica: IPTU, condomínio, área, suítes, vagas (ícones lucide).
 - Mapa localização: PropertyMap ou OsmMap fallback com property.lat/lng + POIs em lista abaixo.
 - SeoHead + buildPropertyJsonLd (RealEstateListing) do imóvel atual.
-- Sticky sidebar: foto corretor, Agendar Visita (date input), WhatsApp 1-clique (wa.me), Simular Proposta.
+- Sticky sidebar: foto corretor, Agendar Visita (form POST /api/leads/visit → Resend), WhatsApp buildWhatsAppUrl (wa.me?text= mensagem Ref:ID), Simular Proposta.
 - TSX válido (~150+ linhas).`;
 
 export const BROKER_DASHBOARD_BASE = `Você gera BrokerDashboardPage (CRM corretor) Vite + React + TypeScript.
@@ -68,10 +68,11 @@ Responda APENAS JSON: { "content": string }.
 
 export const PROPERTIES_LIB_BASE = `Você gera src/lib/properties.ts com dados mock imobiliários realistas.
 Responda APENAS JSON: { "content": string }.
-- export type Property = { id, slug, title, type, neighborhood, city, price, rent?, bedrooms, suites, parking, area, lat?, lng?, tags: string[], images: string[], description, iptu?, condo?, brokerName, brokerPhone, featured }
+- export type Property = { id, slug, title, type, neighborhood, city, price, rent?, bedrooms, suites, parking, area, lat?, lng?, tags: string[], images: string[], description, iptu?, condo?, brokerName, brokerPhone, brokerEmail?, featured }
 - export const MOCK_PROPERTIES: Property[] — mínimo 8 imóveis variados (cobertura, casa, apto, lançamento).
 - export function getPropertyById(id: string): Property | undefined
 - export function formatPriceBRL(n: number): string
+- export function formatPriceShort(n: number): string — compacto para pins (R$ 2,5M)
 - URLs Unsplash luxury; bairros/cidades do brief quando citados.`;
 
 export const IMOBILIARIA_APP_TSX_RULES = `Você gera src/App.tsx multi-página imobiliária Vite + React.

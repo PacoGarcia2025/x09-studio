@@ -140,7 +140,7 @@ export function ensureImobiliaria360Tasks(
       id: "t_imob_property_map",
       path: "src/components/PropertyMap.tsx",
       title: "Mapa Leaflet CartoDB",
-      instruction: `PropertyMap com Leaflet + tiles CartoDB Positron. Pins com preço, highlight no hover, onBoundsChange, onSelect. Import dinâmico leaflet.`,
+      instruction: `PropertyMap com Leaflet + CartoDB Positron + leaflet.markercluster. Pins formatPriceShort, highlight hover, onBoundsChange, onSelect. Import dinâmico leaflet + markercluster.`,
       dependsOn: [],
     },
     8,

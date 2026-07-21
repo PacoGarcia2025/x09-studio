@@ -17,6 +17,7 @@ test -f .next/standalone/server.js
 mkdir -p .next/standalone/.next
 rm -rf .next/standalone/.next/static
 cp -R .next/static .next/standalone/.next/static
+sudo mkdir -p /var/www/html/clients 2>/dev/null || mkdir -p /var/www/html/clients 2>/dev/null || true
 if [ -d public ]; then
   rm -rf .next/standalone/public
   cp -R public .next/standalone/public

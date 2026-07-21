@@ -3,6 +3,13 @@ import { extractPublishSlugFromHost } from "@/lib/projects/publish-url";
 import { updateSession } from "@/lib/supabase/middleware";
 
 export async function middleware(request: NextRequest) {
+  const pathname = request.nextUrl.pathname;
+
+  // APIs (ex.: /api/leads/visit) não devem ser reescritas para /sites/{slug}.
+  if (pathname.startsWith("/api/")) {
+    return updateSession(request);
+  }
+
   const slug = extractPublishSlugFromHost(request.headers.get("host") ?? "");
   if (slug) {
     const url = request.nextUrl.clone();

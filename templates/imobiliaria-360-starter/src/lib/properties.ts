@@ -21,6 +21,7 @@ export type Property = {
   condo?: number;
   brokerName: string;
   brokerPhone: string;
+  brokerEmail?: string;
   featured: boolean;
 };
 
@@ -51,6 +52,7 @@ export const MOCK_PROPERTIES: Property[] = [
     condo: 6800,
     brokerName: "Ana Corretora",
     brokerPhone: "5511999999999",
+    brokerEmail: "ana@imobpremium.com.br",
     featured: true,
   },
   {
@@ -75,6 +77,7 @@ export const MOCK_PROPERTIES: Property[] = [
     description: "Apartamento reformado com acabamento premium.",
     brokerName: "Ana Corretora",
     brokerPhone: "5511999999999",
+    brokerEmail: "ana@imobpremium.com.br",
     featured: true,
   },
   {
@@ -99,6 +102,7 @@ export const MOCK_PROPERTIES: Property[] = [
     description: "Residência ampla com área gourmet e piscina.",
     brokerName: "Carlos Broker",
     brokerPhone: "5511988887777",
+    brokerEmail: "carlos@imobpremium.com.br",
     featured: false,
   },
   {
@@ -123,6 +127,7 @@ export const MOCK_PROPERTIES: Property[] = [
     description: "Penthouse com terraço e home theater.",
     brokerName: "Carlos Broker",
     brokerPhone: "5511988887777",
+    brokerEmail: "carlos@imobpremium.com.br",
     featured: true,
   },
   {
@@ -147,6 +152,7 @@ export const MOCK_PROPERTIES: Property[] = [
     description: "Apartamento compacto premium próximo ao metrô.",
     brokerName: "Ana Corretora",
     brokerPhone: "5511999999999",
+    brokerEmail: "ana@imobpremium.com.br",
     featured: false,
   },
   {
@@ -171,6 +177,7 @@ export const MOCK_PROPERTIES: Property[] = [
     description: "Casa de veraneio com deck e vista mar.",
     brokerName: "Marina Luxury",
     brokerPhone: "5511977776666",
+    brokerEmail: "marina@imobpremium.com.br",
     featured: true,
   },
 ];
@@ -181,6 +188,23 @@ export function getPropertyById(id: string): Property | undefined {
 
 export function formatPriceBRL(value: number): string {
   return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+}
+
+/** Preço compacto para pins do mapa (ex.: R$ 2,5M). */
+export function formatPriceShort(value: number): string {
+  if (value >= 1_000_000) {
+    const millions = value / 1_000_000;
+    const label = millions.toLocaleString("pt-BR", {
+      maximumFractionDigits: 1,
+      minimumFractionDigits: millions >= 10 ? 0 : 1,
+    });
+    return `R$ ${label}M`;
+  }
+  if (value >= 10_000) {
+    const thousands = Math.round(value / 1_000);
+    return `R$ ${thousands.toLocaleString("pt-BR")}k`;
+  }
+  return formatPriceBRL(value);
 }
 
 export const DEFAULT_ORG_ID = ORG;

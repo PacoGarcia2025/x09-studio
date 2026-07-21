@@ -16,9 +16,17 @@ PERFORMANCE & IMAGENS (grátis):
 - preconnect apenas se necessário — evite fontes externas bloqueantes.
 
 MAPA REAL (zero API key):
-- Use PropertyMap (Leaflet + CartoDB Positron) — NÃO iframe OsmMap.
+- Use PropertyMap (Leaflet + CartoDB Positron + leaflet.markercluster) — NÃO iframe OsmMap.
+- Pins DivIcon com formatPriceShort (ex. R$ 2,5M); cluster ao afastar zoom.
 - ListingsPage: split grid + PropertyMap; hover card destaca pin; move map filtra grid.
 - Property com lat/lng obrigatório para pins.
+
+LEADS (zero custo):
+- WhatsApp: buildWhatsAppUrl(phone, "Olá, tenho interesse no imóvel [Título] - Ref:[ID]").
+- Agendar visita: fetch POST /api/leads/visit (Resend free) com brokerEmail do imóvel.
+
+PUBLISH SSG:
+- npm run build (Vite) → dist/ servido pelo Nginx em /var/www/html/clients/{slug}.
 
 SEO RUNTIME:
 - SeoHead em App.tsx: title, description, og via useEffect + JSON-LD script.

@@ -12,6 +12,7 @@ import {
 } from "@/lib/projects/publish-url";
 import { getProjectPublishReadiness } from "@/lib/projects/publish-readiness.server";
 import { prepareProjectForPublish } from "@/lib/publish/prepare.server";
+import { buildStaticSiteForPublish } from "@/lib/publish/static-build.server";
 
 function publicSiteUrl(slug: string): string {
   return buildProjectSubdomainUrl(slug);
@@ -89,6 +90,22 @@ export async function publishProjectAction(
     });
   } catch (prepError) {
     console.warn("[publish] prepare SEO failed", prepError);
+  }
+
+  const staticBuild = await buildStaticSiteForPublish({
+    projectId,
+    slug: gate.project.slug,
+  });
+  if (!staticBuild.ok) {
+    console.warn("[publish] static build failed", staticBuild.log.join("\n"));
+    if (process.env.NODE_ENV === "production") {
+      return {
+        ok: false,
+        error:
+          staticBuild.error ??
+          "Build estático falhou. Verifique npm run build do projeto.",
+      };
+    }
   }
 
   // Corrige URL legada /sites/{slug} gravada antes do subdomínio

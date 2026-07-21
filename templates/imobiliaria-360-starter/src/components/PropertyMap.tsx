@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import type { Property } from "../lib/properties";
-import { formatPriceBRL } from "../lib/properties";
+import { formatPriceShort } from "../lib/properties";
 import { propertyHasCoords, type LatLngBounds } from "../lib/map-utils";
 
 type PropertyMapProps = {
@@ -15,7 +15,24 @@ type PropertyMapProps = {
 const CARTO_POSITRON =
   "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png";
 
-/** Mapa Leaflet + CartoDB Positron — pins sincronizados com listagem. */
+function pricePinHtml(priceLabel: string, isHot: boolean): string {
+  return `<div class="x09-map-pin" style="
+    background:${isHot ? "#D4AF37" : "#1c1917"};
+    color:white;
+    border:2px solid ${isHot ? "#fff" : "#D4AF37"};
+    border-radius:9999px;
+    padding:5px 10px;
+    font-size:11px;
+    font-weight:700;
+    letter-spacing:-0.02em;
+    white-space:nowrap;
+    box-shadow:0 6px 18px rgba(0,0,0,.28);
+    transform:scale(${isHot ? 1.14 : 1});
+    transition:transform .15s ease;
+  ">${priceLabel}</div>`;
+}
+
+/** Mapa Leaflet + CartoDB Positron — pins com preço + marker clustering. */
 export function PropertyMap({
   properties,
   highlightedId,
@@ -26,13 +43,16 @@ export function PropertyMap({
 }: PropertyMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<import("leaflet").Map | null>(null);
-  const markersRef = useRef<Map<string, import("leaflet").Marker>>(new Map());
+  const clusterRef = useRef<import("leaflet").MarkerClusterGroup | null>(null);
   const leafletRef = useRef<typeof import("leaflet") | null>(null);
 
   useEffect(() => {
     let cancelled = false;
 
-    void import("leaflet").then((L) => {
+    void Promise.all([
+      import("leaflet"),
+      import("leaflet.markercluster"),
+    ]).then(([L]) => {
       if (cancelled || !containerRef.current || mapRef.current) return;
       leafletRef.current = L;
 
@@ -87,9 +107,10 @@ export function PropertyMap({
 
     return () => {
       cancelled = true;
+      clusterRef.current?.clearLayers();
       mapRef.current?.remove();
       mapRef.current = null;
-      markersRef.current.clear();
+      clusterRef.current = null;
     };
   }, [properties, onBoundsChange]);
 
@@ -98,8 +119,17 @@ export function PropertyMap({
     const map = mapRef.current;
     if (!L || !map) return;
 
-    markersRef.current.forEach((m) => m.remove());
-    markersRef.current.clear();
+    if (clusterRef.current) {
+      map.removeLayer(clusterRef.current);
+      clusterRef.current.clearLayers();
+    }
+
+    const cluster = L.markerClusterGroup({
+      showCoverageOnHover: false,
+      maxClusterRadius: 56,
+      spiderfyOnMaxZoom: true,
+      animate: true,
+    });
 
     for (const p of properties) {
       if (!propertyHasCoords(p)) continue;
@@ -107,28 +137,20 @@ export function PropertyMap({
       const isHot = p.id === highlightedId;
       const icon = L.divIcon({
         className: "",
-        html: `<div style="
-          background:${isHot ? "#D4AF37" : "#1c1917"};
-          color:white;
-          border:2px solid ${isHot ? "#fff" : "#D4AF37"};
-          border-radius:9999px;
-          padding:4px 8px;
-          font-size:11px;
-          font-weight:600;
-          box-shadow:0 4px 14px rgba(0,0,0,.25);
-          transform:scale(${isHot ? 1.12 : 1});
-          transition:transform .15s ease;
-        ">${formatPriceBRL(p.price).replace(/\s/g, " ")}</div>`,
-        iconSize: [80, 28],
-        iconAnchor: [40, 14],
+        html: pricePinHtml(formatPriceShort(p.price), isHot),
+        iconSize: [88, 32],
+        iconAnchor: [44, 16],
       });
 
-      const marker = L.marker([p.lat, p.lng], { icon }).addTo(map);
+      const marker = L.marker([p.lat, p.lng], { icon });
       marker.on("mouseover", () => onHighlight?.(p.id));
       marker.on("mouseout", () => onHighlight?.(null));
       marker.on("click", () => onSelect?.(p.id));
-      markersRef.current.set(p.id, marker);
+      cluster.addLayer(marker);
     }
+
+    map.addLayer(cluster);
+    clusterRef.current = cluster;
   }, [properties, highlightedId, onHighlight, onSelect]);
 
   return (
