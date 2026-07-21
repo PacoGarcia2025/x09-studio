@@ -1,7 +1,15 @@
-import { type NextRequest } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
+import { extractPublishSlugFromHost } from "@/lib/projects/publish-url";
 import { updateSession } from "@/lib/supabase/middleware";
 
 export async function middleware(request: NextRequest) {
+  const slug = extractPublishSlugFromHost(request.headers.get("host") ?? "");
+  if (slug) {
+    const url = request.nextUrl.clone();
+    url.pathname = `/sites/${slug}`;
+    return NextResponse.rewrite(url);
+  }
+
   return updateSession(request);
 }
 

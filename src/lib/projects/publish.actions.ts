@@ -2,18 +2,13 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-
-function publishDomain(): string {
-  return (
-    process.env.STUDIO_PUBLISH_DOMAIN?.trim() ||
-    process.env.NEXT_PUBLIC_APP_URL?.replace(/^https?:\/\//, "") ||
-    "studio.x09.com.br"
-  );
-}
+import {
+  buildProjectSubdomainHost,
+  buildProjectSubdomainUrl,
+} from "@/lib/projects/publish-url";
 
 function publicSiteUrl(slug: string): string {
-  const domain = publishDomain().replace(/\/$/, "");
-  return `https://${domain}/sites/${slug}`;
+  return buildProjectSubdomainUrl(slug);
 }
 
 async function assertOwner(projectId: string) {
@@ -53,7 +48,7 @@ async function assertOwner(projectId: string) {
 export async function publishProjectAction(
   projectId: string,
 ): Promise<
-  | { ok: true; url: string }
+  | { ok: true; url: string; host: string }
   | { ok: false; error: string }
 > {
   const gate = await assertOwner(projectId);
@@ -85,5 +80,9 @@ export async function publishProjectAction(
 
   revalidatePath(`/projects/${projectId}`);
   revalidatePath(`/sites/${gate.project.slug}`);
-  return { ok: true, url };
+  return {
+    ok: true,
+    url,
+    host: buildProjectSubdomainHost(gate.project.slug),
+  };
 }

@@ -29,20 +29,21 @@ export default async function ProjectDetailPage({ params, searchParams }: Props)
         created_at: string;
         workspace_id: string;
         brief_prompt?: string | null;
+        published_url?: string | null;
       }
     | null = null;
 
   {
     const withBrief = await supabase
       .from("projects")
-      .select("id, name, slug, status, created_at, workspace_id, brief_prompt")
+      .select("id, name, slug, status, created_at, workspace_id, brief_prompt, published_url")
       .eq("id", id)
       .maybeSingle();
 
-    if (withBrief.error && /brief_prompt/i.test(withBrief.error.message)) {
+    if (withBrief.error && /brief_prompt|published_url/i.test(withBrief.error.message)) {
       const fallback = await supabase
         .from("projects")
-        .select("id, name, slug, status, created_at, workspace_id")
+        .select("id, name, slug, status, created_at, workspace_id, brief_prompt")
         .eq("id", id)
         .maybeSingle();
       project = fallback.data;

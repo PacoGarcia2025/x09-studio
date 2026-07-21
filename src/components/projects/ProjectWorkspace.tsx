@@ -13,7 +13,7 @@ import { SilentBuildRunner } from "@/components/projects/SilentBuildRunner";
 import { VerifyPanel } from "@/components/verify/VerifyPanel";
 import { chatProjectAction } from "@/lib/pipeline/actions";
 import type { StudioPlan } from "@/lib/pipeline/plan-schema";
-import { publishProjectAction } from "@/lib/projects/publish.actions";
+import { PublishPanel } from "@/components/projects/PublishPanel";
 
 type MainTab = "preview" | "code" | "layers" | "pipeline";
 
@@ -34,6 +34,7 @@ type Props = {
     slug: string;
     status: string;
     created_at: string;
+    published_url?: string | null;
   };
   planId: string | null;
   initialPrompt?: string;
@@ -103,8 +104,10 @@ export function ProjectWorkspace({
   );
   const [developerMode, setDeveloperMode] = useState(false);
   const [previewKey, setPreviewKey] = useState(0);
-  const [publishing, setPublishing] = useState(false);
-  const [publishedUrl, setPublishedUrl] = useState<string | null>(null);
+  const [publishPanelOpen, setPublishPanelOpen] = useState(false);
+  const [publishedUrl, setPublishedUrl] = useState<string | null>(
+    project.published_url ?? null,
+  );
   const [planning, setPlanning] = useState(false);
 
   useEffect(() => {
@@ -241,34 +244,20 @@ export function ProjectWorkspace({
     [busy, planning, presentPlanForApproval, project.id, router],
   );
 
-  async function handlePublish() {
-    if (publishing) return;
-    setPublishing(true);
-    try {
-      const result = await publishProjectAction(project.id);
-      if (!result.ok) {
-        setChatLog((prev) => [
-          ...prev,
-          {
-            kind: "ai",
-            text: `Não consegui publicar: ${result.error}`,
-          },
-        ]);
-        return;
-      }
-      setPublishedUrl(result.url);
-      setProjectStatus("published");
-      setChatLog((prev) => [
-        ...prev,
-        {
-          kind: "ai",
-          text: `Publicado! Seu link público: ${result.url}`,
-        },
-      ]);
-      window.open(result.url, "_blank", "noopener,noreferrer");
-    } finally {
-      setPublishing(false);
-    }
+  function openPublishPanel() {
+    setPublishPanelOpen(true);
+  }
+
+  function handlePublished(url: string) {
+    setPublishedUrl(url);
+    setProjectStatus("published");
+    setChatLog((prev) => [
+      ...prev,
+      {
+        kind: "ai",
+        text: "Publicado! Seu site está no ar — copie o link no painel acima.",
+      },
+    ]);
   }
 
   function sendChat() {
@@ -435,15 +424,26 @@ export function ProjectWorkspace({
           >
             Dev
           </button>
-          <button
-            type="button"
-            onClick={() => void handlePublish()}
-            disabled={publishing}
-            className="rounded-full bg-sky-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-sky-700 disabled:opacity-60"
-            title={publishedUrl ?? "Publicar e abrir link público"}
-          >
-            {publishing ? "Publicando…" : "Publicar"}
-          </button>
+          <div className="relative">
+            <button
+              type="button"
+              data-publish-trigger
+              onClick={openPublishPanel}
+              className="rounded-full bg-sky-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-sky-700"
+              title={publishedUrl ?? "Publicar site"}
+            >
+              {projectStatus === "published" ? "Publicado" : "Publicar"}
+            </button>
+            <PublishPanel
+              open={publishPanelOpen}
+              onClose={() => setPublishPanelOpen(false)}
+              projectId={project.id}
+              projectSlug={project.slug}
+              initialUrl={publishedUrl}
+              isPublished={projectStatus === "published"}
+              onPublished={handlePublished}
+            />
+          </div>
         </div>
       </header>
 
