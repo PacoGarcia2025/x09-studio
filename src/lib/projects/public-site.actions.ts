@@ -79,7 +79,7 @@ export async function getPublishedSiteFiles(slug: string): Promise<
 `;
     }
 
-    let env: Record<string, string> = {};
+    const env: Record<string, string> = {};
     for (const rel of [".env.local", ".env"]) {
       try {
         Object.assign(env, parseDotEnv(await readProjectFile(project.id, rel)));

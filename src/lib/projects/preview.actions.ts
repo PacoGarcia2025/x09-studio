@@ -82,7 +82,7 @@ export async function getProjectPreviewFiles(
 `;
     }
 
-    let env: Record<string, string> = {};
+    const env: Record<string, string> = {};
     for (const rel of [".env.local", ".env"]) {
       try {
         Object.assign(env, parseDotEnv(await readProjectFile(projectId, rel)));
