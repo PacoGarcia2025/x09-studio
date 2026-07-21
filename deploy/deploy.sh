@@ -44,6 +44,14 @@ fi
 cd "$APP_DIR"
 pm2 save
 
+# --- Nginx (proxy → 3001, cert Let's Encrypt) ---
+if [ -f deploy/nginx-studio.conf ]; then
+  sudo cp deploy/nginx-studio.conf /etc/nginx/sites-available/x09-studio
+  sudo ln -sf /etc/nginx/sites-available/x09-studio /etc/nginx/sites-enabled/x09-studio
+  sudo nginx -t
+  sudo systemctl reload nginx
+fi
+
 curl -sf "http://127.0.0.1:3001/api/health" | head -c 200
 echo
 curl -sf "http://127.0.0.1:4173/" | head -c 120
