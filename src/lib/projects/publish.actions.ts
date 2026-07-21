@@ -10,6 +10,7 @@ import {
   resolveProjectPublishUrl,
   resolvePublicShareUrl,
 } from "@/lib/projects/publish-url";
+import { getProjectPublishReadiness } from "@/lib/projects/publish-readiness.server";
 
 function publicSiteUrl(slug: string): string {
   return buildProjectSubdomainUrl(slug);
@@ -57,6 +58,21 @@ export async function publishProjectAction(
 > {
   const gate = await assertOwner(projectId);
   if (!gate.ok) return { ok: false, error: gate.error };
+
+  if (gate.project.status === "generating") {
+    return {
+      ok: false,
+      error: "Aguarde a geração terminar antes de publicar.",
+    };
+  }
+
+  const readiness = await getProjectPublishReadiness(projectId);
+  if (!readiness.ready) {
+    return {
+      ok: false,
+      error: readiness.reason ?? "Construa o app antes de publicar.",
+    };
+  }
 
   const url = isSubdomainPublishReady()
     ? publicSiteUrl(gate.project.slug)

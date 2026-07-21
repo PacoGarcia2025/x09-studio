@@ -17,6 +17,8 @@ type Props = {
   projectSlug: string;
   initialUrl?: string | null;
   isPublished: boolean;
+  canPublish?: boolean;
+  publishBlockReason?: string;
   onPublished: (url: string) => void;
 };
 
@@ -27,6 +29,8 @@ export function PublishPanel({
   projectSlug,
   initialUrl,
   isPublished,
+  canPublish = true,
+  publishBlockReason,
   onPublished,
 }: Props) {
   const panelRef = useRef<HTMLDivElement>(null);
@@ -46,9 +50,9 @@ export function PublishPanel({
     setUrl(resolvePublicShareUrl(projectSlug, initialUrl));
     setHost(buildProjectSubdomainHost(projectSlug));
     setPublished(isPublished);
-    setError(null);
+    setError(publishBlockReason && !canPublish ? publishBlockReason : null);
     setCopied(false);
-  }, [open, initialUrl, isPublished, projectSlug]);
+  }, [open, initialUrl, isPublished, projectSlug, canPublish, publishBlockReason]);
 
   useEffect(() => {
     if (!open) return;
@@ -63,6 +67,13 @@ export function PublishPanel({
   }, [open, onClose]);
 
   const runPublish = useCallback(async () => {
+    if (!canPublish) {
+      setError(
+        publishBlockReason ??
+          "Construa o app antes de publicar (OK, construir app no chat).",
+      );
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
@@ -82,17 +93,17 @@ export function PublishPanel({
     } finally {
       setBusy(false);
     }
-  }, [onPublished, projectId, projectSlug, subdomainReady]);
+  }, [canPublish, onPublished, projectId, projectSlug, publishBlockReason, subdomainReady]);
 
   useEffect(() => {
     if (!open) {
       autoPublishStarted.current = false;
       return;
     }
-    if (published || autoPublishStarted.current || busy) return;
+    if (!canPublish || published || autoPublishStarted.current || busy) return;
     autoPublishStarted.current = true;
     void runPublish();
-  }, [open, published, busy, runPublish]);
+  }, [open, published, busy, runPublish, canPublish]);
 
   async function copyUrl() {
     try {
@@ -151,13 +162,13 @@ export function PublishPanel({
         </div>
 
         {!subdomainReady ? (
-          <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-xs text-amber-900">
-            <p className="font-medium">Subdomínio: {host}</p>
-            <p className="mt-1 text-amber-800">
-              Falta certificado SSL wildcard{" "}
-              <code className="rounded bg-white/70 px-1">*.studio.x09.com.br</code>.
-              O link copiado acima funciona agora via{" "}
-              <code className="rounded bg-white/70 px-1">/sites/</code>.
+          <div className="mt-3 rounded-xl border border-sky-200 bg-sky-50 px-3 py-2.5 text-xs text-sky-900">
+            <p className="font-medium">Link público ativo</p>
+            <p className="mt-1 text-sky-800">
+              Compartilhe o endereço acima — ele já funciona para visitantes.
+              Subdomínio{" "}
+              <code className="rounded bg-white/70 px-1">{host}</code>{" "}
+              fica disponível quando o certificado wildcard estiver ativo na VPS.
             </p>
             <a
               href={url}
@@ -168,7 +179,16 @@ export function PublishPanel({
               Abrir site publicado
             </a>
           </div>
-        ) : null}
+        ) : (
+          <a
+            href={url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-3 inline-block text-xs font-medium text-sky-700 hover:underline"
+          >
+            Abrir site publicado
+          </a>
+        )}
       </div>
 
       {showDomainSettings ? (
@@ -187,6 +207,15 @@ export function PublishPanel({
       ) : null}
 
       <div className="mt-4 border-t border-zinc-100 pt-4">
+        {!canPublish ? (
+          <div className="mb-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-xs text-amber-900">
+            <p className="font-medium">App ainda não pronto para publicar</p>
+            <p className="mt-1">
+              {publishBlockReason ??
+                "Confirme «OK, construir app» no chat e aguarde o preview carregar."}
+            </p>
+          </div>
+        ) : null}
         <p className="text-xs font-medium text-zinc-500">
           Quem pode ver este site
         </p>
@@ -227,10 +256,16 @@ export function PublishPanel({
       <button
         type="button"
         onClick={() => void runPublish()}
-        disabled={busy}
+        disabled={busy || !canPublish}
         className="mt-3 w-full rounded-xl bg-sky-600 py-2.5 text-sm font-semibold text-white hover:bg-sky-700 disabled:opacity-60"
       >
-        {busy ? "Atualizando…" : published ? "Atualizar" : "Publicar agora"}
+        {busy
+          ? "Atualizando…"
+          : !canPublish
+            ? "Construa o app primeiro"
+            : published
+              ? "Atualizar"
+              : "Publicar agora"}
       </button>
     </div>
   );

@@ -2,6 +2,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { getProjectDir, getTemplateDir } from "@/lib/projects/paths";
 import { projectDirExists } from "@/lib/projects/fs.server";
+import { templateScaffoldId } from "@/lib/skills/templates/skill";
 
 const DEFAULT_TEMPLATE = "react-supabase-starter";
 
@@ -56,6 +57,12 @@ export async function scaffoldProject(
 }
 
 /** Garante scaffold; útil para projetos criados antes do Sprint 3. */
-export async function ensureProjectScaffold(projectId: string) {
-  return scaffoldProject(projectId);
+export async function ensureProjectScaffold(
+  projectId: string,
+  options?: { briefPrompt?: string | null },
+) {
+  const templateId = options?.briefPrompt?.trim()
+    ? templateScaffoldId(options.briefPrompt)
+    : DEFAULT_TEMPLATE;
+  return scaffoldProject(projectId, { templateId });
 }

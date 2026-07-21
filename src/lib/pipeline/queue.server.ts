@@ -128,6 +128,17 @@ export async function tickBuilderQueue(
     projectName: string;
   },
 ): Promise<TickResult> {
+  const [{ data: planRow }, { data: projectRow }] = await Promise.all([
+    supabase.from("plans").select("prompt").eq("id", input.planId).maybeSingle(),
+    supabase
+      .from("projects")
+      .select("brief_prompt")
+      .eq("id", input.projectId)
+      .maybeSingle(),
+  ]);
+  const briefPrompt =
+    projectRow?.brief_prompt?.trim() || planRow?.prompt?.trim() || null;
+
   const { data: tasks, error } = await supabase
     .from("plan_tasks")
     .select(
@@ -226,7 +237,7 @@ export async function tickBuilderQueue(
   );
 
   try {
-    await ensureProjectScaffold(input.projectId);
+    await ensureProjectScaffold(input.projectId, { briefPrompt });
     const provider = getLlmProvider();
     let result: Awaited<ReturnType<typeof applyBuilderTask>> | null = null;
     let lastError: unknown = null;
@@ -248,6 +259,7 @@ export async function tickBuilderQueue(
             instruction: next.instruction,
             path: next.path,
           },
+          { briefPrompt },
         );
         break;
       } catch (err) {

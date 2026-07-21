@@ -2,6 +2,14 @@ import { z } from "zod";
 import type { LlmProvider } from "@/lib/llm/types";
 import { resolveCommandPlan } from "@/lib/pipeline/commands.allowlist";
 import type { PlanTaskType } from "@/lib/pipeline/plan-schema";
+import { formatBuilderContext } from "@/lib/pipeline/brief-context";
+import { resolveSkills } from "@/lib/skills/resolve";
+import { lacksCinematicQuality } from "@/lib/skills/premium-design";
+import {
+  getTsxSyntaxIssues,
+  hasValidTsxSyntax,
+  isTsxPath,
+} from "@/lib/pipeline/jsx-validate";
 
 const filePayloadSchema = z.object({
   content: z.string().min(1).max(120_000),
@@ -57,97 +65,41 @@ async function completeJson(
   return extractJson(result.text);
 }
 
-const FILE_SYSTEM = `Você é o gerador de conteúdo de UMA única task do Builder X09 Studio.
-Responda APENAS JSON: { "content": string }
-- Gere só o conteúdo deste arquivo.
-- Não gere outros arquivos.
-- Não explique.
-- Stack: Vite + React + TypeScript (NÃO Next.js).
-- Use Tailwind via className (CDN no preview). Sem importar tailwindcss.
-- NÃO use import.meta.env (quebra o preview Sandpack). Use getSupabase() para Supabase.
-- Código em TypeScript/React/CSS conforme o path.`;
+function skillPromptForPath(
+  path: string,
+  prompt: string,
+): { system: string; maxTokens: number } {
+  const skills = resolveSkills(prompt);
+  const p = path.replace(/\\/g, "/");
 
-const HOME_PAGE_SYSTEM = `Você gera a HomePage completa de um app Vite + React + TypeScript.
-Responda APENAS JSON: { "content": string } com o arquivo TSX inteiro.
+  if (p.endsWith("pages/HomePage.tsx") || p.endsWith("pages/HomePage.jsx")) {
+    return { system: skills.homePageSystem, maxTokens: 16384 };
+  }
+  if (p.endsWith("pages/LoginPage.tsx") || p.endsWith("pages/LoginPage.jsx")) {
+    return { system: skills.loginPageSystem, maxTokens: 10240 };
+  }
+  if (
+    p.endsWith("pages/DashboardPage.tsx") ||
+    p.endsWith("pages/DashboardPage.jsx")
+  ) {
+    return { system: skills.dashboardPageSystem, maxTokens: 16384 };
+  }
+  if (p.endsWith("App.tsx") || p.endsWith("App.jsx")) {
+    return { system: skills.appTsxRules, maxTokens: 4096 };
+  }
+  return { system: skills.fileSystemBase, maxTokens: 8192 };
+}
 
-Regras OBRIGATÓRIAS:
-- export function HomePage() { ... } (named export).
-- NÃO use AppShell, router, next/*, nem "Meu App".
-- Landing visualmente rica, pronta para conversão, em português do Brasil.
-- Use Tailwind (className). Sem importar CSS/tailwindcss.
-- Pode usar lucide-react para ícones.
-- Sem imagens remotas quebradas: use gradientes, placeholders com divs coloridas, ou https://images.unsplash.com com URLs reais.
-- Conteúdo REAL (textos específicos do negócio do usuário), nunca "Lorem ipsum", nunca "Bem-vindo", nunca página vazia.
-- Aceite prop opcional onNavigateToLogin?: () => void e use no CTA "Entrar".
-- Estrutura mínima (todas obrigatórias):
-  1) Header sticky com nome da marca + 3 links âncora + botão Entrar/CTA
-  2) Hero full-width com headline forte, subtítulo, 2 CTAs, e bloco visual
-  3) Seção de benefícios/serviços (3+ cards)
-  4) Seção de prova social ou galeria (3+ itens)
-  5) Seção CTA final
-  6) Footer com contato
-- O arquivo deve ter NO MÍNIMO ~80 linhas de JSX útil (não um único retângulo colorido).
-- Cores: violeta/fúcsia (#7C3AED / #C026D3) como acento, tipografia forte, bom espaçamento.`;
-
-const APP_TSX_SYSTEM = `Você gera src/App.tsx de um app Vite + React.
-Responda APENAS JSON: { "content": string }.
-
-Obrigatório:
-- import { useState } from "react"
-- import { HomePage } from "./pages/HomePage"
-- import { LoginPage } from "./pages/LoginPage"
-- Se a instrução citar Dashboard/app logado: import { DashboardPage } from "./pages/DashboardPage"
-- Navegação useState<"home" | "login" | "app"> (use "app" só se houver Dashboard)
-- HomePage: onNavigateToLogin={() => setPage("login")}
-- LoginPage: onNavigateHome={() => setPage("home")} e onNavigateApp={() => setPage("app")} se houver Dashboard
-- DashboardPage: onNavigateHome + onSignOut voltando para home/login
-- NÃO use AppShell
-- NÃO mostre header "Meu App" / Início / Entrar do template
-`;
-
-const LOGIN_PAGE_SYSTEM = `Você gera LoginPage completa (Vite + React + TypeScript + Supabase Auth).
-Responda APENAS JSON: { "content": string }.
-
-Regras:
-- export function LoginPage({ onNavigateHome, onNavigateApp }: { onNavigateHome?: () => void; onNavigateApp?: () => void })
-- import { getSupabase } from "../lib/supabase"
-- UI premium Tailwind: card central, marca, toggle Entrar / Criar conta
-- Campos email + senha, botão submit, estados busy/error/success (useState)
-- No submit: supabase.auth.signInWithPassword ou signUp de verdade
-- Após sucesso: onNavigateApp?.() ?? onNavigateHome?.()
-- Link/botão "Voltar" chama onNavigateHome?.()
-- Textos em português do Brasil, alinhados ao produto
-- NUNCA deixe stub ("próximas sprints")
-- Sem next/*, sem AppShell
-`;
-
-const DASHBOARD_PAGE_SYSTEM = `Você gera DashboardPage (área logada) Vite + React + TypeScript + Supabase.
-Responda APENAS JSON: { "content": string }.
-
-Regras:
-- export function DashboardPage({ onNavigateHome, onSignOut }: { onNavigateHome?: () => void; onSignOut?: () => void })
-- import { getSupabase } from "../lib/supabase" e useState/useEffect
-- Layout: topbar ou sidebar com nome do produto, botão Sair, conteúdo principal
-- CRUD útil: lista de itens + formulário criar/editar + excluir
-- Preferir supabase.from("...") com select/insert/update/delete; se falhar, manter estado local com seed
-- Estados: loading, empty, error, busy no submit
-- UI densa Tailwind, textos em português específicos do domínio
-- NÃO página vazia / "em breve" / stub
-- Sem next/*, sem AppShell
-`;
-
-/** Detecta landing fraca (template ou retângulo vazio). */
+/** Detecta landing fraca (abaixo do padrão premium). */
 export function isWeakHomePage(content: string): boolean {
   const trimmed = content.trim();
-  if (trimmed.length < 1500) return true;
+  if (trimmed.length < 2000) return true;
   if (/Bem-vindo|Este app foi gerado pelo X09|Lorem ipsum/i.test(trimmed))
     return true;
   if (!/export\s+(function|const)\s+HomePage/.test(trimmed)) return true;
-  const sectionCount = (trimmed.match(/<section\b/gi) ?? []).length;
-  const headingCount = (trimmed.match(/<h[12]\b/gi) ?? []).length;
-  if (sectionCount < 2 && headingCount < 2) return true;
+  if (lacksCinematicQuality(trimmed).length > 0) return true;
   const words = trimmed.match(/[A-Za-zÀ-ÿ]{4,}/g) ?? [];
-  if (words.length < 60) return true;
+  if (words.length < 80) return true;
   return false;
 }
 
@@ -169,7 +121,7 @@ export function isWeakLoginPage(content: string): boolean {
 
 export function isWeakDashboardPage(content: string): boolean {
   const trimmed = content.trim();
-  if (trimmed.length < 1200) return true;
+  if (trimmed.length < 1500) return true;
   if (/em breve|próximas sprints|coming soon|placeholder/i.test(trimmed))
     return true;
   if (!/export\s+(function|const)\s+DashboardPage/.test(trimmed)) return true;
@@ -178,24 +130,11 @@ export function isWeakDashboardPage(content: string): boolean {
   return false;
 }
 
-function systemForPath(path: string): { system: string; maxTokens: number } {
-  const p = path.replace(/\\/g, "/");
-  if (p.endsWith("pages/HomePage.tsx") || p.endsWith("pages/HomePage.jsx")) {
-    return { system: HOME_PAGE_SYSTEM, maxTokens: 12288 };
-  }
-  if (p.endsWith("pages/LoginPage.tsx") || p.endsWith("pages/LoginPage.jsx")) {
-    return { system: LOGIN_PAGE_SYSTEM, maxTokens: 8192 };
-  }
-  if (
-    p.endsWith("pages/DashboardPage.tsx") ||
-    p.endsWith("pages/DashboardPage.jsx")
-  ) {
-    return { system: DASHBOARD_PAGE_SYSTEM, maxTokens: 12288 };
-  }
-  if (p.endsWith("App.tsx") || p.endsWith("App.jsx")) {
-    return { system: APP_TSX_SYSTEM, maxTokens: 4096 };
-  }
-  return { system: FILE_SYSTEM, maxTokens: 8192 };
+function systemForPath(
+  path: string,
+  skillPrompt: string,
+): { system: string; maxTokens: number } {
+  return skillPromptForPath(path, skillPrompt);
 }
 
 /**
@@ -211,6 +150,7 @@ export async function generateTaskPayload(
   },
   context: {
     projectName: string;
+    briefPrompt?: string | null;
     existingFileContent?: string | null;
   },
 ): Promise<
@@ -220,21 +160,29 @@ export async function generateTaskPayload(
   | { kind: "sql"; filename: string; content: string }
   | { kind: "delete" }
 > {
-  const base = [
-    `Projeto: ${context.projectName}`,
-    `Task: ${task.title}`,
-    `Tipo: ${task.type}`,
-    `Instrução: ${task.instruction}`,
-    task.path ? `Path: ${task.path}` : null,
-  ]
+  const base = formatBuilderContext({
+    projectName: context.projectName,
+    briefPrompt: context.briefPrompt,
+    taskInstruction: [
+      `Task: ${task.title}`,
+      `Tipo: ${task.type}`,
+      task.path ? `Path: ${task.path}` : null,
+      task.instruction,
+    ]
+      .filter(Boolean)
+      .join("\n"),
+  });
+
+  const skillPrompt = [context.briefPrompt, task.instruction]
     .filter(Boolean)
     .join("\n");
+  const skills = resolveSkills(skillPrompt);
 
   switch (task.type) {
     case "create_file":
     case "update_file": {
       if (!task.path) throw new Error("Task de arquivo exige path");
-      const { system, maxTokens } = systemForPath(task.path);
+      const { system, maxTokens } = systemForPath(task.path, skillPrompt);
       const user = [
         base,
         task.type === "update_file" && context.existingFileContent != null
@@ -257,34 +205,57 @@ export async function generateTaskPayload(
       if (isHome && isWeakHomePage(content)) {
         const retryUser = [
           base,
-          "A versão anterior ficou FRACA (quase vazia). Reescreva a landing COMPLETA com hero, 3+ seções, textos reais e CTAs.",
-          'Retorne JSON {"content":"..."} com HomePage.tsx completo e denso.',
+          "REJEITADO: abaixo do padrão premium cinematográfico (R$20k). Reescreva HomePage COMPLETA: framer-motion, gradientes mesh, 5+ seções, copy real do brief, CTAs com cor de marca.",
+          `Falhas detectadas: ${lacksCinematicQuality(content).join("; ") || "conteúdo raso"}`,
+          'Retorne JSON {"content":"..."} com HomePage.tsx completo.',
         ].join("\n\n");
         content = filePayloadSchema.parse(
-          await completeJson(provider, HOME_PAGE_SYSTEM, retryUser, 12288),
+          await completeJson(provider, skills.homePageSystem, retryUser, 16384),
         ).content;
       }
 
       if (isLogin && isWeakLoginPage(content)) {
         const retryUser = [
           base,
-          "A versão anterior é stub/fraca. Reescreva LoginPage COMPLETA com getSupabase().auth (signInWithPassword/signUp), email, senha, toggle cadastro e visual premium.",
+          "A versão anterior é stub/fraca. Reescreva LoginPage COMPLETA com getSupabase().auth (signInWithPassword/signUp), email, senha, toggle cadastro e visual premium cinematográfico.",
           'Retorne JSON {"content":"..."} .',
         ].join("\n\n");
         content = filePayloadSchema.parse(
-          await completeJson(provider, LOGIN_PAGE_SYSTEM, retryUser, 8192),
+          await completeJson(provider, skills.loginPageSystem, retryUser, 10240),
         ).content;
       }
 
       if (isDashboard && isWeakDashboardPage(content)) {
         const retryUser = [
           base,
-          "A versão anterior é fraca/vazia. Reescreva DashboardPage COM lista + formulário CRUD + loading/empty, usando getSupabase() quando possível.",
+          "A versão anterior é fraca. Reescreva DashboardPage premium COM KPIs, lista CRUD, formulário, loading/empty/error, getSupabase() quando possível.",
           'Retorne JSON {"content":"..."} .',
         ].join("\n\n");
         content = filePayloadSchema.parse(
-          await completeJson(provider, DASHBOARD_PAGE_SYSTEM, retryUser, 12288),
+          await completeJson(provider, skills.dashboardPageSystem, retryUser, 16384),
         ).content;
+      }
+
+      if (isTsxPath(normalizedPath)) {
+        for (let attempt = 0; attempt < 2 && !hasValidTsxSyntax(content, normalizedPath); attempt += 1) {
+          const syntaxIssues = getTsxSyntaxIssues(content, normalizedPath);
+          const retryUser = [
+            base,
+            `ERRO DE SINTAXE no arquivo gerado: ${syntaxIssues.join("; ")}`,
+            "Reescreva o arquivo TSX COMPLETO do zero. Feche todas as tags JSX e strings. Não trunque no final.",
+            'Retorne JSON {"content":"..."} com o arquivo inteiro e válido.',
+          ].join("\n\n");
+          content = filePayloadSchema.parse(
+            await completeJson(provider, system, retryUser, maxTokens),
+          ).content;
+        }
+
+        if (!hasValidTsxSyntax(content, normalizedPath)) {
+          const syntaxIssues = getTsxSyntaxIssues(content, normalizedPath);
+          throw new Error(
+            `Sintaxe TSX inválida em ${normalizedPath}: ${syntaxIssues.join("; ")}`,
+          );
+        }
       }
 
       return { kind: "file", content };

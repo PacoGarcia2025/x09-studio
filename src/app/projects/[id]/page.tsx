@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { ProjectWorkspace } from "@/components/projects/ProjectWorkspace";
 import { getLatestPlan } from "@/lib/pipeline/actions";
+import { getProjectPublishReadiness } from "@/lib/projects/publish-readiness.server";
 import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -70,6 +71,16 @@ export default async function ProjectDetailPage({ params, searchParams }: Props)
   const shouldAutoStart =
     autostart === "1" || (Boolean(briefPrompt) && !latest);
 
+  // Plano existe mas build nunca rodou (usuário saiu antes do OK).
+  const needsBuildApproval = Boolean(
+    latest &&
+      latest.status === "ready" &&
+      project.status !== "ready" &&
+      project.status !== "generating",
+  );
+
+  const publishReadiness = await getProjectPublishReadiness(project.id);
+
   return (
     <ProjectWorkspace
       project={project}
@@ -79,6 +90,9 @@ export default async function ProjectDetailPage({ params, searchParams }: Props)
       initialModel={latest?.model}
       autoStart={shouldAutoStart}
       awaitApproval={!latest && shouldAutoStart}
+      needsBuildApproval={needsBuildApproval}
+      canPublish={publishReadiness.ready}
+      publishBlockReason={publishReadiness.reason}
     />
   );
 }

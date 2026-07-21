@@ -1,5 +1,9 @@
 import "server-only";
 import { fileExists, readProjectFile } from "@/lib/projects/fs.server";
+import {
+  evaluateDashboardWithSkills,
+  evaluateHomeWithSkills,
+} from "@/lib/skills/code-review";
 
 export type QualityIssue = {
   code: string;
@@ -22,6 +26,7 @@ function words(content: string): number {
  */
 export async function critiqueGeneratedApp(
   projectId: string,
+  briefPrompt?: string,
 ): Promise<QualityReport> {
   const issues: QualityIssue[] = [];
   let score = 100;
@@ -59,6 +64,16 @@ export async function critiqueGeneratedApp(
 
   if (homeExists) {
     const home = await readProjectFile(projectId, "src/pages/HomePage.tsx");
+
+    for (const gate of evaluateHomeWithSkills(home, briefPrompt ?? "")) {
+      issues.push({
+        code: gate.code,
+        message: gate.message,
+        severity: gate.severity,
+      });
+      score -= gate.penalty;
+    }
+
     if (/Bem-vindo|Este app foi gerado pelo X09|Lorem ipsum|Meu App/i.test(home)) {
       issues.push({
         code: "generic_copy",
@@ -67,22 +82,23 @@ export async function critiqueGeneratedApp(
       });
       score -= 30;
     }
-    if (home.length < 1800 || words(home) < 70) {
+    const sections = (home.match(/<section\b/gi) ?? []).length;
+    if (sections < 4) {
+      issues.push({
+        code: "few_sections",
+        message: "Home precisa de pelo menos 4 seções (padrão premium)",
+        severity: "error",
+      });
+      score -= 15;
+    }
+
+    if (home.length < 2200 || words(home) < 85) {
       issues.push({
         code: "thin_home",
-        message: "Home muito rasa — precisa de seções e copy real",
+        message: "Home muito rasa para padrão cinematográfico premium",
         severity: "error",
       });
       score -= 25;
-    }
-    const sections = (home.match(/<section\b/gi) ?? []).length;
-    if (sections < 3) {
-      issues.push({
-        code: "few_sections",
-        message: "Home precisa de pelo menos 3 seções",
-        severity: "warn",
-      });
-      score -= 10;
     }
   }
 
@@ -130,13 +146,21 @@ export async function critiqueGeneratedApp(
   );
   if (dashboardExists) {
     const dash = await readProjectFile(projectId, "src/pages/DashboardPage.tsx");
-    if (dash.length < 1000 || /em breve|próximas sprints/i.test(dash)) {
+    for (const gate of evaluateDashboardWithSkills(dash)) {
       issues.push({
-        code: "thin_dashboard",
-        message: "Dashboard raso ou stub",
-        severity: "warn",
+        code: gate.code,
+        message: gate.message,
+        severity: gate.severity,
       });
-      score -= 10;
+      score -= gate.penalty;
+    }
+    if (/em breve|próximas sprints/i.test(dash)) {
+      issues.push({
+        code: "stub_dashboard",
+        message: "Dashboard ainda é stub",
+        severity: "error",
+      });
+      score -= 20;
     }
   }
 

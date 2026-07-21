@@ -163,6 +163,7 @@ export type StoredPlan = {
   prompt: string;
   plan: StudioPlan;
   model: string | null;
+  status: string;
   created_at: string;
 };
 
@@ -174,7 +175,7 @@ export async function getLatestPlan(
 
   const { data } = await gate.supabase
     .from("plans")
-    .select("id, prompt, plan_json, model, created_at")
+    .select("id, prompt, plan_json, model, status, created_at")
     .eq("project_id", projectId)
     .order("created_at", { ascending: false })
     .limit(1)
@@ -187,6 +188,7 @@ export async function getLatestPlan(
     prompt: data.prompt,
     plan: data.plan_json as StudioPlan,
     model: data.model,
+    status: data.status ?? "ready",
     created_at: data.created_at,
   };
 }

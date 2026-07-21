@@ -2,13 +2,23 @@ import "server-only";
 import { z } from "zod";
 import type { LlmProvider } from "@/lib/llm/types";
 import {
+  EDIT_PATCH_RULES,
+  formatBuilderContext,
+} from "@/lib/pipeline/brief-context";
+import { resolveSkills } from "@/lib/skills/resolve";
+import {
+  assertValidTsxOrThrow,
+  prepareTsxForProject,
+} from "@/lib/pipeline/tsx-write-guard";
+import { getTsxSyntaxIssues } from "@/lib/pipeline/jsx-validate";
+import { LANDING_APP_TSX } from "@/lib/pipeline/task-content.server";
+import {
   fileExists,
   listProjectTree,
   readProjectFile,
   writeProjectFile,
   type FileTreeNode,
 } from "@/lib/projects/fs.server";
-import { LANDING_APP_TSX } from "@/lib/pipeline/task-content.server";
 
 const patchSchema = z.object({
   summary: z.string().min(1),
@@ -48,6 +58,61 @@ function extractJson(text: string): unknown {
   }
 }
 
+async function requestEditPatch(
+  provider: LlmProvider,
+  input: {
+    projectName: string;
+    briefPrompt?: string | null;
+    message: string;
+    fileBlocks: string[];
+    syntaxRetryNote?: string;
+  },
+): Promise<{ patch: z.infer<typeof patchSchema>; model: string }> {
+  const skillPrompt = [input.briefPrompt, input.message].filter(Boolean).join("\n");
+  const skills = resolveSkills(skillPrompt);
+  const editRules = skills.editPatchRules || EDIT_PATCH_RULES;
+
+  const completion = await provider.complete({
+    messages: [
+      {
+        role: "system",
+        content: `Você é o editor cirúrgico do X09 Studio (Vite + React + TypeScript + Tailwind via className).
+Responda APENAS JSON:
+{
+  "summary": string (1-2 frases do que mudou, em português),
+  "files": [{ "path": string, "content": string }]
+}
+
+Regras:
+${editRules}`,
+      },
+      {
+        role: "user",
+        content: [
+          formatBuilderContext({
+            projectName: input.projectName,
+            briefPrompt: input.briefPrompt,
+            taskInstruction: `Pedido de edição: ${input.message}`,
+          }),
+          input.syntaxRetryNote,
+          "Arquivos atuais:",
+          input.fileBlocks.join("\n\n"),
+        ]
+          .filter(Boolean)
+          .join("\n\n"),
+      },
+    ],
+    responseJsonSchema: { type: "object" },
+    temperature: 0.25,
+    maxOutputTokens: 16384,
+  });
+
+  return {
+    patch: patchSchema.parse(extractJson(completion.text)),
+    model: completion.model,
+  };
+}
+
 /**
  * Aplica edição cirúrgica: a IA recebe contexto dos arquivos e devolve
  * apenas os arquivos que precisam mudar (conteúdo completo).
@@ -83,52 +148,51 @@ export async function applyChatEditPatch(
     if (!(await fileExists(input.projectId, rel))) continue;
     const content = await readProjectFile(input.projectId, rel);
     fileBlocks.push(
-      `--- ${rel}\n\`\`\`\n${content.slice(0, 10000)}\n\`\`\``,
+      `--- ${rel}\n\`\`\`\n${content.slice(0, 12000)}\n\`\`\``,
     );
   }
 
-  const completion = await provider.complete({
-    messages: [
-      {
-        role: "system",
-        content: `Você é o editor cirúrgico do X09 Studio (Vite + React + TypeScript + Tailwind via className).
-Responda APENAS JSON:
-{
-  "summary": string (1-2 frases do que mudou, em português),
-  "files": [{ "path": string, "content": string }]
-}
+  let parsed: z.infer<typeof patchSchema> | null = null;
+  let patchModel = "edit-patch";
+  let syntaxRetryNote: string | undefined;
 
-Regras:
-- Altere SÓ o necessário para atender o pedido.
-- Devolva o conteúdo COMPLETO de cada arquivo modificado (não diff).
-- Paths relativos ao projeto (ex: src/pages/HomePage.tsx).
-- Máximo 8 arquivos.
-- NÃO use Next.js, NÃO use AppShell/"Meu App".
-- Mantenha exports (HomePage, LoginPage) e props de navegação se existirem.
-- Textos em português do Brasil, específicos — nunca Lorem/Bem-vindo genérico.
-- Se precisar criar página nova, inclua o arquivo e atualize src/App.tsx.`,
-      },
-      {
-        role: "user",
-        content: [
-          `Projeto: ${input.projectName}`,
-          input.briefPrompt
-            ? `Brief original: ${input.briefPrompt.slice(0, 500)}`
-            : null,
-          `Pedido de edição: ${input.message}`,
-          "Arquivos atuais:",
-          fileBlocks.join("\n\n"),
-        ]
-          .filter(Boolean)
-          .join("\n\n"),
-      },
-    ],
-    responseJsonSchema: { type: "object" },
-    temperature: 0.3,
-    maxOutputTokens: 12288,
-  });
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const result = await requestEditPatch(provider, {
+      projectName: input.projectName,
+      briefPrompt: input.briefPrompt,
+      message: input.message,
+      fileBlocks,
+      syntaxRetryNote,
+    });
+    parsed = result.patch;
+    patchModel = result.model;
 
-  const parsed = patchSchema.parse(extractJson(completion.text));
+    const invalid: string[] = [];
+    for (const file of parsed.files) {
+      const path = file.path.replace(/\\/g, "/").replace(/^\.\//, "");
+      try {
+        assertValidTsxOrThrow(path, file.content);
+      } catch (err) {
+        invalid.push(
+          err instanceof Error ? err.message : `Inválido: ${path}`,
+        );
+      }
+    }
+
+    if (invalid.length === 0) break;
+
+    syntaxRetryNote = `ERRO DE SINTAXE na tentativa anterior — corrija e reescreva os arquivos COMPLETOS:\n${invalid.join("\n")}`;
+    if (attempt === 2) {
+      throw new Error(
+        `Não consegui aplicar a edição: ${invalid.slice(0, 2).join("; ")}`,
+      );
+    }
+  }
+
+  if (!parsed) {
+    throw new Error("Falha ao gerar patch de edição");
+  }
+
   const written: string[] = [];
 
   for (const file of parsed.files) {
@@ -136,11 +200,14 @@ Regras:
     if (path.includes("..") || path.startsWith("/")) {
       throw new Error(`Path inválido no patch: ${file.path}`);
     }
-    await writeProjectFile(input.projectId, path, file.content);
+
+    const content = prepareTsxForProject(path, file.content);
+    assertValidTsxOrThrow(path, content);
+
+    await writeProjectFile(input.projectId, path, content);
     written.push(path);
 
     if (/pages\/HomePage\.tsx?$/i.test(path)) {
-      // Garante navegação Home/Login se o patch não tocou App.tsx
       if (!written.some((p) => p.endsWith("App.tsx"))) {
         const appExists = await fileExists(input.projectId, "src/App.tsx");
         if (appExists) {
@@ -161,6 +228,18 @@ Regras:
   return {
     summary: parsed.summary,
     paths: written,
-    model: completion.model,
+    model: patchModel,
   };
+}
+
+/** Valida TSX sem gravar — útil em testes. */
+export function validatePatchFiles(
+  files: Array<{ path: string; content: string }>,
+): string[] {
+  const issues: string[] = [];
+  for (const file of files) {
+    const path = file.path.replace(/\\/g, "/");
+    issues.push(...getTsxSyntaxIssues(file.content, path).map((i) => `${path}: ${i}`));
+  }
+  return issues;
 }

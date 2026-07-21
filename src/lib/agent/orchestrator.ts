@@ -20,6 +20,12 @@ import {
   buildArtQa,
   buildEditQa,
 } from "./prompts";
+import {
+  buildAgentPlanSkillAddon,
+  buildAgentBuildSkillAddon,
+  buildAgentEditSkillAddon,
+  buildAgentRepairSkillAddon,
+} from "@/lib/skills/agent-bridge";
 
 export type StreamEmit = (event: GenerationEvent) => void;
 
@@ -55,8 +61,12 @@ async function runPlan(
   emit({ type: "mode", mode: "plan", model: provider.id });
 
   const lastUser = [...req.messages].reverse().find((m) => m.role === "user");
+  const planPrompt = lastUser?.content ?? "";
   const messages: LlmMessage[] = [
-    { role: "system", content: PLAN_SYSTEM_PROMPT },
+    {
+      role: "system",
+      content: `${PLAN_SYSTEM_PROMPT}\n\n${buildAgentPlanSkillAddon(planPrompt)}`,
+    },
     {
       role: "user",
       content: `${lastUser?.content ?? ""}\n\n${req.userContext ?? ""}\n\nResponda SOMENTE com JSON válido (AppSpec).`,
@@ -163,7 +173,16 @@ async function streamBuild(
         ? REPAIR_SYSTEM_PROMPT
         : BUILD_SYSTEM_PROMPT;
 
-  const system = `${systemBase}\n${req.userContext ?? ""}`;
+  const lastUser = [...req.messages].reverse().find((m) => m.role === "user");
+  const buildPrompt = lastUser?.content ?? "";
+  const skillAddon =
+    mode === "edit"
+      ? buildAgentEditSkillAddon(buildPrompt)
+      : mode === "repair"
+        ? buildAgentRepairSkillAddon()
+        : buildAgentBuildSkillAddon(buildPrompt);
+
+  const system = `${systemBase}\n\n${skillAddon}\n${req.userContext ?? ""}`;
 
   const formatted = req.messages
     .filter((m) => m.content.trim())

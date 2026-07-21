@@ -138,8 +138,9 @@ export async function applyBuilderTask(
   projectId: string,
   projectName: string,
   task: BuilderTaskInput,
+  options?: { briefPrompt?: string | null },
 ): Promise<BuilderApplyResult> {
-  await ensureProjectScaffold(projectId);
+  await ensureProjectScaffold(projectId, { briefPrompt: options?.briefPrompt });
 
   const existing =
     task.path && (task.type === "update_file" || task.type === "create_file")
@@ -150,6 +151,7 @@ export async function applyBuilderTask(
 
   const payload = await generateTaskPayload(provider, task, {
     projectName,
+    briefPrompt: options?.briefPrompt,
     existingFileContent: existing,
   });
 

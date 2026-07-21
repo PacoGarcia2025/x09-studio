@@ -1,4 +1,5 @@
 import type { LlmProvider } from "@/lib/llm/types";
+import { resolveSkills } from "@/lib/skills/resolve";
 import {
   PLAN_JSON_SHAPE_HINT,
   normalizePlannerPayload,
@@ -28,6 +29,7 @@ Regras obrigatórias:
   - SaaS/CRM/dashboard/painel: Task DashboardPage com lista + formulário CRUD (supabase.from).
   - Evite tasks de migrate/build/typecheck.
 - NÃO escreva o código-fonte completo no JSON do plano (só instruções).
+- Em "tasks.instruction", inclua nome da marca, paleta de cores, contatos e cidade EXATOS do pedido do usuário.
 - Em "tasks.instruction", descreva seções e tom em 3–6 frases para Home/Login.
 - tasks tipadas: create_file, update_file, delete_file, run_command, sql_migration, env_set.
 - Entre 4 e 20 tasks. Landing: 4–8. SaaS: 8–16.
@@ -95,9 +97,14 @@ export async function runPlanner(
     .filter(Boolean)
     .join("\n\n");
 
+  const skills = resolveSkills(prompt);
+
   const completion = await provider.complete({
     messages: [
-      { role: "system", content: SYSTEM_PROMPT },
+      {
+        role: "system",
+        content: `${SYSTEM_PROMPT}\n\n═══ SKILLS X09 ATIVAS (${skills.ids.join(", ")}) ═══\n${skills.plannerAddon}`,
+      },
       { role: "user", content: userContent },
     ],
     responseJsonSchema: { type: "object" },
@@ -174,7 +181,7 @@ function ensureFullAppTasks(plan: StudioPlan, prompt: string): StudioPlan {
     id: "t_home_full",
     path: "src/pages/HomePage.tsx",
     title: "Página principal completa",
-    instruction: `Crie a página principal COMPLETA para: ${prompt.slice(0, 350)}. Header com CTA Entrar, hero, 3+ seções, prova social/galeria, CTA final, footer. Textos reais do negócio. Aceite prop opcional onNavigateToLogin?.()`,
+    instruction: `Crie a página principal COMPLETA para: ${prompt.slice(0, 600)}. Use nome da empresa, cores, WhatsApp/telefone/e-mail/endereço/CRECI citados no pedido. Header com CTA Entrar, hero, 3+ seções, prova social/galeria, CTA final, footer. Textos reais — nunca fictícios. Aceite prop opcional onNavigateToLogin?.()`,
     dependsOn: [appId],
     insertAt: 1,
   });

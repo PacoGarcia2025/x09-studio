@@ -44,6 +44,10 @@ type Props = {
   autoStart?: boolean;
   /** Se true, após gerar o plano pede OK (não constrói sozinho). */
   awaitApproval?: boolean;
+  /** Plano salvo mas build nunca iniciou — mostrar botão OK no chat. */
+  needsBuildApproval?: boolean;
+  canPublish?: boolean;
+  publishBlockReason?: string;
 };
 
 function plainPlanBlurb(plan: StudioPlan): string {
@@ -68,6 +72,9 @@ export function ProjectWorkspace({
   initialModel,
   autoStart = false,
   awaitApproval = true,
+  needsBuildApproval = false,
+  canPublish = true,
+  publishBlockReason,
 }: Props) {
   const router = useRouter();
   const [mainTab, setMainTab] = useState<MainTab>("preview");
@@ -86,17 +93,30 @@ export function ProjectWorkspace({
   const [buildToken, setBuildToken] = useState(0);
   const [chatLog, setChatLog] = useState<ChatItem[]>(() => {
     if (!initialPrompt) return [];
-    return [
-      { kind: "user", text: initialPrompt },
-      {
+    const items: ChatItem[] = [{ kind: "user", text: initialPrompt }];
+
+    if (needsBuildApproval && planId && initialPlan) {
+      items.push({
         kind: "ai",
-        working: autoStart && !planId,
-        text:
-          autoStart && !planId
-            ? "Entendi seu pedido. Estou preparando a estrutura do app…"
-            : "Prompt salvo neste projeto. Use o chat para pedir alterações.",
-      },
-    ];
+        text: "Plano pronto. Confirme abaixo para construir o app antes de publicar.",
+      });
+      items.push({
+        kind: "plan",
+        planId,
+        plan: initialPlan,
+      });
+      return items;
+    }
+
+    items.push({
+      kind: "ai",
+      working: autoStart && !planId,
+      text:
+        autoStart && !planId
+          ? "Entendi seu pedido. Estou preparando a estrutura do app…"
+          : "Prompt salvo neste projeto. Use o chat para pedir alterações.",
+    });
+    return items;
   });
   const [verifyToken, setVerifyToken] = useState(0);
   const [fixToken, setFixToken] = useState(0);
@@ -111,7 +131,14 @@ export function ProjectWorkspace({
       ? resolvePublicShareUrl(project.slug, project.published_url)
       : null,
   );
+  const [publishReady, setPublishReady] = useState(canPublish);
+  const [publishBlockMsg, setPublishBlockMsg] = useState(publishBlockReason);
   const [planning, setPlanning] = useState(false);
+
+  useEffect(() => {
+    setPublishReady(canPublish);
+    setPublishBlockMsg(publishBlockReason);
+  }, [canPublish, publishBlockReason]);
 
   useEffect(() => {
     if (planId) setActivePlanId(planId);
@@ -122,10 +149,18 @@ export function ProjectWorkspace({
 
   const statusLabel = useMemo(() => {
     if (isGenerating) return "Gerando…";
-    if (projectStatus === "published") return "Publicado";
+    if (projectStatus === "published") return publishReady ? "Publicado" : "Publicado (desatualizado)";
     if (projectStatus === "ready") return "Pronto";
     return "Visualizando a última versão salva";
-  }, [isGenerating, projectStatus]);
+  }, [isGenerating, projectStatus, publishReady]);
+
+  const publishButtonLabel = useMemo(() => {
+    if (isGenerating) return "Gerando…";
+    if (projectStatus === "published" && publishReady) return "Publicado";
+    if (projectStatus === "published" && !publishReady) return "Publicar";
+    if (projectStatus === "ready") return "Publicar";
+    return "Publicar";
+  }, [isGenerating, projectStatus, publishReady]);
 
   const tabs = useMemo(() => {
     const base: Array<[MainTab, string]> = [
@@ -254,6 +289,8 @@ export function ProjectWorkspace({
   function handlePublished(url: string) {
     setPublishedUrl(url);
     setProjectStatus("published");
+    setPublishReady(true);
+    setPublishBlockMsg(undefined);
     setChatLog((prev) => [
       ...prev,
       {
@@ -340,6 +377,8 @@ export function ProjectWorkspace({
           setIsGenerating(false);
           setBuildEnabled(false);
           setProjectStatus("ready");
+          setPublishReady(true);
+          setPublishBlockMsg(undefined);
           setPreviewKey((k) => k + 1);
           setVerifyToken((t) => t + 1);
           setChatLog((prev) => [
@@ -435,7 +474,7 @@ export function ProjectWorkspace({
               className="rounded-full bg-sky-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-sky-700"
               title={publishedUrl ?? "Publicar site"}
             >
-              {projectStatus === "published" ? "Publicado" : "Publicar"}
+              {publishButtonLabel}
             </button>
             <PublishPanel
               open={publishPanelOpen}
@@ -443,7 +482,9 @@ export function ProjectWorkspace({
               projectId={project.id}
               projectSlug={project.slug}
               initialUrl={publishedUrl}
-              isPublished={projectStatus === "published"}
+              isPublished={projectStatus === "published" && publishReady}
+              canPublish={publishReady}
+              publishBlockReason={publishBlockMsg}
               onPublished={handlePublished}
             />
           </div>

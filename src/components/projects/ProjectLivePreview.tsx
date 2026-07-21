@@ -70,29 +70,49 @@ export function ProjectLivePreview({ projectId, refreshKey = 0 }: Props) {
   const [files, setFiles] = useState<Record<string, string> | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadAttempt, setLoadAttempt] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
     setError(null);
 
-    void (async () => {
-      const result = await getProjectPreviewFiles(projectId);
+    const timeout = window.setTimeout(() => {
       if (cancelled) return;
-      if (!result.ok) {
-        setError(result.error);
-        setFiles(null);
-        setLoading(false);
-        return;
-      }
-      setFiles(result.files);
+      setError(
+        "O preview demorou demais. Clique em «Atualizar preview» ou aguarde a geração terminar.",
+      );
       setLoading(false);
+    }, 45_000);
+
+    void (async () => {
+      try {
+        const result = await getProjectPreviewFiles(projectId);
+        if (cancelled) return;
+        if (!result.ok) {
+          setError(result.error);
+          setFiles(null);
+          setLoading(false);
+          return;
+        }
+        setFiles(result.files);
+        setLoading(false);
+      } catch (err) {
+        if (cancelled) return;
+        setError(
+          err instanceof Error ? err.message : "Falha ao carregar preview",
+        );
+        setLoading(false);
+      } finally {
+        window.clearTimeout(timeout);
+      }
     })();
 
     return () => {
       cancelled = true;
+      window.clearTimeout(timeout);
     };
-  }, [projectId, refreshKey]);
+  }, [projectId, refreshKey, loadAttempt]);
 
   const sandpackFiles = useMemo(
     () => (files ? toSandpackFiles(files) : null),
@@ -110,7 +130,16 @@ export function ProjectLivePreview({ projectId, refreshKey = 0 }: Props) {
   if (error || !sandpackFiles) {
     return (
       <div className="absolute inset-0 grid place-items-center bg-white px-6 text-center text-sm text-zinc-500">
-        {error ?? "Preview indisponível"}
+        <div>
+          <p>{error ?? "Preview indisponível"}</p>
+          <button
+            type="button"
+            onClick={() => setLoadAttempt((n) => n + 1)}
+            className="mt-3 rounded-full bg-zinc-900 px-4 py-2 text-xs font-semibold text-white hover:bg-zinc-800"
+          >
+            Tentar de novo
+          </button>
+        </div>
       </div>
     );
   }

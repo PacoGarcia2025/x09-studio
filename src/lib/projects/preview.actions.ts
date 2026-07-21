@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import {
   listProjectTree,
+  projectDirExists,
   readProjectFile,
   type FileTreeNode,
 } from "@/lib/projects/fs.server";
@@ -58,7 +59,9 @@ export async function getProjectPreviewFiles(
   if (!gate.ok) return gate;
 
   try {
-    await ensureProjectScaffold(projectId);
+    if (!(await projectDirExists(projectId))) {
+      await ensureProjectScaffold(projectId);
+    }
     const tree = await listProjectTree(projectId);
     const paths = flattenFiles(tree);
     const files: Record<string, string> = {};

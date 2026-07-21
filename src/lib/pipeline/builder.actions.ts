@@ -22,7 +22,7 @@ async function assertPlanOwner(planId: string) {
 
   const { data: project } = await supabase
     .from("projects")
-    .select("id, name, workspace_id")
+    .select("id, name, workspace_id, brief_prompt")
     .eq("id", plan.project_id)
     .maybeSingle();
 
@@ -218,7 +218,18 @@ export async function tickBuildAction(planId: string): Promise<
     });
 
     if (tick.done && !tick.failed) {
-      const quality = await critiqueGeneratedApp(gate.project.id);
+      const { data: planRow } = await gate.supabase
+        .from("plans")
+        .select("prompt")
+        .eq("id", planId)
+        .maybeSingle();
+      const briefPrompt =
+        gate.project.brief_prompt?.trim() || planRow?.prompt?.trim() || "";
+
+      const quality = await critiqueGeneratedApp(
+        gate.project.id,
+        briefPrompt || undefined,
+      );
       if (!quality.ok) {
         const detail = quality.issues
           .filter((i) => i.severity === "error")
