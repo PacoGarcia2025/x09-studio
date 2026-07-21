@@ -166,26 +166,13 @@ function ensureFullAppTasks(plan: StudioPlan, prompt: string): StudioPlan {
     return input.id;
   };
 
-  const appId = ensureTask({
-    id: "t_app_nav",
-    path: "src/App.tsx",
-    title: needsDashboardApp(prompt)
-      ? "App com Home + Login + Dashboard"
-      : "App com navegação Home + Login",
-    instruction: needsDashboardApp(prompt)
-      ? "Reescreva App.tsx com useState home|login|app. Renderize HomePage, LoginPage e DashboardPage. SEM AppShell. Login navega para app após sucesso."
-      : "Reescreva App.tsx com useState para páginas home|login. Renderize HomePage e LoginPage. SEM AppShell e SEM texto Meu App. Inclua forma de ir para login a partir da home (callback ou prop).",
-    dependsOn: [],
-    insertAt: 0,
-  });
-
   const homeId = ensureTask({
     id: "t_home_full",
     path: "src/pages/HomePage.tsx",
     title: "Página principal completa",
     instruction: `Crie a página principal COMPLETA para: ${prompt.slice(0, 600)}. Use nome da empresa, cores, WhatsApp/telefone/e-mail/endereço/CRECI citados no pedido. Header com CTA Entrar, hero, 3+ seções, prova social/galeria, CTA final, footer. Textos reais — nunca fictícios. Aceite prop opcional onNavigateToLogin?.()`,
-    dependsOn: [appId],
-    insertAt: 1,
+    dependsOn: [],
+    insertAt: 0,
   });
 
   const loginId = ensureTask({
@@ -194,20 +181,37 @@ function ensureFullAppTasks(plan: StudioPlan, prompt: string): StudioPlan {
     title: "Login e cadastro com Supabase Auth",
     instruction: `Tela de autenticação completa para: ${prompt.slice(0, 200)}. Toggle Entrar/Criar conta, email+senha, busy/error. Use getSupabase() de ../lib/supabase e chame auth.signInWithPassword / auth.signUp de verdade. Após sucesso, chame onNavigateApp?.() se existir, senão onNavigateHome?.(). Visual premium Tailwind. NÃO stub.`,
     dependsOn: [homeId],
-    insertAt: 2,
+    insertAt: 1,
   });
 
+  let appDependsOn = [homeId, loginId];
+
   if (needsDashboardApp(prompt)) {
-    ensureTask({
+    const dashId = ensureTask({
       id: "t_dashboard_crud",
       path: "src/pages/DashboardPage.tsx",
       title: "Dashboard com CRUD",
       instruction: `Crie DashboardPage para: ${prompt.slice(0, 300)}. Layout com sidebar/topbar, título do produto, lista de registros (useState + getSupabase().from se houver tabela; senão estado local com mock inicial). Formulário para criar/editar (nome + campos relevantes), botões salvar/excluir, estados loading/empty/error. Após login o usuário cai aqui. Props: onNavigateHome?: () => void, onSignOut?: () => void. Português, UI densa e útil — NÃO página vazia.`,
       dependsOn: [loginId],
-      insertAt: 3,
+      insertAt: 2,
     });
+    appDependsOn = [homeId, loginId, dashId];
+  }
 
-    // Reforça App.tsx com rota dashboard
+  ensureTask({
+    id: "t_app_nav",
+    path: "src/App.tsx",
+    title: needsDashboardApp(prompt)
+      ? "App com Home + Login + Dashboard"
+      : "App com navegação Home + Login",
+    instruction: needsDashboardApp(prompt)
+      ? "Reescreva App.tsx com useState home|login|app. Renderize HomePage, LoginPage e DashboardPage. SEM AppShell. Login navega para app após sucesso."
+      : "Reescreva App.tsx com useState para páginas home|login. Renderize HomePage e LoginPage. SEM AppShell e SEM texto Meu App. Inclua forma de ir para login a partir da home (callback ou prop).",
+    dependsOn: appDependsOn,
+    insertAt: 99,
+  });
+
+  if (needsDashboardApp(prompt)) {
     const appIdx = pathOf("src/App.tsx");
     if (appIdx >= 0) {
       const current = tasks[appIdx]!;

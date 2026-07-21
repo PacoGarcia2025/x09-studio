@@ -27,13 +27,14 @@ export function ensureImobiliaria360Tasks(
     const idx = pathOf(input.path);
     if (idx >= 0) {
       const current = tasks[idx]!;
-      if (current.instruction.length < 120) {
-        tasks[idx] = {
-          ...current,
-          instruction: `${current.instruction}\n\n${input.instruction}`,
-          dependsOn: [...new Set([...current.dependsOn, ...input.dependsOn])],
-        };
-      }
+      tasks[idx] = {
+        ...current,
+        instruction:
+          current.instruction.length < 120
+            ? `${current.instruction}\n\n${input.instruction}`
+            : current.instruction,
+        dependsOn: [...new Set([...(current.dependsOn ?? []), ...input.dependsOn])],
+      };
       return current.id;
     }
     tasks.splice(insertAt, 0, {

@@ -1,10 +1,17 @@
 import fs from "node:fs/promises";
 import path from "node:path";
-import { getProjectDir, getTemplateDir } from "@/lib/projects/paths";
-import { projectDirExists } from "@/lib/projects/fs.server";
+import { isImobiliaria360 } from "@/lib/skills/detect";
 import { templateScaffoldId } from "@/lib/skills/templates/skill";
+import {
+  fileExists,
+  projectDirExists,
+  writeProjectFile,
+} from "@/lib/projects/fs.server";
+import { getProjectDir, getTemplateDir } from "@/lib/projects/paths";
 
 const DEFAULT_TEMPLATE = "react-supabase-starter";
+
+const IMOB_MERGE_DIRS = ["src/pages", "src/components", "src/lib"] as const;
 
 async function pathExists(p: string): Promise<boolean> {
   try {
@@ -13,6 +20,78 @@ async function pathExists(p: string): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+async function listFilesRecursive(
+  absoluteDir: string,
+  relativeDir = "",
+): Promise<string[]> {
+  const entries = await fs.readdir(absoluteDir, { withFileTypes: true });
+  const out: string[] = [];
+  for (const entry of entries) {
+    const rel = relativeDir ? `${relativeDir}/${entry.name}` : entry.name;
+    if (entry.isDirectory()) {
+      out.push(...(await listFilesRecursive(path.join(absoluteDir, entry.name), rel)));
+    } else {
+      out.push(rel.replace(/\\/g, "/"));
+    }
+  }
+  return out;
+}
+
+/**
+ * Copia arquivos ausentes do template alvo (ex.: ListingsPage) sem sobrescrever
+ * páginas já geradas pelo Builder — corrige preview quebrado mid-build.
+ */
+export async function mergeMissingTemplateFiles(
+  projectId: string,
+  templateId: string,
+): Promise<string[]> {
+  const templateDir = getTemplateDir(templateId);
+  const merged: string[] = [];
+
+  for (const dir of IMOB_MERGE_DIRS) {
+    const abs = path.join(templateDir, dir);
+    if (!(await pathExists(abs))) continue;
+
+    const files = await listFilesRecursive(abs, dir);
+    for (const rel of files) {
+      if (await fileExists(projectId, rel)) continue;
+      const src = path.join(templateDir, rel);
+      if (!(await pathExists(src))) continue;
+      const content = await fs.readFile(src, "utf8");
+      await writeProjectFile(projectId, rel, content);
+      merged.push(rel);
+    }
+  }
+
+  if (merged.length > 0 && (await fileExists(projectId, "package.json"))) {
+    try {
+      const [tplPkgRaw, projPkgRaw] = await Promise.all([
+        fs.readFile(path.join(templateDir, "package.json"), "utf8"),
+        fs.readFile(path.join(getProjectDir(projectId), "package.json"), "utf8"),
+      ]);
+      const tplPkg = JSON.parse(tplPkgRaw) as {
+        dependencies?: Record<string, string>;
+      };
+      const projPkg = JSON.parse(projPkgRaw) as {
+        dependencies?: Record<string, string>;
+      };
+      projPkg.dependencies = {
+        ...(projPkg.dependencies ?? {}),
+        ...(tplPkg.dependencies ?? {}),
+      };
+      await writeProjectFile(
+        projectId,
+        "package.json",
+        `${JSON.stringify(projPkg, null, 2)}\n`,
+      );
+    } catch {
+      // package.json merge best-effort
+    }
+  }
+
+  return merged;
 }
 
 /**
@@ -56,13 +135,18 @@ export async function scaffoldProject(
   return { created: true, projectDir };
 }
 
-/** Garante scaffold; útil para projetos criados antes do Sprint 3. */
+/** Garante scaffold + arquivos ausentes do template correto para o brief. */
 export async function ensureProjectScaffold(
   projectId: string,
   options?: { briefPrompt?: string | null },
 ) {
-  const templateId = options?.briefPrompt?.trim()
-    ? templateScaffoldId(options.briefPrompt)
-    : DEFAULT_TEMPLATE;
-  return scaffoldProject(projectId, { templateId });
+  const brief = options?.briefPrompt?.trim() ?? "";
+  const templateId = brief ? templateScaffoldId(brief) : DEFAULT_TEMPLATE;
+  const result = await scaffoldProject(projectId, { templateId });
+
+  if (brief && isImobiliaria360(brief) && templateId === "imobiliaria-360-starter") {
+    await mergeMissingTemplateFiles(projectId, templateId);
+  }
+
+  return result;
 }

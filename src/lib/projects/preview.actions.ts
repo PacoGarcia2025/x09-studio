@@ -8,6 +8,10 @@ import {
   type FileTreeNode,
 } from "@/lib/projects/fs.server";
 import { ensureProjectScaffold } from "@/lib/projects/scaffold.server";
+import {
+  findBrokenImports,
+  formatBrokenImportMessage,
+} from "@/lib/projects/import-graph.server";
 import { toSandpackVirtualPath, parseDotEnv, patchSupabaseEnvInCode, prepareSandpackFileContent } from "@/lib/projects/preview-map";
 
 async function assertOwner(projectId: string) {
@@ -19,7 +23,7 @@ async function assertOwner(projectId: string) {
 
   const { data: project } = await supabase
     .from("projects")
-    .select("id, workspace_id")
+    .select("id, workspace_id, status, brief_prompt")
     .eq("id", projectId)
     .maybeSingle();
 
@@ -53,14 +57,42 @@ export async function getProjectPreviewFiles(
   projectId: string,
 ): Promise<
   | { ok: true; files: Record<string, string>; updatedAt: string }
-  | { ok: false; error: string }
+  | { ok: false; error: string; generating?: boolean }
 > {
   const gate = await assertOwner(projectId);
   if (!gate.ok) return gate;
 
+  const supabase = await createClient();
+  const { data: project } = await supabase
+    .from("projects")
+    .select("status, brief_prompt")
+    .eq("id", projectId)
+    .maybeSingle();
+
+  const briefPrompt = project?.brief_prompt ?? null;
+  const projectStatus = project?.status ?? "draft";
+
   try {
     if (!(await projectDirExists(projectId))) {
-      await ensureProjectScaffold(projectId);
+      await ensureProjectScaffold(projectId, { briefPrompt });
+    } else if (briefPrompt) {
+      await ensureProjectScaffold(projectId, { briefPrompt });
+    }
+
+    const broken = await findBrokenImports(projectId);
+    if (broken.length > 0) {
+      if (projectStatus === "generating") {
+        return {
+          ok: false,
+          error:
+            "A IA ainda está gerando o app. Aguarde a conclusão ou volte e clique em «Continuar build».",
+          generating: true,
+        };
+      }
+      return {
+        ok: false,
+        error: `${formatBrokenImportMessage(broken)}. Abra o Builder e clique em «Continuar build» ou regenere o projeto.`,
+      };
     }
     const tree = await listProjectTree(projectId);
     const paths = flattenFiles(tree);

@@ -1,6 +1,12 @@
 import "server-only";
 import { fileExists, readProjectFile } from "@/lib/projects/fs.server";
 import {
+  findBrokenImports,
+  formatBrokenImportMessage,
+} from "@/lib/projects/import-graph.server";
+import { IMOBILIARIA_PAGES } from "@/lib/skills/imobiliaria-360";
+import { isImobiliaria360 } from "@/lib/skills/detect";
+import {
   evaluateDashboardWithSkills,
   evaluateHomeWithSkills,
 } from "@/lib/skills/code-review";
@@ -181,6 +187,29 @@ export async function critiqueGeneratedApp(
         severity: "error",
       });
       score -= 15;
+    }
+  }
+
+  const broken = await findBrokenImports(projectId);
+  if (broken.length > 0) {
+    issues.push({
+      code: "broken_imports",
+      message: formatBrokenImportMessage(broken),
+      severity: "error",
+    });
+    score -= 35;
+  }
+
+  if (briefPrompt && isImobiliaria360(briefPrompt)) {
+    for (const rel of IMOBILIARIA_PAGES) {
+      if (!(await fileExists(projectId, rel))) {
+        issues.push({
+          code: "missing_imob_page",
+          message: `Portal imobiliário incompleto: falta ${rel}`,
+          severity: "error",
+        });
+        score -= 20;
+      }
     }
   }
 

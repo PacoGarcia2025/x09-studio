@@ -4,13 +4,13 @@ export function isImobiliaria360(prompt: string): boolean {
   if (!text) return false;
 
   const strong =
-    /\b(portal imobili[aá]rio|imobili[aá]ria 360|360[°º]?|smart search|cat[aá]logo de im[oó]veis|listagem de im[oó]veis|corretor(es)?|carteira de im[oó]veis|vgv|creci|matterport|penthouse|im[oó]veis exclusivos)\b/i.test(
+    /\b(portal imobili[aá]rio|imobili[aá]ria 360|360[°º]?|smart search|cat[aá]logo de im[oó]veis|listagem de im[oó]veis|corretor(es)?|carteira de im[oó]veis|vgv|creci|matterport|penthouse|im[oó]veis exclusivos|site.{0,40}imobili|imobili.{0,40}(site|im[oó]veis))\b/i.test(
       text,
     );
 
   const combo =
     /\bimobili[aá]ria\b/i.test(text) &&
-    /\b(crm|corretor|dashboard|listagem|cat[aá]logo|portal|aluguel|comprar|lan[cç]amentos|propriet[aá]rio|administrador)\b/i.test(
+    /\b(crm|corretor|dashboard|listagem|cat[aá]logo|portal|aluguel|comprar|lan[cç]amentos|propriet[aá]rio|administrador|im[oó]veis|alto padr[aã]o|luxo|boutique)\b/i.test(
       text,
     );
 

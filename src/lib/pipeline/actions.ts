@@ -288,12 +288,33 @@ export async function chatProjectAction(
         message: trimmed,
       });
 
+      const { critiqueGeneratedApp } = await import(
+        "@/lib/pipeline/quality-critic.server"
+      );
+      const brief =
+        (gate.project as { brief_prompt?: string | null }).brief_prompt ??
+        latest?.prompt ??
+        "";
+      const quality = await critiqueGeneratedApp(projectId, brief || undefined);
+      const nextStatus = quality.ok ? "ready" : "error";
+
       await gate.supabase
         .from("projects")
-        .update({ status: "ready" })
+        .update({ status: nextStatus })
         .eq("id", projectId);
 
       revalidatePath(`/projects/${projectId}`);
+      if (!quality.ok) {
+        const detail = quality.issues
+          .filter((i) => i.severity === "error")
+          .slice(0, 2)
+          .map((i) => i.message)
+          .join("; ");
+        return {
+          ok: false,
+          error: `Edição incompleta: ${detail || "imports ou páginas faltando"}`,
+        };
+      }
       return {
         ok: true,
         intent: "edit",
