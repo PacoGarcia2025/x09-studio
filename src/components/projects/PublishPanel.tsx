@@ -1,7 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { buildProjectSubdomainHost, buildProjectSubdomainUrl } from "@/lib/projects/publish-url";
+import {
+  buildProjectSubdomainHost,
+  buildProjectSubdomainUrl,
+  resolveProjectPublishUrl,
+} from "@/lib/projects/publish-url";
 import { publishProjectAction } from "@/lib/projects/publish.actions";
 
 type Props = {
@@ -24,9 +28,8 @@ export function PublishPanel({
   onPublished,
 }: Props) {
   const panelRef = useRef<HTMLDivElement>(null);
-  const [url, setUrl] = useState(
-    initialUrl ?? buildProjectSubdomainUrl(projectSlug),
-  );
+  const canonicalUrl = resolveProjectPublishUrl(projectSlug, initialUrl);
+  const [url, setUrl] = useState(canonicalUrl);
   const [host, setHost] = useState(buildProjectSubdomainHost(projectSlug));
   const [published, setPublished] = useState(isPublished);
   const [busy, setBusy] = useState(false);
@@ -37,7 +40,7 @@ export function PublishPanel({
 
   useEffect(() => {
     if (!open) return;
-    setUrl(initialUrl ?? buildProjectSubdomainUrl(projectSlug));
+    setUrl(resolveProjectPublishUrl(projectSlug, initialUrl));
     setHost(buildProjectSubdomainHost(projectSlug));
     setPublished(isPublished);
     setError(null);

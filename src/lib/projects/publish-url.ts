@@ -16,6 +16,49 @@ export function buildProjectSubdomainUrl(slug: string): string {
   return `https://${buildProjectSubdomainHost(slug)}`;
 }
 
+/** Converte URL legada (/sites/{slug}) para subdomínio canônico. */
+export function resolveProjectPublishUrl(
+  slug: string,
+  stored?: string | null,
+): string {
+  const canonical = buildProjectSubdomainUrl(slug);
+  const raw = stored?.trim();
+  if (!raw) return canonical;
+
+  try {
+    const parsed = new URL(raw);
+    const legacyPath = `/sites/${slug}`;
+    if (
+      parsed.pathname === legacyPath ||
+      parsed.pathname === `${legacyPath}/`
+    ) {
+      return canonical;
+    }
+    if (parsed.hostname.toLowerCase() === buildProjectSubdomainHost(slug)) {
+      return raw;
+    }
+  } catch {
+    // ignore
+  }
+
+  return canonical;
+}
+
+/** true se published_url ainda usa /sites/{slug}. */
+export function isLegacyPublishedUrl(slug: string, stored?: string | null): boolean {
+  const raw = stored?.trim();
+  if (!raw) return false;
+  try {
+    const parsed = new URL(raw);
+    const legacyPath = `/sites/${slug}`;
+    return (
+      parsed.pathname === legacyPath || parsed.pathname === `${legacyPath}/`
+    );
+  } catch {
+    return false;
+  }
+}
+
 /** Extrai slug de host `{slug}.studio.x09.com.br`. */
 export function extractPublishSlugFromHost(host: string): string | null {
   const hostname = host.split(":")[0]?.toLowerCase() ?? "";

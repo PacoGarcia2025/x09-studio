@@ -14,6 +14,7 @@ import { VerifyPanel } from "@/components/verify/VerifyPanel";
 import { chatProjectAction } from "@/lib/pipeline/actions";
 import type { StudioPlan } from "@/lib/pipeline/plan-schema";
 import { PublishPanel } from "@/components/projects/PublishPanel";
+import { resolveProjectPublishUrl } from "@/lib/projects/publish-url";
 
 type MainTab = "preview" | "code" | "layers" | "pipeline";
 
@@ -106,7 +107,9 @@ export function ProjectWorkspace({
   const [previewKey, setPreviewKey] = useState(0);
   const [publishPanelOpen, setPublishPanelOpen] = useState(false);
   const [publishedUrl, setPublishedUrl] = useState<string | null>(
-    project.published_url ?? null,
+    project.published_url
+      ? resolveProjectPublishUrl(project.slug, project.published_url)
+      : null,
   );
   const [planning, setPlanning] = useState(false);
 

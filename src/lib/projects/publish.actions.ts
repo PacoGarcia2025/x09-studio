@@ -5,6 +5,8 @@ import { createClient } from "@/lib/supabase/server";
 import {
   buildProjectSubdomainHost,
   buildProjectSubdomainUrl,
+  isLegacyPublishedUrl,
+  resolveProjectPublishUrl,
 } from "@/lib/projects/publish-url";
 
 function publicSiteUrl(slug: string): string {
@@ -55,6 +57,14 @@ export async function publishProjectAction(
   if (!gate.ok) return { ok: false, error: gate.error };
 
   const url = publicSiteUrl(gate.project.slug);
+
+  // Corrige URL legada /sites/{slug} gravada antes do subdomínio
+  if (isLegacyPublishedUrl(gate.project.slug, gate.project.published_url)) {
+    await gate.supabase
+      .from("projects")
+      .update({ published_url: url })
+      .eq("id", projectId);
+  }
 
   // published_url pode não existir se migration não rodou
   const update = await gate.supabase
