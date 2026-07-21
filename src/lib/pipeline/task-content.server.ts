@@ -3,8 +3,9 @@ import type { LlmProvider } from "@/lib/llm/types";
 import { resolveCommandPlan } from "@/lib/pipeline/commands.allowlist";
 import type { PlanTaskType } from "@/lib/pipeline/plan-schema";
 import { formatBuilderContext } from "@/lib/pipeline/brief-context";
+import { isImobiliaria360 } from "@/lib/skills/detect";
 import { resolveSkills } from "@/lib/skills/resolve";
-import { lacksCinematicQuality } from "@/lib/skills/premium-design";
+import { lacksPremiumQuality } from "@/lib/skills/premium-design";
 import {
   getTsxSyntaxIssues,
   hasValidTsxSyntax,
@@ -75,6 +76,24 @@ function skillPromptForPath(
   if (p.endsWith("pages/HomePage.tsx") || p.endsWith("pages/HomePage.jsx")) {
     return { system: skills.homePageSystem, maxTokens: 16384 };
   }
+  if (p.endsWith("pages/ListingsPage.tsx")) {
+    return { system: skills.listingsPageSystem, maxTokens: 16384 };
+  }
+  if (p.endsWith("pages/PropertyDetailPage.tsx")) {
+    return { system: skills.propertyDetailPageSystem, maxTokens: 16384 };
+  }
+  if (p.endsWith("pages/BrokerDashboardPage.tsx")) {
+    return { system: skills.brokerDashboardPageSystem, maxTokens: 16384 };
+  }
+  if (p.endsWith("pages/OwnerPortalPage.tsx")) {
+    return { system: skills.ownerPortalPageSystem, maxTokens: 12288 };
+  }
+  if (p.endsWith("pages/AdminDashboardPage.tsx")) {
+    return { system: skills.adminDashboardPageSystem, maxTokens: 12288 };
+  }
+  if (p.endsWith("lib/properties.ts")) {
+    return { system: skills.propertiesLibSystem, maxTokens: 8192 };
+  }
   if (p.endsWith("pages/LoginPage.tsx") || p.endsWith("pages/LoginPage.jsx")) {
     return { system: skills.loginPageSystem, maxTokens: 10240 };
   }
@@ -85,19 +104,19 @@ function skillPromptForPath(
     return { system: skills.dashboardPageSystem, maxTokens: 16384 };
   }
   if (p.endsWith("App.tsx") || p.endsWith("App.jsx")) {
-    return { system: skills.appTsxRules, maxTokens: 4096 };
+    return { system: skills.appTsxRules, maxTokens: 6144 };
   }
   return { system: skills.fileSystemBase, maxTokens: 8192 };
 }
 
 /** Detecta landing fraca (abaixo do padrão premium). */
-export function isWeakHomePage(content: string): boolean {
+export function isWeakHomePage(content: string, brief = ""): boolean {
   const trimmed = content.trim();
   if (trimmed.length < 2000) return true;
   if (/Bem-vindo|Este app foi gerado pelo X09|Lorem ipsum/i.test(trimmed))
     return true;
   if (!/export\s+(function|const)\s+HomePage/.test(trimmed)) return true;
-  if (lacksCinematicQuality(trimmed).length > 0) return true;
+  if (lacksPremiumQuality(trimmed, brief).length > 0) return true;
   const words = trimmed.match(/[A-Za-zÀ-ÿ]{4,}/g) ?? [];
   if (words.length < 80) return true;
   return false;
@@ -202,11 +221,11 @@ export async function generateTaskPayload(
       const isLogin = /pages\/LoginPage\.tsx?$/i.test(normalizedPath);
       const isDashboard = /pages\/DashboardPage\.tsx?$/i.test(normalizedPath);
 
-      if (isHome && isWeakHomePage(content)) {
+      if (isHome && isWeakHomePage(content, skillPrompt)) {
         const retryUser = [
           base,
-          "REJEITADO: abaixo do padrão premium cinematográfico (R$20k). Reescreva HomePage COMPLETA: framer-motion, gradientes mesh, 5+ seções, copy real do brief, CTAs com cor de marca.",
-          `Falhas detectadas: ${lacksCinematicQuality(content).join("; ") || "conteúdo raso"}`,
+          "REJEITADO: abaixo do padrão premium (R$20k). Reescreva HomePage COMPLETA: framer-motion, 5+ seções, copy real do brief, CTAs com cor de marca.",
+          `Falhas detectadas: ${lacksPremiumQuality(content, skillPrompt).join("; ") || "conteúdo raso"}`,
           'Retorne JSON {"content":"..."} com HomePage.tsx completo.',
         ].join("\n\n");
         content = filePayloadSchema.parse(
@@ -341,6 +360,93 @@ export default function App() {
   }
 
   return <HomePage onNavigateToLogin={() => setPage("login")} />;
+}
+`;
+
+/** App.tsx multi-página imobiliária 360°. */
+export const IMOBILIARIA_APP_TSX = `import { useState } from "react";
+import { HomePage } from "./pages/HomePage";
+import { ListingsPage } from "./pages/ListingsPage";
+import { PropertyDetailPage } from "./pages/PropertyDetailPage";
+import { LoginPage } from "./pages/LoginPage";
+import { BrokerDashboardPage } from "./pages/BrokerDashboardPage";
+import { OwnerPortalPage } from "./pages/OwnerPortalPage";
+import { AdminDashboardPage } from "./pages/AdminDashboardPage";
+
+type Page = "home" | "listings" | "property" | "login" | "broker" | "owner" | "admin";
+
+export default function App() {
+  const [page, setPage] = useState<Page>("home");
+  const [propertyId, setPropertyId] = useState<string>("1");
+
+  if (page === "login") {
+    return (
+      <LoginPage
+        onNavigateHome={() => setPage("home")}
+        onNavigateApp={() => setPage("broker")}
+      />
+    );
+  }
+
+  if (page === "broker") {
+    return (
+      <BrokerDashboardPage
+        onNavigateHome={() => setPage("home")}
+        onSignOut={() => setPage("home")}
+      />
+    );
+  }
+
+  if (page === "owner") {
+    return (
+      <OwnerPortalPage
+        onNavigateHome={() => setPage("home")}
+        onSignOut={() => setPage("home")}
+      />
+    );
+  }
+
+  if (page === "admin") {
+    return (
+      <AdminDashboardPage
+        onNavigateHome={() => setPage("home")}
+        onSignOut={() => setPage("home")}
+      />
+    );
+  }
+
+  if (page === "listings") {
+    return (
+      <ListingsPage
+        onNavigateHome={() => setPage("home")}
+        onSelectProperty={(id) => {
+          setPropertyId(id);
+          setPage("property");
+        }}
+      />
+    );
+  }
+
+  if (page === "property") {
+    return (
+      <PropertyDetailPage
+        propertyId={propertyId}
+        onNavigateBack={() => setPage("listings")}
+        onNavigateListings={() => setPage("listings")}
+      />
+    );
+  }
+
+  return (
+    <HomePage
+      onNavigateToLogin={() => setPage("login")}
+      onNavigateListings={() => setPage("listings")}
+      onSelectProperty={(id) => {
+        setPropertyId(id);
+        setPage("property");
+      }}
+    />
+  );
 }
 `;
 

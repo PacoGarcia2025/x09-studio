@@ -1,4 +1,16 @@
 import { getActiveSkills, getProductType, resolveSkillIds } from "@/lib/skills/registry";
+import { isImobiliaria360, isLuxuryLight } from "@/lib/skills/detect";
+import {
+  ADMIN_DASHBOARD_BASE,
+  BROKER_DASHBOARD_BASE,
+  IMOBILIARIA_APP_TSX_RULES,
+  LISTINGS_PAGE_BASE,
+  OWNER_PORTAL_BASE,
+  PROPERTIES_LIB_BASE,
+  PROPERTY_DETAIL_BASE,
+} from "@/lib/skills/imobiliaria-360";
+import { LUXURY_LIGHT_BAR } from "@/lib/skills/luxury-light";
+import { CINEMATIC_PREMIUM_BAR } from "@/lib/skills/premium-design";
 import { pickTemplateProfile } from "@/lib/skills/templates/catalog";
 import { templatePlannerAddon } from "@/lib/skills/templates/skill";
 import type { ResolvedSkills } from "@/lib/skills/types";
@@ -50,6 +62,9 @@ export function resolveSkills(prompt: string): ResolvedSkills {
   const skills = getActiveSkills(prompt);
   const ids = resolveSkillIds(prompt);
   const profile = pickTemplateProfile(prompt);
+  const imob = isImobiliaria360(prompt);
+  const luxury = isLuxuryLight(prompt);
+  const visualBar = luxury ? LUXURY_LIGHT_BAR : CINEMATIC_PREMIUM_BAR;
 
   const plannerAddon = joinBlocks([
     templatePlannerAddon(prompt),
@@ -58,11 +73,13 @@ export function resolveSkills(prompt: string): ResolvedSkills {
 
   const fileSystemBase = joinBlocks([
     FILE_BASE,
+    visualBar,
     ...skills.map((s) => s.builderFileRules),
   ]);
 
   const homePageSystem = joinBlocks([
     HOME_BASE,
+    visualBar,
     ...skills.map((s) => s.homePageRules),
   ]);
 
@@ -88,7 +105,23 @@ export function resolveSkills(prompt: string): ResolvedSkills {
     homePageSystem,
     loginPageSystem,
     dashboardPageSystem,
-    appTsxRules: APP_TSX_BASE,
+    listingsPageSystem: imob
+      ? joinBlocks([LISTINGS_PAGE_BASE, visualBar])
+      : FILE_BASE,
+    propertyDetailPageSystem: imob
+      ? joinBlocks([PROPERTY_DETAIL_BASE, visualBar])
+      : FILE_BASE,
+    brokerDashboardPageSystem: imob
+      ? joinBlocks([BROKER_DASHBOARD_BASE, visualBar])
+      : dashboardPageSystem,
+    ownerPortalPageSystem: imob
+      ? joinBlocks([OWNER_PORTAL_BASE, visualBar])
+      : FILE_BASE,
+    adminDashboardPageSystem: imob
+      ? joinBlocks([ADMIN_DASHBOARD_BASE, visualBar])
+      : FILE_BASE,
+    propertiesLibSystem: imob ? PROPERTIES_LIB_BASE : FILE_BASE,
+    appTsxRules: imob ? IMOBILIARIA_APP_TSX_RULES : APP_TSX_BASE,
     editPatchRules,
   };
 }

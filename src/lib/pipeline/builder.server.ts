@@ -7,6 +7,7 @@ import {
   LANDING_APP_TSX,
   MINIMAL_DASHBOARD_PAGE_TSX,
 } from "@/lib/pipeline/task-content.server";
+import { isImobiliaria360 } from "@/lib/skills/detect";
 import type { PlanTaskType } from "@/lib/pipeline/plan-schema";
 import {
   deleteProjectFile,
@@ -162,17 +163,27 @@ export async function applyBuilderTask(
 
       let log = `${task.type} → ${task.path} (${payload.content.length} chars)`;
 
-      // Landing: remove o chrome "Meu App / Início / Entrar" do template.
+      // Landing simples: remove chrome "Meu App". Imobiliária 360° usa App.tsx próprio.
       if (isHomePagePath(task.path)) {
-        await writeProjectFile(projectId, "src/App.tsx", LANDING_APP_TSX);
-        if (!(await fileExists(projectId, "src/pages/DashboardPage.tsx"))) {
-          await writeProjectFile(
-            projectId,
-            "src/pages/DashboardPage.tsx",
-            MINIMAL_DASHBOARD_PAGE_TSX,
-          );
+        const brief = options?.briefPrompt ?? "";
+        if (!isImobiliaria360(brief)) {
+          await writeProjectFile(projectId, "src/App.tsx", LANDING_APP_TSX);
+          if (!(await fileExists(projectId, "src/pages/DashboardPage.tsx"))) {
+            await writeProjectFile(
+              projectId,
+              "src/pages/DashboardPage.tsx",
+              MINIMAL_DASHBOARD_PAGE_TSX,
+            );
+          }
+          log += " + App.tsx sem AppShell";
         }
-        log += " + App.tsx sem AppShell";
+      }
+
+      if (
+        task.path?.replace(/\\/g, "/") === "src/App.tsx" &&
+        isImobiliaria360(options?.briefPrompt ?? "")
+      ) {
+        log += " + App imobiliária 360°";
       }
 
       return { log };

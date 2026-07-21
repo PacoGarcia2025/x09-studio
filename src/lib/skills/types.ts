@@ -5,9 +5,11 @@ export type SkillId =
   | "x09-visual-edits"
   | "x09-code-review"
   | "x09-templates"
-  | "x09-seo-performance";
+  | "x09-seo-performance"
+  | "x09-luxury-light"
+  | "x09-imobiliaria-360";
 
-export type ProductType = "landing" | "saas" | "dashboard" | "mixed";
+export type ProductType = "landing" | "saas" | "dashboard" | "mixed" | "portal";
 
 export type SkillQualityIssue = {
   code: string;
@@ -44,6 +46,12 @@ export type ResolvedSkills = {
   homePageSystem: string;
   loginPageSystem: string;
   dashboardPageSystem: string;
+  listingsPageSystem: string;
+  propertyDetailPageSystem: string;
+  brokerDashboardPageSystem: string;
+  ownerPortalPageSystem: string;
+  adminDashboardPageSystem: string;
+  propertiesLibSystem: string;
   appTsxRules: string;
   editPatchRules: string;
 };

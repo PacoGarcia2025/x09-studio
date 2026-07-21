@@ -1,4 +1,6 @@
 import type { LlmProvider } from "@/lib/llm/types";
+import { ensureImobiliaria360Tasks } from "@/lib/pipeline/planner-imobiliaria";
+import { isImobiliaria360 } from "@/lib/skills/detect";
 import { resolveSkills } from "@/lib/skills/resolve";
 import {
   PLAN_JSON_SHAPE_HINT,
@@ -32,7 +34,7 @@ Regras obrigatórias:
 - Em "tasks.instruction", inclua nome da marca, paleta de cores, contatos e cidade EXATOS do pedido do usuário.
 - Em "tasks.instruction", descreva seções e tom em 3–6 frases para Home/Login.
 - tasks tipadas: create_file, update_file, delete_file, run_command, sql_migration, env_set.
-- Entre 4 e 20 tasks. Landing: 4–8. SaaS: 8–16.
+- Entre 4 e 20 tasks. Landing: 4–8. SaaS: 8–16. Portal imobiliário 360°: 15–25 (use skill imobiliaria).
 - Cada task: "id" único e "dependsOn" quando houver dependência.
 - database.tables, auth.providers e auth.roles DEVEM ser arrays.
 - auth.providers: ["email"], auth.roles mínimos: ["visitor","user"].
@@ -113,12 +115,12 @@ export async function runPlanner(
   });
 
   const parsed = extractJsonObject(completion.text);
-  const plan = ensureFullAppTasks(
-    remapPlanPaths(
-      studioPlanSchema.parse(normalizePlannerPayload(parsed)),
-    ),
-    input.prompt,
+  const remapped = remapPlanPaths(
+    studioPlanSchema.parse(normalizePlannerPayload(parsed)),
   );
+  const plan = isImobiliaria360(input.prompt)
+    ? ensureImobiliaria360Tasks(remapped, input.prompt)
+    : ensureFullAppTasks(remapped, input.prompt);
 
   return {
     plan,

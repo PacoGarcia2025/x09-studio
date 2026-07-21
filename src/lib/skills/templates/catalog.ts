@@ -1,4 +1,7 @@
+import { isImobiliaria360 } from "@/lib/skills/detect";
+
 export type TemplateProfileId =
+  | "imobiliaria-360"
   | "landing-premium"
   | "saas-crm"
   | "portfolio-agency";
@@ -15,6 +18,17 @@ export type TemplateProfile = {
 };
 
 export const TEMPLATE_PROFILES: TemplateProfile[] = [
+  {
+    id: "imobiliaria-360",
+    scaffoldId: "imobiliaria-360-starter",
+    label: "Imobiliária 360°",
+    description:
+      "Portal imobiliário multi-página: catálogo, detalhe, CRM corretor, portal proprietário e admin BI.",
+    generationHints:
+      "15–25 tasks: properties.ts mock, Home smart search, ListingsPage filtros+mapa, PropertyDetailPage imersiva, Login multi-persona, Broker/Owner/Admin dashboards, App.tsx roteamento completo.",
+    match:
+      /\b(portal imobili[aá]rio|imobili[aá]ria 360|360[°º]?|smart search|cat[aá]logo de im[oó]veis|listagem de im[oó]veis|corretor(es)?|carteira de im[oó]veis|vgv|matterport|penthouse|im[oó]veis exclusivos)\b/i,
+  },
   {
     id: "landing-premium",
     scaffoldId: "react-supabase-starter",
@@ -52,6 +66,10 @@ const DEFAULT_PROFILE = TEMPLATE_PROFILES[0]!;
 export function pickTemplateProfile(prompt: string): TemplateProfile {
   const text = prompt.trim();
   if (!text) return DEFAULT_PROFILE;
+
+  if (isImobiliaria360(text)) {
+    return TEMPLATE_PROFILES.find((p) => p.id === "imobiliaria-360")!;
+  }
 
   for (const profile of TEMPLATE_PROFILES) {
     if (profile.match.test(text)) return profile;

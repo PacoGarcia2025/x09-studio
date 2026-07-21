@@ -13,8 +13,15 @@ export {
 } from "@/lib/skills/code-review";
 export {
   lacksCinematicQuality,
+  lacksPremiumQuality,
   CINEMATIC_PREMIUM_BAR,
 } from "@/lib/skills/premium-design";
+export { LUXURY_LIGHT_BAR } from "@/lib/skills/luxury-light";
+export { isImobiliaria360, isLuxuryLight } from "@/lib/skills/detect";
+export {
+  IMOBILIARIA_PAGES,
+  x09Imobiliaria360Skill,
+} from "@/lib/skills/imobiliaria-360";
 export {
   pickTemplateProfile,
   TEMPLATE_PROFILES,

@@ -1,4 +1,4 @@
-import { lacksCinematicQuality } from "@/lib/skills/premium-design";
+import { lacksPremiumQuality } from "@/lib/skills/premium-design";
 import { briefMissingFromContent } from "@/lib/pipeline/brief-context";
 import type { StudioSkill } from "@/lib/skills/types";
 
@@ -33,7 +33,7 @@ LANDING PREMIUM (conversão + cinema):
 - Se mudar cor, aplique em hero, CTAs, orbs e accents — não só um botão.
 `.trim(),
   evaluateHome(home, brief) {
-    const issues = lacksCinematicQuality(home).map((message) => ({
+    const issues = lacksPremiumQuality(home, brief).map((message) => ({
       code: "landing_premium",
       message,
       severity: "error" as const,

@@ -1,3 +1,6 @@
+import { isLuxuryLight } from "@/lib/skills/detect";
+import { lacksLuxuryLightQuality } from "@/lib/skills/luxury-light";
+
 /**
  * Barra de qualidade visual cinematográfica (nível agência R$15–30k).
  * Compartilhada entre skills de geração.
@@ -60,4 +63,11 @@ export function lacksCinematicQuality(home: string): string[] {
   }
 
   return issues;
+}
+
+/** Luxury light ou cinematic conforme brief. */
+export function lacksPremiumQuality(home: string, prompt: string): string[] {
+  return isLuxuryLight(prompt)
+    ? lacksLuxuryLightQuality(home)
+    : lacksCinematicQuality(home);
 }
