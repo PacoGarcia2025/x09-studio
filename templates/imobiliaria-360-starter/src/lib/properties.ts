@@ -11,6 +11,8 @@ export type Property = {
   suites: number;
   parking: number;
   area: number;
+  lat?: number;
+  lng?: number;
   tags: string[];
   images: string[];
   description: string;
@@ -34,9 +36,11 @@ export const MOCK_PROPERTIES: Property[] = [
     suites: 3,
     parking: 4,
     area: 420,
+    lat: -23.5675,
+    lng: -46.6682,
     tags: ["Penthouse", "Exclusividade", "Pé direito duplo"],
     images: [
-      "https://images.unsplash.com/photo-1613490493576-7fde63acd811?w=1200",
+      "https://images.unsplash.com/photo-1613490493576-7fde63acd811?w=1200&fm=webp&q=80",
     ],
     description: "Cobertura de alto padrão com vista panorâmica.",
     iptu: 4200,

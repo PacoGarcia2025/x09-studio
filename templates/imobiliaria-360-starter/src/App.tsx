@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { CookieConsent } from "./components/CookieConsent";
+import { SeoHead } from "./components/SeoHead";
 import { HomePage } from "./pages/HomePage";
 import { ListingsPage } from "./pages/ListingsPage";
 import { PropertyDetailPage } from "./pages/PropertyDetailPage";
@@ -72,8 +74,13 @@ export default function App() {
   }
 
   return (
-    <HomePage
-      onNavigateToLogin={() => setPage("login")}
-    />
+    <>
+      <SeoHead
+        title="Portal Imobiliário Premium"
+        description="Imóveis exclusivos de alto padrão — catálogo, tour virtual e atendimento personalizado."
+      />
+      <CookieConsent />
+      <HomePage onNavigateToLogin={() => setPage("login")} />
+    </>
   );
 }

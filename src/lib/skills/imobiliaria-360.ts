@@ -21,7 +21,7 @@ Responda APENAS JSON: { "content": string }.
 - export function ListingsPage({ onNavigateHome, onSelectProperty }: { onNavigateHome?: () => void; onSelectProperty?: (id: string) => void })
 - import { MOCK_PROPERTIES, type Property } from "../lib/properties"
 - Layout split: grid de cards + painel lateral de filtros (tipo, quartos, preço slider, tags lifestyle).
-- Mapa mock: div com pins simulados (position absolute) ou grid com ícones MapPin + preço — não precisa Leaflet real.
+- Mapa REAL: import { OsmMap } from "../components/OsmMap" — split screen listagem + OsmMap com lat/lng do imóvel selecionado.
 - Ordenação: Menor preço | Maior preço | Mais recentes.
 - Cards: foto Unsplash, badge Exclusividade, metragem, quartos, vagas, preço formatado BRL.
 - Skeleton loaders ao filtrar (animate-pulse).
@@ -32,10 +32,11 @@ Responda APENAS JSON: { "content": string }.
 - export function PropertyDetailPage({ propertyId, onNavigateBack, onNavigateListings }: { propertyId: string; onNavigateBack?: () => void; onNavigateListings?: () => void })
 - import { getPropertyById } from "../lib/properties"
 - Galeria estilo Apple: foto principal + mosaico lateral + botão tela cheia (useState).
-- Embed Matterport/YouTube: iframe mock com src placeholder ou botão "Tour 360°".
+- Embed Matterport/YouTube: iframe com src do brief quando citado (matterport.com/show, youtube.com/embed) — title acessível.
 - Calculadora financiamento: sliders entrada + prazo → parcela estimada (useState).
 - Ficha técnica: IPTU, condomínio, área, suítes, vagas (ícones lucide).
-- Mapa localização mock + POIs (escolas, restaurantes).
+- Mapa localização: OsmMap com property.lat/lng + POIs em lista abaixo.
+- SeoHead + buildPropertyJsonLd (RealEstateListing) do imóvel atual.
 - Sticky sidebar: foto corretor, Agendar Visita (date input), WhatsApp 1-clique (wa.me), Simular Proposta.
 - TSX válido (~150+ linhas).`;
 
@@ -67,7 +68,7 @@ Responda APENAS JSON: { "content": string }.
 
 export const PROPERTIES_LIB_BASE = `Você gera src/lib/properties.ts com dados mock imobiliários realistas.
 Responda APENAS JSON: { "content": string }.
-- export type Property = { id, slug, title, type, neighborhood, city, price, rent?, bedrooms, suites, parking, area, tags: string[], images: string[], description, iptu?, condo?, brokerName, brokerPhone, featured }
+- export type Property = { id, slug, title, type, neighborhood, city, price, rent?, bedrooms, suites, parking, area, lat?, lng?, tags: string[], images: string[], description, iptu?, condo?, brokerName, brokerPhone, featured }
 - export const MOCK_PROPERTIES: Property[] — mínimo 8 imóveis variados (cobertura, casa, apto, lançamento).
 - export function getPropertyById(id: string): Property | undefined
 - export function formatPriceBRL(n: number): string

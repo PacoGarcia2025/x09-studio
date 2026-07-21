@@ -91,7 +91,13 @@ describe("fase 3 — imobiliária 360°", () => {
     expect(ids).toContain("x09-imobiliaria-360");
     expect(ids).toContain("x09-luxury-light");
     expect(ids).toContain("x09-saas-builder");
+    expect(ids).toContain("x09-enterprise-publish");
     expect(getProductType(PORTAL_PROMPT)).toBe("portal");
+  });
+
+  it("enterprise publish skill is always active", () => {
+    const ids = resolveSkillIds("landing simples");
+    expect(ids).toContain("x09-enterprise-publish");
   });
 
   it("resolves imobiliaria scaffold and page systems", () => {

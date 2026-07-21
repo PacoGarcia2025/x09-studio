@@ -94,6 +94,9 @@ function skillPromptForPath(
   if (p.endsWith("lib/properties.ts")) {
     return { system: skills.propertiesLibSystem, maxTokens: 8192 };
   }
+  if (p.endsWith("lib/auth-roles.ts") || p.includes("/components/")) {
+    return { system: skills.fileSystemBase, maxTokens: 6144 };
+  }
   if (p.endsWith("pages/LoginPage.tsx") || p.endsWith("pages/LoginPage.jsx")) {
     return { system: skills.loginPageSystem, maxTokens: 10240 };
   }

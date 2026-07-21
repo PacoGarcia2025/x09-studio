@@ -137,13 +137,24 @@ export function ensureImobiliaria360Tasks(
 
   upsert(
     {
+      id: "t_imob_auth_roles",
+      path: "src/lib/auth-roles.ts",
+      title: "Auth roles Supabase",
+      instruction: `auth-roles.ts: getCurrentRole, signUpWithRole(email, password, role), roleDashboardPage. Roles: buyer|broker|owner|admin via user_metadata.`,
+      dependsOn: [],
+    },
+    8,
+  );
+
+  upsert(
+    {
       id: "t_imob_app",
       path: "src/App.tsx",
       title: "App multi-página imobiliária",
-      instruction: `App.tsx: useState page home|listings|property|login|broker|owner|admin + selectedPropertyId. Wire todas as páginas. Login roteia para broker/owner/admin. SEM AppShell.`,
+      instruction: `App.tsx: useState page home|listings|property|login|broker|owner|admin + selectedPropertyId. Import CookieConsent + SeoHead globais. Login usa auth-roles para rotear persona. SEM AppShell.`,
       dependsOn: [homeId, listingsId, detailId, loginId, brokerId, ownerId, adminId],
     },
-    8,
+    9,
   );
 
   const pages = [

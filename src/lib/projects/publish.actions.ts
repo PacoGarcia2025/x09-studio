@@ -11,6 +11,7 @@ import {
   resolvePublicShareUrl,
 } from "@/lib/projects/publish-url";
 import { getProjectPublishReadiness } from "@/lib/projects/publish-readiness.server";
+import { prepareProjectForPublish } from "@/lib/publish/prepare.server";
 
 function publicSiteUrl(slug: string): string {
   return buildProjectSubdomainUrl(slug);
@@ -25,7 +26,7 @@ async function assertOwner(projectId: string) {
 
   const { data: project } = await supabase
     .from("projects")
-    .select("id, name, slug, status, workspace_id, published_url, publish_status")
+    .select("id, name, slug, status, workspace_id, published_url, publish_status, brief_prompt")
     .eq("id", projectId)
     .maybeSingle();
 
@@ -77,6 +78,18 @@ export async function publishProjectAction(
   const url = isSubdomainPublishReady()
     ? publicSiteUrl(gate.project.slug)
     : resolvePublicShareUrl(gate.project.slug, gate.project.published_url);
+
+  try {
+    await prepareProjectForPublish({
+      projectId,
+      projectName: gate.project.name,
+      slug: gate.project.slug,
+      briefPrompt: gate.project.brief_prompt,
+      publishedUrl: url,
+    });
+  } catch (prepError) {
+    console.warn("[publish] prepare SEO failed", prepError);
+  }
 
   // Corrige URL legada /sites/{slug} gravada antes do subdomínio
   if (isLegacyPublishedUrl(gate.project.slug, gate.project.published_url)) {

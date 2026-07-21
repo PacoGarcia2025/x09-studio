@@ -7,7 +7,8 @@ export type SkillId =
   | "x09-templates"
   | "x09-seo-performance"
   | "x09-luxury-light"
-  | "x09-imobiliaria-360";
+  | "x09-imobiliaria-360"
+  | "x09-enterprise-publish";
 
 export type ProductType = "landing" | "saas" | "dashboard" | "mixed" | "portal";
 

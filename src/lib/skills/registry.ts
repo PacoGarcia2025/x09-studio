@@ -7,6 +7,7 @@ import { x09TemplatesSkill } from "@/lib/skills/templates/skill";
 import { x09SeoPerformanceSkill } from "@/lib/skills/seo-performance/skill";
 import { x09LuxuryLightSkill } from "@/lib/skills/luxury-light";
 import { x09Imobiliaria360Skill } from "@/lib/skills/imobiliaria-360";
+import { x09EnterprisePublishSkill } from "@/lib/skills/enterprise-publish";
 import { isImobiliaria360, isLuxuryLight } from "@/lib/skills/detect";
 import type { ProductType, SkillId, StudioSkill } from "@/lib/skills/types";
 
@@ -20,6 +21,7 @@ export const SKILL_REGISTRY: Record<SkillId, StudioSkill> = {
   "x09-seo-performance": x09SeoPerformanceSkill,
   "x09-luxury-light": x09LuxuryLightSkill,
   "x09-imobiliaria-360": x09Imobiliaria360Skill,
+  "x09-enterprise-publish": x09EnterprisePublishSkill,
 };
 
 const ALWAYS_ON: SkillId[] = [
@@ -28,6 +30,7 @@ const ALWAYS_ON: SkillId[] = [
   "x09-code-review",
   "x09-templates",
   "x09-seo-performance",
+  "x09-enterprise-publish",
 ];
 
 export function pickProductSkillIds(prompt: string): SkillId[] {
