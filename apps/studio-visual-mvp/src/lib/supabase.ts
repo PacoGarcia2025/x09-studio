@@ -1,14 +1,18 @@
 import { createClient } from "@supabase/supabase-js";
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as
-  | string
-  | undefined;
+const FALLBACK_URL = "https://example.supabase.co";
+const FALLBACK_KEY = "sb_publishable_placeholder";
 
-if (!supabaseUrl || !supabaseAnonKey) {
+const envUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined;
+const envKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
+
+if (!envUrl?.trim() || !envKey?.trim()) {
   console.warn(
-    "[supabase] VITE_SUPABASE_URL ou VITE_SUPABASE_ANON_KEY ausentes no .env.local — a conexão não vai funcionar.",
+    "[supabase] VITE_SUPABASE_URL ou VITE_SUPABASE_ANON_KEY ausentes no .env.local — usando placeholder (CI/testes).",
   );
 }
 
-export const supabase = createClient(supabaseUrl ?? "", supabaseAnonKey ?? "");
+export const supabase = createClient(
+  envUrl?.trim() || FALLBACK_URL,
+  envKey?.trim() || FALLBACK_KEY,
+);
