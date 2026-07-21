@@ -6,16 +6,11 @@ const APP_ROOT = fs.existsSync(path.join(__dirname, "package.json"))
   ? __dirname
   : path.resolve(__dirname, "..");
 
-function loadEnv() {
-  const envPath = path.join(APP_ROOT, ".env");
+function loadEnvFile(filePath) {
   const envVars = {};
+  if (!fs.existsSync(filePath)) return envVars;
 
-  if (!fs.existsSync(envPath)) {
-    console.warn(`[ecosystem] .env não encontrado em ${envPath}`);
-    return envVars;
-  }
-
-  const content = fs.readFileSync(envPath, "utf-8").replace(/^\uFEFF/, "");
+  const content = fs.readFileSync(filePath, "utf-8").replace(/^\uFEFF/, "");
   for (const line of content.split(/\r?\n/)) {
     const trimmed = line.trim();
     if (!trimmed || trimmed.startsWith("#")) continue;
@@ -35,8 +30,23 @@ function loadEnv() {
     ) {
       val = val.slice(1, -1);
     }
-    // Remove aspas escapadas residual e espaços
     envVars[key] = val.trim();
+  }
+  return envVars;
+}
+
+function loadEnv() {
+  const envPath = path.join(APP_ROOT, ".env");
+  const envLocalPath = path.join(APP_ROOT, ".env.local");
+
+  // .env base + .env.local sobrescreve (mesmo padrão do Next.js)
+  const envVars = {
+    ...loadEnvFile(envPath),
+    ...loadEnvFile(envLocalPath),
+  };
+
+  if (!fs.existsSync(envPath) && !fs.existsSync(envLocalPath)) {
+    console.warn(`[ecosystem] .env/.env.local não encontrados em ${APP_ROOT}`);
   }
 
   // Aliases → nome canônico usado no código
@@ -52,8 +62,11 @@ function loadEnv() {
     "OPENAI_API_KEY",
     "ANTHROPIC_API_KEY",
     "GEMINI_API_KEY",
+    "STUDIO_PROJECTS_ROOT",
+    "SUPABASE_SECRET_KEY",
+    "SUPABASE_SERVICE_ROLE_KEY",
   ].filter((k) => Boolean(envVars[k]));
-  console.log(`[ecosystem] LLM keys carregadas: ${present.join(", ") || "(nenhuma)"}`);
+  console.log(`[ecosystem] env carregado: ${present.join(", ") || "(nenhuma chave crítica)"}`);
 
   return envVars;
 }
