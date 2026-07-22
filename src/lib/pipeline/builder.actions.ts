@@ -114,6 +114,42 @@ export async function getBuildState(
   };
 }
 
+/** Retoma fila sem resetar tasks já concluídas (ex.: após F5). */
+export async function resumeBuildAction(
+  planId: string,
+): Promise<{ ok: true; resumed: boolean } | { ok: false; error: string }> {
+  const gate = await assertPlanOwner(planId);
+  if (gate.error || !gate.supabase || !gate.plan || !gate.project) {
+    return { ok: false, error: gate.error ?? "Erro" };
+  }
+
+  const { data: tasks } = await gate.supabase
+    .from("plan_tasks")
+    .select("status")
+    .eq("plan_id", planId);
+
+  const list = tasks ?? [];
+  const allDone = list.every(
+    (t) => t.status === "done" || t.status === "skipped",
+  );
+  if (allDone) {
+    return { ok: true, resumed: false };
+  }
+
+  await gate.supabase
+    .from("plans")
+    .update({ status: "building", error_message: null })
+    .eq("id", planId);
+
+  await gate.supabase
+    .from("projects")
+    .update({ status: "generating" })
+    .eq("id", gate.project.id);
+
+  revalidatePath(`/projects/${gate.project.id}`);
+  return { ok: true, resumed: true };
+}
+
 export async function startBuildAction(
   planId: string,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
@@ -199,6 +235,7 @@ export async function tickBuildAction(planId: string): Promise<
       ok: true;
       done: boolean;
       failed: boolean;
+      processed: boolean;
       message: string;
       currentTaskKey: string | null;
       counts: BuildState["counts"];
@@ -244,6 +281,7 @@ export async function tickBuildAction(planId: string): Promise<
           ok: true,
           done: true,
           failed: true,
+          processed: tick.processed,
           message: `Qualidade insuficiente (score ${quality.score}/100): ${detail || "gere de novo pelo chat"}`,
           currentTaskKey: null,
           counts: tick.counts,
@@ -254,18 +292,21 @@ export async function tickBuildAction(planId: string): Promise<
         .from("projects")
         .update({ status: "ready" })
         .eq("id", gate.project.id);
+      revalidatePath(`/projects/${gate.project.id}`);
     }
     if (tick.failed) {
       await gate.supabase
         .from("projects")
         .update({ status: "error" })
         .eq("id", gate.project.id);
+      revalidatePath(`/projects/${gate.project.id}`);
     }
 
     return {
       ok: true,
       done: tick.done,
       failed: tick.failed,
+      processed: tick.processed,
       message: tick.message,
       currentTaskKey: tick.currentTaskKey,
       counts: tick.counts,

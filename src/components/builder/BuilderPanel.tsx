@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import {
   getBuildState,
   requeueBuildTaskAction,
+  resumeBuildAction,
   startBuildAction,
   tickBuildAction,
   type BuildState,
@@ -67,12 +68,27 @@ export function BuilderPanel({
           setRunning(false);
           return;
         }
+      } else {
+        const resume = await resumeBuildAction(planId);
+        if (!resume.ok) {
+          setError(resume.error);
+          runningRef.current = false;
+          setRunning(false);
+          return;
+        }
+        if (!resume.resumed) {
+          runningRef.current = false;
+          setRunning(false);
+          refresh();
+          onBuildSuccess?.();
+          return;
+        }
       }
 
-      let guard = 0;
+      let steps = 0;
+      let idleTicks = 0;
       let endedOk = false;
-      while (guard < 80) {
-        guard += 1;
+      while (steps < 250) {
         const tick = await tickBuildAction(planId);
         if (!tick.ok) {
           setError(tick.error);
@@ -83,6 +99,17 @@ export function BuilderPanel({
           endedOk = !tick.failed;
           break;
         }
+        if (/Aguardando task em execução\/retry/i.test(tick.message)) {
+          idleTicks += 1;
+          if (idleTicks >= 60) {
+            setError("Build travou aguardando retry da IA.");
+            break;
+          }
+          await new Promise((r) => setTimeout(r, 2500));
+          continue;
+        }
+        idleTicks = 0;
+        steps += 1;
       }
 
       runningRef.current = false;

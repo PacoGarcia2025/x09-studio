@@ -17,6 +17,7 @@ import {
 } from "@/lib/projects/fs.server";
 import { getProjectDir } from "@/lib/projects/paths";
 import { ensureProjectScaffold } from "@/lib/projects/scaffold.server";
+import { fixBrokenImagesInSource } from "@/lib/pipeline/source-images";
 
 export type BuilderTaskInput = {
   type: PlanTaskType;
@@ -125,6 +126,12 @@ async function upsertEnv(
   return `env ${key} atualizado em ${envPath}`;
 }
 
+function polishGeneratedSource(path: string, content: string): string {
+  const normalized = path.replace(/\\/g, "/");
+  if (!/\.(tsx|ts|jsx|js)$/.test(normalized)) return content;
+  return fixBrokenImagesInSource(content);
+}
+
 function isHomePagePath(filePath: string): boolean {
   const p = filePath.replace(/\\/g, "/");
   return /\/pages\/HomePage\.tsx?$/i.test(p) || p === "src/pages/HomePage.tsx";
@@ -159,9 +166,10 @@ export async function applyBuilderTask(
   switch (payload.kind) {
     case "file": {
       if (!task.path) throw new Error("path obrigatório");
-      await writeProjectFile(projectId, task.path, payload.content);
+      const polished = polishGeneratedSource(task.path, payload.content);
+      await writeProjectFile(projectId, task.path, polished);
 
-      let log = `${task.type} → ${task.path} (${payload.content.length} chars)`;
+      let log = `${task.type} → ${task.path} (${polished.length} chars)`;
 
       // Landing simples: remove chrome "Meu App". Imobiliária 360° usa App.tsx próprio.
       if (isHomePagePath(task.path)) {

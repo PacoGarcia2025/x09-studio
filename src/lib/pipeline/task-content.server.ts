@@ -11,6 +11,11 @@ import {
   hasValidTsxSyntax,
   isTsxPath,
 } from "@/lib/pipeline/jsx-validate";
+import {
+  fixBrokenImagesInSource,
+  hasBrokenImageSources,
+  isScaffoldPlaceholderHome,
+} from "@/lib/pipeline/source-images";
 
 const filePayloadSchema = z.object({
   content: z.string().min(1).max(120_000),
@@ -115,6 +120,7 @@ function skillPromptForPath(
 /** Detecta landing fraca (abaixo do padrão premium). */
 export function isWeakHomePage(content: string, brief = ""): boolean {
   const trimmed = content.trim();
+  if (isScaffoldPlaceholderHome(trimmed)) return true;
   if (trimmed.length < 2000) return true;
   if (/Bem-vindo|Este app foi gerado pelo X09|Lorem ipsum/i.test(trimmed))
     return true;
@@ -277,6 +283,10 @@ export async function generateTaskPayload(
           throw new Error(
             `Sintaxe TSX inválida em ${normalizedPath}: ${syntaxIssues.join("; ")}`,
           );
+        }
+
+        if (hasBrokenImageSources(content)) {
+          content = fixBrokenImagesInSource(content);
         }
       }
 

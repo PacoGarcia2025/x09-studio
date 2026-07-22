@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { BuilderPanel } from "@/components/builder/BuilderPanel";
 import { FixPanel } from "@/components/fix/FixPanel";
 import { PlannerPanel } from "@/components/planner/PlannerPanel";
@@ -12,6 +12,7 @@ import { ProjectLivePreview } from "@/components/projects/ProjectLivePreview";
 import { SilentBuildRunner } from "@/components/projects/SilentBuildRunner";
 import { VerifyPanel } from "@/components/verify/VerifyPanel";
 import { chatProjectAction } from "@/lib/pipeline/actions";
+import { getBuildState } from "@/lib/pipeline/builder.actions";
 import type { StudioPlan } from "@/lib/pipeline/plan-schema";
 import { PublishPanel } from "@/components/projects/PublishPanel";
 import { resolvePublicShareUrl } from "@/lib/projects/publish-url";
@@ -90,7 +91,9 @@ export function ProjectWorkspace({
   const [buildEnabled, setBuildEnabled] = useState(
     Boolean(planId && project.status === "generating" && !awaitApproval),
   );
+  const [buildFreshStart, setBuildFreshStart] = useState(false);
   const [buildToken, setBuildToken] = useState(0);
+  const lastDoneTasksRef = useRef(0);
   const [chatLog, setChatLog] = useState<ChatItem[]>(() => {
     if (!initialPrompt) return [];
     const items: ChatItem[] = [{ kind: "user", text: initialPrompt }];
@@ -147,6 +150,63 @@ export function ProjectWorkspace({
     setProjectStatus(project.status);
   }, [initialModel, initialPlan, planId, project.status]);
 
+  useEffect(() => {
+    if (developerMode || !activePlanId) return;
+    if (projectStatus !== "generating") return;
+    setBuildEnabled(true);
+    setIsGenerating(true);
+  }, [activePlanId, developerMode, projectStatus]);
+
+  useEffect(() => {
+    if (!activePlanId || !isGenerating || developerMode || buildEnabled) return;
+
+    const poll = async () => {
+      const result = await getBuildState(activePlanId);
+      if (!result.ok) return;
+
+      const { counts, planStatus } = result.data;
+      if (counts.done > lastDoneTasksRef.current) {
+        lastDoneTasksRef.current = counts.done;
+        setPreviewKey((k) => k + 1);
+      }
+
+      const finished =
+        counts.queued === 0 &&
+        counts.running === 0 &&
+        counts.retrying === 0 &&
+        (planStatus === "built" || counts.done + counts.failed === counts.total);
+
+      if (!finished) return;
+
+      if (counts.failed > 0) {
+        setIsGenerating(false);
+        setProjectStatus("error");
+        setPreviewKey((k) => k + 1);
+        router.refresh();
+        return;
+      }
+
+      setIsGenerating(false);
+      setProjectStatus("ready");
+      setPublishReady(true);
+      setPublishBlockMsg(undefined);
+      setPreviewKey((k) => k + 1);
+      router.refresh();
+    };
+
+    const id = window.setInterval(() => {
+      void poll();
+    }, 5_000);
+    void poll();
+    return () => window.clearInterval(id);
+  }, [
+    activePlanId,
+    buildEnabled,
+    developerMode,
+    isGenerating,
+    router,
+  ]);
+
   const statusLabel = useMemo(() => {
     if (isGenerating) return "Gerando…";
     if (projectStatus === "published") return publishReady ? "Publicado" : "Publicado (desatualizado)";
@@ -199,6 +259,7 @@ export function ProjectWorkspace({
     setActivePlanId(planItemId);
     setIsGenerating(true);
     setProjectStatus("generating");
+    setBuildFreshStart(true);
     setBuildToken((t) => t + 1);
     setBuildEnabled(true);
     setChatLog((prev) => [
@@ -332,6 +393,7 @@ export function ProjectWorkspace({
             setActivePlanId(next.planId);
             setActivePlan(next.plan);
             setActiveModel(next.model);
+            setBuildFreshStart(true);
             setBuildToken((t) => t + 1);
             setBuildEnabled(true);
             setChatLog((prev) => [
@@ -360,6 +422,7 @@ export function ProjectWorkspace({
       <SilentBuildRunner
         planId={activePlanId}
         enabled={buildEnabled && !developerMode}
+        freshStart={buildFreshStart}
         runToken={buildToken}
         onProgress={(message) => {
           setChatLog((prev) => {
@@ -372,10 +435,12 @@ export function ProjectWorkspace({
             ];
           });
         }}
+        onPreviewUpdate={() => setPreviewKey((k) => k + 1)}
         onSuccess={() => {
           setBusy(false);
           setIsGenerating(false);
           setBuildEnabled(false);
+          setBuildFreshStart(false);
           setProjectStatus("ready");
           setPublishReady(true);
           setPublishBlockMsg(undefined);
@@ -394,6 +459,7 @@ export function ProjectWorkspace({
           setBusy(false);
           setIsGenerating(false);
           setBuildEnabled(false);
+          setBuildFreshStart(false);
           setProjectStatus("error");
           setChatLog((prev) => [
             ...prev.filter((m) => !(m.kind === "ai" && m.working)),
