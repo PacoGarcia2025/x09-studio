@@ -228,6 +228,19 @@ body {
   animation: x09-fade 420ms ease both;
 }
 
+/* Formulários em páginas claras (configurações) — evita herdar texto claro do body dark */
+.x09-settings-light,
+.x09-settings-light input,
+.x09-settings-light textarea,
+.x09-settings-light select {
+  color: #18181b;
+}
+
+.x09-settings-light input::placeholder,
+.x09-settings-light textarea::placeholder {
+  color: #a1a1aa;
+}
+
 @keyframes x09-fade {
   from {
     opacity: 0;

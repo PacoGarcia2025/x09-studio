@@ -20,7 +20,7 @@ export default async function ProjectSettingsPage({ params }: Props) {
   if (!settings.ok) notFound();
 
   return (
-    <div className="min-h-screen bg-[#F7F7F8]">
+    <div className="min-h-screen bg-[#F7F7F8] text-zinc-900">
       <header className="flex h-12 items-center gap-3 border-b border-zinc-200 bg-white px-4">
         <Link
           href={`/projects/${id}`}
@@ -32,7 +32,7 @@ export default async function ProjectSettingsPage({ params }: Props) {
           Configurações — {settings.name}
         </h1>
       </header>
-      <main className="px-4 py-8">
+      <main className="x09-settings-light px-4 py-8">
         <ProjectSettingsForm
           projectId={id}
           initialBrief={settings.briefPrompt}

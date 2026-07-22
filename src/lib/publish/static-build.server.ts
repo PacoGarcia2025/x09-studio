@@ -34,12 +34,14 @@ async function runNpm(
   args: string[],
   cwd: string,
   log: string[],
+  envOverrides?: Record<string, string | undefined>,
 ): Promise<void> {
   log.push(`$ npm ${args.join(" ")}`);
+  const env = { ...process.env, ...envOverrides };
   await execFileAsync("npm", args, {
     cwd,
     timeout: 300_000,
-    env: { ...process.env, NODE_ENV: "production" },
+    env,
     shell: process.platform === "win32",
     maxBuffer: 10 * 1024 * 1024,
   });
@@ -68,8 +70,22 @@ export async function buildStaticSiteForPublish(input: {
   const outDir = path.join(getStaticClientsRoot(), input.slug);
 
   try {
-    await runNpm(["ci", "--prefer-offline", "--no-audit"], projectDir, log);
-    await runNpm(["run", "build"], projectDir, log);
+    // NODE_ENV=production omite devDependencies (typescript/vite) — tsc some do PATH.
+    await runNpm(["ci", "--prefer-offline", "--no-audit"], projectDir, log, {
+      NODE_ENV: "development",
+    });
+
+    try {
+      await runNpm(["run", "build"], projectDir, log, {
+        NODE_ENV: "production",
+      });
+    } catch (buildErr) {
+      log.push("npm run build falhou — tentando vite build direto…");
+      await runNpm(["exec", "--", "vite", "build"], projectDir, log, {
+        NODE_ENV: "production",
+      });
+      if (buildErr instanceof Error) log.push(buildErr.message);
+    }
 
     const distStat = await fs.stat(distDir).catch(() => null);
     if (!distStat?.isDirectory()) {

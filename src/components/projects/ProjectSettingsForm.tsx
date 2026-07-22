@@ -34,6 +34,9 @@ const FIELDS: Array<{
   { key: "brandColors", label: "Paleta de cores da marca" },
 ];
 
+const fieldClass =
+  "w-full rounded-xl border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 caret-zinc-900 placeholder:text-zinc-400 shadow-sm outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-200";
+
 export function ProjectSettingsForm({
   projectId,
   initialBrief,
@@ -68,7 +71,7 @@ export function ProjectSettingsForm({
   }
 
   return (
-    <div className="mx-auto max-w-2xl space-y-8 pb-16">
+    <div className="mx-auto max-w-2xl space-y-8 pb-16 text-zinc-900">
       <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
         <strong>Em breve:</strong> upload de logotipo, PDF institucional e anexos
         (imagem, PDF, áudio) no chat. Os campos abaixo já entram automaticamente
@@ -81,7 +84,7 @@ export function ProjectSettingsForm({
           value={briefPrompt}
           onChange={(e) => setBriefPrompt(e.target.value)}
           rows={6}
-          className="w-full rounded-xl border border-zinc-200 px-3 py-2 text-sm"
+          className={fieldClass}
           placeholder="Descreva o site, tom, páginas desejadas…"
         />
       </section>
@@ -101,7 +104,7 @@ export function ProjectSettingsForm({
                 }
                 rows={rows}
                 placeholder={placeholder}
-                className="w-full rounded-xl border border-zinc-200 px-3 py-2 text-sm"
+                className={fieldClass}
               />
             ) : (
               <input
@@ -110,7 +113,7 @@ export function ProjectSettingsForm({
                   setFacts((prev) => ({ ...prev, [key]: e.target.value }))
                 }
                 placeholder={placeholder}
-                className="w-full rounded-xl border border-zinc-200 px-3 py-2 text-sm"
+                className={fieldClass}
               />
             )}
           </label>
