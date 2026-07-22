@@ -94,6 +94,37 @@ export async function mergeMissingTemplateFiles(
   return merged;
 }
 
+async function mergeTemplatePackageJson(
+  projectId: string,
+  templateId: string,
+): Promise<void> {
+  if (!(await fileExists(projectId, "package.json"))) return;
+  try {
+    const templateDir = getTemplateDir(templateId);
+    const [tplPkgRaw, projPkgRaw] = await Promise.all([
+      fs.readFile(path.join(templateDir, "package.json"), "utf8"),
+      fs.readFile(path.join(getProjectDir(projectId), "package.json"), "utf8"),
+    ]);
+    const tplPkg = JSON.parse(tplPkgRaw) as {
+      dependencies?: Record<string, string>;
+    };
+    const projPkg = JSON.parse(projPkgRaw) as {
+      dependencies?: Record<string, string>;
+    };
+    projPkg.dependencies = {
+      ...(tplPkg.dependencies ?? {}),
+      ...(projPkg.dependencies ?? {}),
+    };
+    await writeProjectFile(
+      projectId,
+      "package.json",
+      `${JSON.stringify(projPkg, null, 2)}\n`,
+    );
+  } catch {
+    // best-effort
+  }
+}
+
 /**
  * Copia o template oficial para STUDIO_PROJECTS_ROOT/{projectId}.
  * Idempotente: se a pasta já existir e tiver package.json, não sobrescreve.
@@ -143,6 +174,8 @@ export async function ensureProjectScaffold(
   const brief = options?.briefPrompt?.trim() ?? "";
   const templateId = brief ? templateScaffoldId(brief) : DEFAULT_TEMPLATE;
   const result = await scaffoldProject(projectId, { templateId });
+
+  await mergeTemplatePackageJson(projectId, templateId);
 
   if (brief && isImobiliaria360(brief) && templateId === "imobiliaria-360-starter") {
     await mergeMissingTemplateFiles(projectId, templateId);

@@ -5,6 +5,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { promisify } from "node:util";
 import { projectDirExists } from "@/lib/projects/fs.server";
+import { ensureProjectDependencies } from "@/lib/publish/project-deps.server";
 import { getProjectDir, getStaticClientsRoot } from "@/lib/projects/paths";
 
 const execFileAsync = promisify(execFile);
@@ -70,6 +71,11 @@ export async function buildStaticSiteForPublish(input: {
   const outDir = path.join(getStaticClientsRoot(), input.slug);
 
   try {
+    const addedDeps = await ensureProjectDependencies(input.projectId);
+    if (addedDeps.length > 0) {
+      log.push(`Deps adicionadas ao package.json: ${addedDeps.join(", ")}`);
+    }
+
     // NODE_ENV=production omite devDependencies (typescript/vite) — tsc some do PATH.
     await runNpm(["ci", "--prefer-offline", "--no-audit"], projectDir, log, {
       NODE_ENV: "development",
