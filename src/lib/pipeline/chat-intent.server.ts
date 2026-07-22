@@ -5,15 +5,36 @@ export type ChatIntent = "create" | "edit" | "ask" | "resume_build";
 /** Pedido para retomar geração interrompida (não é edição de código). */
 export function isResumeBuildMessage(message: string): boolean {
   const m = message.trim();
+  if (!m) return false;
+
+  if (
+    /\b(onde parou|de onde parou|where (you )?left off)\b/i.test(m) &&
+    /\b(continue|continuar|retomar|retome|prossiga|seguir)\b/i.test(m)
+  ) {
+    return true;
+  }
+
+  if (
+    /\b(continu(e|ar)|retom(e|ar)|prossig(a|ir)|seguir)\b.*\b(gera(ç|c)ão|build|site|app|projeto|preview|constru)/i.test(
+      m,
+    )
+  ) {
+    return true;
+  }
+
+  if (
+    /\b(gera(ç|c)ão|build|constru).*\b(continu|retom|conclu|finaliz|termin)/i.test(
+      m,
+    )
+  ) {
+    return true;
+  }
+
   return (
-    /\b(continu|retom|conclu|finaliz|termin).*(gera|geração|build|site|app|projeto|preview|constru)/i.test(
-      m,
-    ) ||
-    /\b(gera|geração|build|constru).*(continu|retom|conclu|finaliz|termin)/i.test(
-      m,
-    ) ||
     /\bcontinuar (de )?onde parou\b/i.test(m) ||
-    /\bretomar (a )?geração\b/i.test(m)
+    /\bretomar (a )?geração\b/i.test(m) ||
+    /\btermin(ar|e) (de )?gerar\b/i.test(m) ||
+    /\bfaltou (gerar|construir|terminar)\b/i.test(m)
   );
 }
 
@@ -71,10 +92,11 @@ export async function classifyChatIntent(
         {
           role: "system",
           content: `Classifique a intenção do usuário para o editor X09 Studio.
-Responda APENAS JSON: {"intent":"create"|"edit"|"ask"}
+Responda APENAS JSON: {"intent":"create"|"edit"|"ask"|"resume_build"}
 - create: gerar app/plano novo (ou refazer tudo)
 - edit: alterar arquivos do app já existente (texto, cor, seção, login, etc.)
 - ask: só pergunta, sem mudar código
+- resume_build: continuar/retomar geração interrompida ("continue de onde parou", "retomar build", etc.) — NÃO é edit
 Projeto atual: ${input.projectName}. Já existe app gerado: sim.`,
         },
         { role: "user", content: message },
