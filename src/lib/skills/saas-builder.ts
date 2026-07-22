@@ -1,4 +1,5 @@
 import { lacksCinematicQuality } from "@/lib/skills/premium-design";
+import { isImobiliaria360 } from "@/lib/skills/detect";
 import type { StudioSkill } from "@/lib/skills/types";
 
 export const x09SaasBuilderSkill: StudioSkill = {
@@ -36,6 +37,7 @@ DASHBOARD PREMIUM (área logada vendável):
 - Edições SaaS: mantenha CRUD funcional; não remova auth ou rotas.
 `.trim(),
   evaluateHome(home, brief) {
+    if (isImobiliaria360(brief)) return [];
     return lacksCinematicQuality(home).map((message) => ({
       code: "saas_home_premium",
       message,

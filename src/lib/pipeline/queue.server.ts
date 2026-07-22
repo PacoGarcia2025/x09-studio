@@ -181,12 +181,15 @@ export async function tickBuilderQueue(
     supabase.from("plans").select("prompt").eq("id", input.planId).maybeSingle(),
     supabase
       .from("projects")
-      .select("brief_prompt")
+      .select("brief_prompt, company_facts")
       .eq("id", input.projectId)
       .maybeSingle(),
   ]);
+  const { buildEffectiveBrief } = await import("@/lib/projects/effective-brief");
   const briefPrompt =
-    projectRow?.brief_prompt?.trim() || planRow?.prompt?.trim() || null;
+    buildEffectiveBrief(projectRow?.brief_prompt, projectRow?.company_facts) ||
+    planRow?.prompt?.trim() ||
+    null;
 
   const { data: tasks, error } = await supabase
     .from("plan_tasks")

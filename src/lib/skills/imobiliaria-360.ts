@@ -63,7 +63,7 @@ Responda APENAS JSON: { "content": string }.
 - export function AdminDashboardPage({ onNavigateHome, onSignOut }: props)
 - KPIs BI: VGV, imóveis carteira, corretores ativos, comissões mês.
 - Tabela corretores com performance.
-- Gráfico vendas (barras CSS ou recharts se disponível).
+- Gráfico vendas com barras CSS (div + height %) — PROIBIDO importar recharts (quebra preview).
 - useState + mock (~120+ linhas).`;
 
 export const PROPERTIES_LIB_BASE = `Você gera src/lib/properties.ts com dados mock imobiliários realistas.

@@ -2,7 +2,9 @@ import "server-only";
 import { fileExists, readProjectFile } from "@/lib/projects/fs.server";
 import {
   findBrokenImports,
+  findDisallowedNpmImports,
   formatBrokenImportMessage,
+  formatDisallowedNpmMessage,
 } from "@/lib/projects/import-graph.server";
 import { IMOBILIARIA_PAGES } from "@/lib/skills/imobiliaria-360";
 import { isImobiliaria360 } from "@/lib/skills/detect";
@@ -10,6 +12,10 @@ import {
   evaluateDashboardWithSkills,
   evaluateHomeWithSkills,
 } from "@/lib/skills/code-review";
+import {
+  countPageSections,
+  meetsPremiumSectionBar,
+} from "@/lib/pipeline/page-sections";
 
 export type QualityIssue = {
   code: string;
@@ -88,11 +94,11 @@ export async function critiqueGeneratedApp(
       });
       score -= 30;
     }
-    const sections = (home.match(/<section\b/gi) ?? []).length;
-    if (sections < 4) {
+    const sections = countPageSections(home);
+    if (!meetsPremiumSectionBar(home, 4)) {
       issues.push({
         code: "few_sections",
-        message: "Home precisa de pelo menos 4 seções (padrão premium)",
+        message: `Home precisa de mais estrutura (${sections} blocos — premium exige 4+ seções ou conteúdo denso)`,
         severity: "error",
       });
       score -= 15;
@@ -198,6 +204,16 @@ export async function critiqueGeneratedApp(
       severity: "error",
     });
     score -= 35;
+  }
+
+  const disallowed = await findDisallowedNpmImports(projectId);
+  if (disallowed.length > 0) {
+    issues.push({
+      code: "disallowed_npm",
+      message: formatDisallowedNpmMessage(disallowed),
+      severity: "error",
+    });
+    score -= 30;
   }
 
   if (briefPrompt && isImobiliaria360(briefPrompt)) {

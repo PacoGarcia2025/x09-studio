@@ -1,13 +1,17 @@
 "use client";
 
 import { useMemo } from "react";
-import { prepareSandpackFileContent } from "@/lib/projects/preview-map";
 import {
   SandpackLayout,
   SandpackPreview,
   SandpackProvider,
   type SandpackFiles,
 } from "@codesandbox/sandpack-react";
+import { prepareSandpackFileContent } from "@/lib/projects/preview-map";
+import {
+  sandpackCustomSetup,
+  sandpackExternalResources,
+} from "@/lib/projects/sandpack-setup";
 
 const INDEX_HTML = `<!DOCTYPE html>
 <html lang="pt-BR">
@@ -58,23 +62,10 @@ export function PublicSitePreview({
           theme="light"
           files={sandpackFiles}
           style={{ height: "100%", width: "100%" }}
-          customSetup={{
-            dependencies: {
-              "@supabase/supabase-js": "^2.50.2",
-              "lucide-react": "^0.468.0",
-              "framer-motion": "^11.15.0",
-              leaflet: "^1.9.4",
-              "leaflet.markercluster": "^1.5.3",
-            },
-          }}
+          customSetup={sandpackCustomSetup}
           options={{
             recompileMode: "immediate",
-            externalResources: [
-              "https://cdn.tailwindcss.com",
-              "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css",
-              "https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css",
-              "https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css",
-            ],
+            externalResources: sandpackExternalResources,
             classes: {
               "sp-wrapper": "x09-sp-fill",
               "sp-layout": "x09-sp-fill",

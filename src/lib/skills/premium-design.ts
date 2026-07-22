@@ -1,5 +1,9 @@
 import { isLuxuryLight } from "@/lib/skills/detect";
 import { lacksLuxuryLightQuality } from "@/lib/skills/luxury-light";
+import {
+  countPageSections,
+  meetsPremiumSectionBar,
+} from "@/lib/pipeline/page-sections";
 
 /**
  * Barra de qualidade visual cinematográfica (nível agência R$15–30k).
@@ -23,6 +27,7 @@ Stack FIXA (Sandpack preview):
 - Vite + React + TypeScript — NÃO Next.js, NÃO next/*, NÃO AppShell "Meu App".
 - Tailwind via className (CDN). NÃO importar tailwindcss nem CSS externo.
 - NÃO use import.meta.env — use getSupabase() de ../lib/supabase.
+- Pacotes NPM permitidos: lucide-react, framer-motion, recharts, @supabase/supabase-js, leaflet, clsx — NÃO use axios, react-router, next/*, chart.js, @mui/*.
 - TSX válido: feche TODAS tags, strings e chaves. Nunca trunque o arquivo.
 `.trim();
 
@@ -35,9 +40,11 @@ export function lacksCinematicQuality(home: string): string[] {
     issues.push("HomePage curta demais para padrão premium (< 2200 chars)");
   }
 
-  const sections = (trimmed.match(/<section\b/gi) ?? []).length;
-  if (sections < 4) {
-    issues.push(`Poucas seções (${sections}) — premium exige 4+ seções distintas`);
+  const sections = countPageSections(trimmed);
+  if (!meetsPremiumSectionBar(trimmed, 4)) {
+    issues.push(
+      `Poucas seções (${sections}) — premium exige 4+ seções distintas ou conteúdo denso`,
+    );
   }
 
   const hasMotion =

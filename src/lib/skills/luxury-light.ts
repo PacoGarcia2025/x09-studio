@@ -1,4 +1,8 @@
 import type { StudioSkill } from "@/lib/skills/types";
+import {
+  countPageSections,
+  meetsPremiumSectionBar,
+} from "@/lib/pipeline/page-sections";
 
 export const LUXURY_LIGHT_BAR = `
 BARRA VISUAL LUXURY LIGHT (OBRIGATÓRIA — marcas de alto padrão):
@@ -73,9 +77,11 @@ export function lacksLuxuryLightQuality(home: string): string[] {
     issues.push("Sem framer-motion — luxury exige micro-interações sutis");
   }
 
-  const sections = (trimmed.match(/<section\b/gi) ?? []).length;
-  if (sections < 4) {
-    issues.push(`Poucas seções (${sections}) — luxury exige 4+ seções`);
+  const sections = countPageSections(trimmed);
+  if (!meetsPremiumSectionBar(trimmed, 4)) {
+    issues.push(
+      `Poucas seções (${sections}) — luxury exige 4+ seções ou conteúdo denso`,
+    );
   }
 
   return issues;

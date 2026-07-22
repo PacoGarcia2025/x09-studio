@@ -529,6 +529,13 @@ export function ProjectWorkspace({
         </div>
 
         <div className="ml-auto flex items-center gap-1.5">
+          <Link
+            href={`/projects/${project.id}/settings`}
+            className="rounded-lg px-2 py-1.5 text-xs text-zinc-500 hover:bg-zinc-100"
+            title="Configurações da empresa"
+          >
+            Configurações
+          </Link>
           <button
             type="button"
             onClick={() => setPreviewKey((k) => k + 1)}

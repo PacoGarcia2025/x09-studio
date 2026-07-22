@@ -7,6 +7,10 @@ import {
   SandpackProvider,
   type SandpackFiles,
 } from "@codesandbox/sandpack-react";
+import {
+  sandpackCustomSetup,
+  sandpackExternalResources,
+} from "@/lib/projects/sandpack-setup";
 import { getProjectPreviewFiles } from "@/lib/projects/preview.actions";
 import { ensureAppDefaultExport, sanitizeCodeForSandpack } from "@/lib/projects/preview-map";
 
@@ -152,24 +156,11 @@ export function ProjectLivePreview({ projectId, refreshKey = 0 }: Props) {
         theme="light"
         files={sandpackFiles}
         style={{ height: "100%", width: "100%" }}
-        customSetup={{
-          dependencies: {
-            "@supabase/supabase-js": "^2.50.2",
-            "lucide-react": "^0.468.0",
-            "framer-motion": "^11.15.0",
-            leaflet: "^1.9.4",
-            "leaflet.markercluster": "^1.5.3",
-          },
-        }}
+        customSetup={sandpackCustomSetup}
         options={{
           recompileMode: "immediate",
           recompileDelay: 300,
-          externalResources: [
-            "https://cdn.tailwindcss.com",
-            "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css",
-            "https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css",
-            "https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css",
-          ],
+          externalResources: sandpackExternalResources,
           classes: {
             "sp-wrapper": "x09-sp-fill",
             "sp-layout": "x09-sp-fill",
