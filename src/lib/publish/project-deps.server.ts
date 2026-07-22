@@ -1,13 +1,11 @@
 import "server-only";
 
-import path from "node:path";
 import {
   listProjectTree,
   readProjectFile,
   writeProjectFile,
   type FileTreeNode,
 } from "@/lib/projects/fs.server";
-import { getProjectDir } from "@/lib/projects/paths";
 import { STUDIO_RUNTIME_DEPENDENCIES } from "@/lib/projects/runtime-deps";
 
 function flattenFiles(nodes: FileTreeNode[], out: string[] = []): string[] {
@@ -92,13 +90,6 @@ export async function ensureProjectDependencies(
 
   pkg.dependencies = deps;
   await writeProjectFile(projectId, pkgRel, `${JSON.stringify(pkg, null, 2)}\n`);
-
-  try {
-    const { unlink } = await import("node:fs/promises");
-    await unlink(path.join(getProjectDir(projectId), "package-lock.json"));
-  } catch {
-    // lock será regenerado no npm ci
-  }
 
   return added;
 }

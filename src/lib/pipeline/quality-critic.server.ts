@@ -3,8 +3,10 @@ import { fileExists, readProjectFile } from "@/lib/projects/fs.server";
 import {
   findBrokenImports,
   findDisallowedNpmImports,
+  findUndeclaredJsxIdentifiers,
   formatBrokenImportMessage,
   formatDisallowedNpmMessage,
+  formatUndeclaredJsxMessage,
 } from "@/lib/projects/import-graph.server";
 import { IMOBILIARIA_PAGES } from "@/lib/skills/imobiliaria-360";
 import { isImobiliaria360 } from "@/lib/skills/detect";
@@ -214,6 +216,16 @@ export async function critiqueGeneratedApp(
       severity: "error",
     });
     score -= 30;
+  }
+
+  const undeclaredJsx = await findUndeclaredJsxIdentifiers(projectId);
+  if (undeclaredJsx.length > 0) {
+    issues.push({
+      code: "undeclared_jsx",
+      message: formatUndeclaredJsxMessage(undeclaredJsx),
+      severity: "error",
+    });
+    score -= 35;
   }
 
   if (briefPrompt && isImobiliaria360(briefPrompt)) {

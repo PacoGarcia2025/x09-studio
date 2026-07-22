@@ -4,9 +4,19 @@ import path from "node:path";
 import {
   listProjectTree,
   readProjectFile,
+  writeProjectFile,
   type FileTreeNode,
 } from "@/lib/projects/fs.server";
+import {
+  findUndeclaredJsxInSource,
+  formatUndeclaredJsxMessage,
+  repairKnownRuntimeImportsInSource,
+  type UndeclaredJsxIdentifier,
+} from "@/lib/projects/jsx-scope";
 import { SANDPACK_ALLOWED_PACKAGES } from "@/lib/projects/sandpack-setup";
+
+export type { UndeclaredJsxIdentifier };
+export { formatUndeclaredJsxMessage };
 
 export type BrokenImport = {
   file: string;
@@ -142,4 +152,56 @@ export function formatDisallowedNpmMessage(
   const extra =
     list.length > 1 ? ` (+${list.length - 1} pacote(s) não suportado(s))` : "";
   return `Pacote "${first.package}" não disponível no preview (Sandpack) em ${first.file}${extra}. Use lucide-react, framer-motion ou CSS nativo.`;
+}
+
+function listSourceFiles(nodes: FileTreeNode[]): string[] {
+  return flattenFiles(nodes).filter((f) => /\.(tsx?|jsx?|mts|cts)$/.test(f));
+}
+
+/** JSX com identificadores não importados (ReferenceError em runtime). */
+export async function findUndeclaredJsxIdentifiers(
+  projectId: string,
+): Promise<UndeclaredJsxIdentifier[]> {
+  const tree = await listProjectTree(projectId);
+  const files = listSourceFiles(tree);
+  const undeclared: UndeclaredJsxIdentifier[] = [];
+
+  for (const file of files) {
+    let content: string;
+    try {
+      content = await readProjectFile(projectId, file);
+    } catch {
+      continue;
+    }
+    undeclared.push(...findUndeclaredJsxInSource(content, file));
+  }
+
+  return undeclared;
+}
+
+/**
+ * Corrige imports faltantes de lucide-react / framer-motion em arquivos TSX.
+ * Retorna paths alterados.
+ */
+export async function repairUndeclaredJsxImports(
+  projectId: string,
+): Promise<string[]> {
+  const tree = await listProjectTree(projectId);
+  const files = listSourceFiles(tree).filter((f) => /\.tsx$/i.test(f));
+  const changed: string[] = [];
+
+  for (const file of files) {
+    let content: string;
+    try {
+      content = await readProjectFile(projectId, file);
+    } catch {
+      continue;
+    }
+    const repaired = repairKnownRuntimeImportsInSource(content);
+    if (repaired === content) continue;
+    await writeProjectFile(projectId, file, repaired);
+    changed.push(file);
+  }
+
+  return changed;
 }
