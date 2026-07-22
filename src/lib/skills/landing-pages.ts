@@ -21,7 +21,7 @@ LANDING PREMIUM (conversão + cinema):
 - Seção prova social: números, logos fictícios do setor OU depoimentos com nomes plausíveis do nicho.
 - Seção processo ou diferenciais com layout assimétrico (não grid 3 colunas clone).
 - CTA final full-width com gradiente da marca.
-- Footer: endereço, telefone, WhatsApp, e-mail, CRECI, horário se aplicável.
+- Footer: endereço, telefone, WhatsApp, e-mail, registro profissional/órgão fiscalizador se aplicável, horário se citado.
 - Mínimo ~140 linhas de JSX útil; 5+ <section>.
 `.trim(),
   loginPageRules: `

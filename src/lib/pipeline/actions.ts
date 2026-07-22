@@ -203,6 +203,14 @@ export type ChatTurnResult =
     }
   | {
       ok: true;
+      intent: "resume_build";
+      planId: string;
+      pendingTasks: number;
+      recoveredTasks: number;
+      model: string;
+    }
+  | {
+      ok: true;
       intent: "edit";
       summary: string;
       paths: string[];
@@ -250,6 +258,67 @@ export async function chatProjectAction(
       hasExistingApp,
       projectName: gate.project.name,
     });
+
+    if (intent === "resume_build") {
+      if (!latest) {
+        return {
+          ok: false,
+          error: "Ainda não há plano de geração neste projeto. Aprove um plano primeiro.",
+        };
+      }
+
+      const { getBuildState, resumeBuildAction } = await import(
+        "@/lib/pipeline/builder.actions"
+      );
+      const { recoverStaleBuilderTasks } = await import(
+        "@/lib/pipeline/queue.server"
+      );
+
+      const recoveredTasks = await recoverStaleBuilderTasks(
+        gate.supabase,
+        latest.id,
+      );
+      const resume = await resumeBuildAction(latest.id);
+      if (!resume.ok) {
+        return { ok: false, error: resume.error };
+      }
+
+      const state = await getBuildState(latest.id);
+      if (!state.ok) {
+        return { ok: false, error: state.error };
+      }
+
+      const pending =
+        state.data.counts.queued +
+        state.data.counts.running +
+        state.data.counts.retrying;
+
+      if (pending === 0 && !resume.resumed) {
+        return {
+          ok: true,
+          intent: "ask",
+          answer:
+            "A geração deste projeto já está concluída. Peça ajustes específicos (cores, textos, seções) ou publique o site.",
+          model: "x09-studio",
+        };
+      }
+
+      await gate.supabase
+        .from("projects")
+        .update({ status: "generating" })
+        .eq("id", projectId);
+
+      revalidatePath(`/projects/${projectId}`);
+
+      return {
+        ok: true,
+        intent: "resume_build",
+        planId: latest.id,
+        pendingTasks: pending,
+        recoveredTasks,
+        model: "x09-studio",
+      };
+    }
 
     if (intent === "ask") {
       const brief =

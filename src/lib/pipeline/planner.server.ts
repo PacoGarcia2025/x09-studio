@@ -170,7 +170,7 @@ function ensureFullAppTasks(plan: StudioPlan, prompt: string): StudioPlan {
     id: "t_home_full",
     path: "src/pages/HomePage.tsx",
     title: "Página principal completa",
-    instruction: `Crie a página principal COMPLETA para: ${prompt.slice(0, 600)}. Use nome da empresa, cores, WhatsApp/telefone/e-mail/endereço/CRECI citados no pedido. Header com CTA Entrar, hero, 3+ seções, prova social/galeria, CTA final, footer. Textos reais — nunca fictícios. Aceite prop opcional onNavigateToLogin?.()`,
+    instruction: `Crie a página principal COMPLETA para: ${prompt.slice(0, 600)}. Use nome da empresa, cores, WhatsApp/telefone/e-mail/endereço/registro profissional citados no pedido (CRECI só se imobiliária). Header com CTA Entrar, hero, 3+ seções, prova social/galeria, CTA final, footer. Textos reais — nunca fictícios. Aceite prop opcional onNavigateToLogin?.()`,
     dependsOn: [],
     insertAt: 0,
   });

@@ -87,6 +87,10 @@ export function briefMissingFromContent(
   return missing;
 }
 
+/** Texto padrão para prompts — órgão fiscalizador é opcional e varia por segmento. */
+export const REGULATORY_BODY_HINT =
+  "registro profissional / órgão fiscalizador (ex.: CRECI para imobiliárias, OAB, CRM, CRC — omita se não constar no brief)";
+
 export function formatBuilderContext(input: {
   projectName: string;
   briefPrompt?: string | null;
@@ -97,7 +101,7 @@ export function formatBuilderContext(input: {
   const brief = input.briefPrompt?.trim();
   if (brief) {
     parts.push(
-      `Brief completo do cliente (OBRIGATÓRIO — use nome, cores, contatos, cidade, CRECI, WhatsApp, e-mail EXATOS):\n${brief.slice(0, 2800)}`,
+      `Brief completo do cliente (OBRIGATÓRIO — use nome, cores, contatos, cidade, WhatsApp, e-mail EXATOS; ${REGULATORY_BODY_HINT}):\n${brief.slice(0, 2800)}`,
     );
   }
 
@@ -108,7 +112,7 @@ export function formatBuilderContext(input: {
   parts.push(`Regras de conteúdo e visual:
 - Marca: use o nome REAL da empresa do brief (nunca "Sua Empresa", "Marca", "Exemplo").
 - Cores: siga EXCLUSIVAMENTE a paleta pedida no brief (nunca violeta/fúcsia genérico se o cliente pediu outra cor).
-- Contato: inclua telefone, WhatsApp, e-mail, endereço e CRECI se estiverem no brief.
+- Contato: inclua telefone, WhatsApp, e-mail, endereço e ${REGULATORY_BODY_HINT} somente se constarem no brief.
 - Copy em português do Brasil, específica do negócio e da cidade/região mencionadas.`);
 
   return parts.join("\n\n");

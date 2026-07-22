@@ -7,13 +7,13 @@ export const x09CoreSkill: StudioSkill = {
   alwaysOn: true,
   plannerRules: `
 - Produto entregável = qualidade de agência premium (R$15–30k), não MVP genérico.
-- Extraia do pedido: nome da marca, paleta, cidade, telefone, WhatsApp, e-mail, CRECI/CNPJ quando citados.
+- Extraia do pedido: nome da marca, paleta, cidade, telefone, WhatsApp, e-mail, CNPJ e registro profissional/órgão fiscalizador quando citados (ex.: CRECI só para imobiliárias).
 - tasks.instruction deve repetir dados reais do cliente — nunca placeholders fictícios.
 `.trim(),
   builderFileRules: STACK_RULES,
   homePageRules: `
 ${CINEMATIC_PREMIUM_BAR}
-- Marca e contatos EXATOS do brief (nome, WhatsApp, CRECI, endereço).
+- Marca e contatos EXATOS do brief (nome, WhatsApp, endereço; registro profissional/órgão fiscalizador só se aplicável).
 - Paleta: EXCLUSIVAMENTE a pedida no brief — nunca reverta para violeta genérico.
 `.trim(),
   loginPageRules: `

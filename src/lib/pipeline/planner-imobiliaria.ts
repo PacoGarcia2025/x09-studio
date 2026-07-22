@@ -64,7 +64,7 @@ export function ensureImobiliaria360Tasks(
       id: "t_imob_home",
       path: "src/pages/HomePage.tsx",
       title: "Home imobiliária premium",
-      instruction: `HomePage imobiliária 360°: ${brief}. Hero vídeo/carrossel, smart search (Comprar/Alugar/Lançamentos), filtros, destaques exclusivos, lifestyle grid, social proof VGV, footer CRECI/NAP. Props: onNavigateToLogin, onNavigateListings, onSelectProperty. Luxury light se brief pedir ouro/off-white.`,
+      instruction: `HomePage imobiliária 360°: ${brief}. Hero vídeo/carrossel, smart search (Comprar/Alugar/Lançamentos), filtros, destaques exclusivos, lifestyle grid, social proof VGV, footer NAP + CRECI/registro se citado no brief. Props: onNavigateToLogin, onNavigateListings, onSelectProperty. Luxury light se brief pedir ouro/off-white.`,
       dependsOn: [propsId],
     },
     1,

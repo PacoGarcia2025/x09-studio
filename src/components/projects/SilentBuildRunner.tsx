@@ -8,7 +8,7 @@ import {
 } from "@/lib/pipeline/builder.actions";
 
 const MAX_STEPS = 250;
-const MAX_IDLE_TICKS = 60;
+const MAX_IDLE_TICKS = 120;
 const IDLE_DELAY_MS = 2_500;
 const TICK_DELAY_MS = 400;
 
@@ -102,7 +102,7 @@ export function SilentBuildRunner({
         if (idleTicks >= MAX_IDLE_TICKS) {
           runningRef.current = false;
           onError?.(
-            "A geração travou aguardando a IA. Recarregue a página — o progresso salvo será retomado.",
+            "A IA demorou mais que o esperado. Tente no chat: “continuar a geração” — o progresso salvo será retomado.",
           );
           return;
         }

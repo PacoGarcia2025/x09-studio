@@ -337,6 +337,28 @@ export function ProjectWorkspace({
         return;
       }
 
+      if (result.intent === "resume_build") {
+        setBusy(false);
+        setActivePlanId(result.planId);
+        setProjectStatus("generating");
+        setBuildFreshStart(false);
+        setBuildToken((t) => t + 1);
+        setBuildEnabled(true);
+        setIsGenerating(true);
+        setChatLog((prev) => [
+          ...prev.filter((m) => !(m.kind === "ai" && m.working)),
+          {
+            kind: "ai",
+            working: true,
+            text:
+              result.recoveredTasks > 0
+                ? `Retomando a geração (${result.pendingTasks} etapa(s) pendente(s); ${result.recoveredTasks} recuperada(s) após travamento).`
+                : `Retomando a geração (${result.pendingTasks} etapa(s) pendente(s))…`,
+          },
+        ]);
+        return;
+      }
+
       // create → plano para OK
       presentPlanForApproval(result);
     },

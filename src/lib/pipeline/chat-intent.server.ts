@@ -1,6 +1,21 @@
 import type { LlmProvider } from "@/lib/llm/types";
 
-export type ChatIntent = "create" | "edit" | "ask";
+export type ChatIntent = "create" | "edit" | "ask" | "resume_build";
+
+/** Pedido para retomar geração interrompida (não é edição de código). */
+export function isResumeBuildMessage(message: string): boolean {
+  const m = message.trim();
+  return (
+    /\b(continu|retom|conclu|finaliz|termin).*(gera|geração|build|site|app|projeto|preview|constru)/i.test(
+      m,
+    ) ||
+    /\b(gera|geração|build|constru).*(continu|retom|conclu|finaliz|termin)/i.test(
+      m,
+    ) ||
+    /\bcontinuar (de )?onde parou\b/i.test(m) ||
+    /\bretomar (a )?geração\b/i.test(m)
+  );
+}
 
 /**
  * Classifica a mensagem do chat: criar app novo, editar o existente, ou só perguntar.
@@ -15,6 +30,10 @@ export async function classifyChatIntent(
 ): Promise<ChatIntent> {
   const message = input.message.trim();
   if (!input.hasExistingApp) return "create";
+
+  if (isResumeBuildMessage(message)) {
+    return "resume_build";
+  }
 
   // Heurística rápida (sem LLM) para casos óbvios
   if (
@@ -65,8 +84,13 @@ Projeto atual: ${input.projectName}. Já existe app gerado: sim.`,
       maxOutputTokens: 64,
     });
 
-    const match = result.text.match(/"intent"\s*:\s*"(create|edit|ask)"/);
-    if (match?.[1] === "create" || match?.[1] === "edit" || match?.[1] === "ask") {
+    const match = result.text.match(/"intent"\s*:\s*"(create|edit|ask|resume_build)"/);
+    if (
+      match?.[1] === "create" ||
+      match?.[1] === "edit" ||
+      match?.[1] === "ask" ||
+      match?.[1] === "resume_build"
+    ) {
       return match[1];
     }
   } catch {

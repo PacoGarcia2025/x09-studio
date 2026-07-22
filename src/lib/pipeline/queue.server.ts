@@ -5,6 +5,8 @@ import type { PlanTaskType } from "@/lib/pipeline/plan-schema";
 import { ensureProjectScaffold } from "@/lib/projects/scaffold.server";
 
 const RETRY_DELAYS_MS = [2_000, 4_000, 8_000, 16_000, 30_000];
+/** Task running/retrying além disso = servidor caiu ou timeout — volta para queued. */
+const STALE_TASK_MS = 4 * 60 * 1000;
 
 export type DbTask = {
   id: string;
@@ -106,6 +108,53 @@ function hasEligibleQueuedTask(tasks: DbTask[]): boolean {
   return pickNext(tasks) !== null;
 }
 
+/**
+ * Tasks presas em running/retrying (ex.: F5 ou timeout do server action) voltam à fila.
+ */
+export async function recoverStaleBuilderTasks(
+  supabase: SupabaseClient,
+  planId: string,
+): Promise<number> {
+  const { data: tasks } = await supabase
+    .from("plan_tasks")
+    .select("id, task_key, status, started_at")
+    .eq("plan_id", planId)
+    .in("status", ["running", "retrying"]);
+
+  if (!tasks?.length) return 0;
+
+  const now = Date.now();
+  const stale = tasks.filter((t) => {
+    if (!t.started_at) return true;
+    return now - new Date(t.started_at).getTime() > STALE_TASK_MS;
+  });
+
+  if (stale.length === 0) return 0;
+
+  await supabase
+    .from("plan_tasks")
+    .update({
+      status: "queued",
+      error_message: null,
+      started_at: null,
+      finished_at: null,
+    })
+    .in(
+      "id",
+      stale.map((t) => t.id),
+    );
+
+  await appendLog(
+    supabase,
+    planId,
+    null,
+    "warn",
+    `Recuperadas ${stale.length} task(s) travada(s): ${stale.map((t) => t.task_key).join(", ")}`,
+  );
+
+  return stale.length;
+}
+
 function hasBlockedQueuedTasks(tasks: DbTask[]): boolean {
   const byKey = new Map(tasks.map((t) => [t.task_key, t]));
   return tasks.some((task) => {
@@ -151,7 +200,17 @@ export async function tickBuilderQueue(
     throw new Error(error?.message ?? "Falha ao carregar tasks");
   }
 
-  const list = tasks as DbTask[];
+  await recoverStaleBuilderTasks(supabase, input.planId);
+
+  const { data: refreshed } = await supabase
+    .from("plan_tasks")
+    .select(
+      "id, plan_id, task_key, type, title, instruction, path, depends_on, status, sort_order",
+    )
+    .eq("plan_id", input.planId)
+    .order("sort_order", { ascending: true });
+
+  const list = (refreshed ?? tasks) as DbTask[];
   const c0 = counts(list);
 
   if (list.every((t) => t.status === "done" || t.status === "skipped")) {

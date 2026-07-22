@@ -1,7 +1,10 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { tickBuilderQueue } from "@/lib/pipeline/queue.server";
+import {
+  recoverStaleBuilderTasks,
+  tickBuilderQueue,
+} from "@/lib/pipeline/queue.server";
 import { critiqueGeneratedApp } from "@/lib/pipeline/quality-critic.server";
 import { createClient } from "@/lib/supabase/server";
 
@@ -135,6 +138,8 @@ export async function resumeBuildAction(
   if (allDone) {
     return { ok: true, resumed: false };
   }
+
+  await recoverStaleBuilderTasks(gate.supabase, planId);
 
   await gate.supabase
     .from("plans")

@@ -118,7 +118,7 @@ HOME IMOBILIÁRIA 360°:
 - Seção Destaques da Semana: cards com carousel hover, badges Exclusividade/Penthouse.
 - Seção Busca por Estilo de Vida: grid categorias (coberturas, condomínio, beira-mar).
 - Social proof: VGV, imóveis carteira, anos tradição.
-- Footer NAP + CRECI + links catálogo.
+- Footer NAP + registro profissional/órgão fiscalizador (ex.: CRECI) se constar no brief + links catálogo.
 `.trim(),
   loginPageRules: `
 - Login com seleção de persona (Corretor | Proprietário | Admin) OU redirect broker após auth.

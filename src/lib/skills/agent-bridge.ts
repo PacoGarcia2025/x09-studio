@@ -21,7 +21,7 @@ ${skills.plannerAddon}
 
 Regras Agent:
 - visualDirection no AppSpec DEVE citar cor de marca EXATA do brief do cliente.
-- Copy pt-BR premium — dados reais (nome, telefone, CRECI, cidade), nunca fictícios genéricos.
+- Copy pt-BR premium — dados reais (nome, telefone, cidade, registro profissional se houver), nunca fictícios genéricos.
 - acceptanceCriteria deve incluir motion, profundidade visual e SEO (h1 único, footer NAP).
 `.trim();
 }
