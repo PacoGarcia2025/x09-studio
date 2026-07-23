@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   injectPublishHeadAssets,
   PUBLISH_HEAD_ASSETS,
+  sanitizePublishedIndexHtml,
 } from "@/lib/publish/publish-assets";
 
 describe("injectPublishHeadAssets", () => {
@@ -24,5 +25,14 @@ describe("injectPublishHeadAssets", () => {
 
   it("inclui todos os assets do Sandpack", () => {
     expect(PUBLISH_HEAD_ASSETS.length).toBeGreaterThanOrEqual(4);
+  });
+});
+
+describe("sanitizePublishedIndexHtml", () => {
+  it("remove script corrompido com URL Unsplash", () => {
+    const html = `<!doctype html><html><head><script type="module" src="/assets/index-abc.js"></script></head><body><div id="root"></div><script type="module" src="https://images.unsplash.com/photo-123?w=1200"></script></body></html>`;
+    const out = sanitizePublishedIndexHtml(html);
+    expect(out).not.toContain("photo-123");
+    expect(out).toContain("/assets/index-abc.js");
   });
 });

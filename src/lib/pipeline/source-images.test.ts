@@ -22,4 +22,11 @@ describe("source-images", () => {
     expect(out).toMatch(/images\.unsplash\.com/);
     expect(hasBrokenImageSources(out)).toBe(false);
   });
+
+  it("não corrompe script src do index.html", () => {
+    const input = `<script type="module" src="/src/main.tsx"></script>`;
+    expect(fixBrokenImagesInSource(input)).toBe(input);
+    expect(isBrokenImageSrc("/src/main.tsx")).toBe(false);
+    expect(isBrokenImageSrc("/assets/index-abc.js")).toBe(false);
+  });
 });

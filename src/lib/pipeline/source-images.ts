@@ -12,10 +12,16 @@ export const LUXURY_PROPERTY_IMAGES = [
   "https://images.unsplash.com/photo-1605276374104-dee2a0ed3cd6?w=1200&fm=webp&q=80",
 ] as const;
 
+const NON_IMAGE_SRC =
+  /\.(js|jsx|ts|tsx|mjs|cjs|css|woff2?|map)(\?|#|$)/i;
+
 export function isBrokenImageSrc(src: string): boolean {
   const s = src.trim();
   if (!s) return true;
   if (/^data:/i.test(s)) return false;
+  if (NON_IMAGE_SRC.test(s)) return false;
+  if (/^\/assets\//i.test(s)) return false;
+  if (/^\/src\//i.test(s)) return false;
   if (/^https?:\/\//i.test(s)) {
     if (/placeholder|example\.com|via\.placeholder|picsum\.photos\/seed\/\d/i.test(s)) {
       return true;
@@ -49,11 +55,20 @@ export function fixBrokenImagesInSource(code: string): string {
     LUXURY_PROPERTY_IMAGES[idx++ % LUXURY_PROPERTY_IMAGES.length]!;
 
   let out = code.replace(
-    /src=\{?"([^"'`]+)"\}?/g,
-    (match, src: string) => {
+    /<img\b([^>]*?)\ssrc=(["'])([^"']+)\2([^>]*)>/gi,
+    (match, before, quote, src, after) => {
       if (!isBrokenImageSrc(src)) return match;
       const url = nextUrl();
-      return match.startsWith("src={") ? `src="${url}"` : `src="${url}"`;
+      return `<img${before} src=${quote}${url}${quote}${after}>`;
+    },
+  );
+
+  out = out.replace(
+    /<img\b([^>]*?)\ssrc=\{?"([^"'`]+)"\}?([^>]*)>/gi,
+    (match, before, src, after) => {
+      if (!isBrokenImageSrc(src)) return match;
+      const url = nextUrl();
+      return `<img${before} src="${url}"${after}>`;
     },
   );
 
