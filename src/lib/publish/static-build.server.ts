@@ -156,7 +156,18 @@ export async function buildStaticSiteForPublish(input: {
 
     await fs.rm(outDir, { recursive: true, force: true });
     await copyDir(distDir, outDir);
-    log.push(`Artefatos estáticos em ${outDir}`);
+
+    const indexPath = path.join(outDir, "index.html");
+    const indexStat = await fs.stat(indexPath).catch(() => null);
+    if (!indexStat?.isFile() || indexStat.size < 128) {
+      return {
+        ok: false,
+        log,
+        error: `Build sem index.html em ${outDir} — publish abortado.`,
+      };
+    }
+
+    log.push(`Artefatos estáticos em ${outDir} (${indexStat.size} bytes index.html)`);
 
     return { ok: true, log, outputDir: outDir };
   } catch (err) {

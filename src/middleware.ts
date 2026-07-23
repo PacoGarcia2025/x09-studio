@@ -10,12 +10,24 @@ export async function middleware(request: NextRequest) {
     return updateSession(request);
   }
 
-  const slug = extractPublishSlugFromHost(request.headers.get("host") ?? "");
+  const slugFromHeader = request.headers.get("x-publish-slug")?.trim().toLowerCase();
+  const slug =
+    (slugFromHeader && /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slugFromHeader)
+      ? slugFromHeader
+      : null) ?? extractPublishSlugFromHost(request.headers.get("host") ?? "");
   if (slug) {
     const url = request.nextUrl.clone();
+    const sitePrefix = `/sites/${slug}`;
+    // Nginx fallback já encaminha para /sites/{slug} — evita reescrita duplicada.
+    if (
+      url.pathname === sitePrefix ||
+      url.pathname.startsWith(`${sitePrefix}/`)
+    ) {
+      return updateSession(request);
+    }
     const subPath =
       url.pathname === "/" ? "" : url.pathname.replace(/\/$/, "");
-    url.pathname = `/sites/${slug}${subPath}`;
+    url.pathname = `${sitePrefix}${subPath}`;
     return NextResponse.rewrite(url);
   }
 
