@@ -8,6 +8,7 @@ import { projectDirExists } from "@/lib/projects/fs.server";
 import { ensureProjectDependencies } from "@/lib/publish/project-deps.server";
 import { repairProjectSourceIssues } from "@/lib/projects/import-graph.server";
 import { getProjectDir, getStaticClientsRoot } from "@/lib/projects/paths";
+import { injectPublishHeadAssets } from "@/lib/publish/publish-assets";
 
 const execFileAsync = promisify(execFile);
 
@@ -165,6 +166,13 @@ export async function buildStaticSiteForPublish(input: {
         log,
         error: `Build sem index.html em ${outDir} — publish abortado.`,
       };
+    }
+
+    const indexRaw = await fs.readFile(indexPath, "utf8");
+    const indexPatched = injectPublishHeadAssets(indexRaw);
+    if (indexPatched !== indexRaw) {
+      await fs.writeFile(indexPath, indexPatched, "utf8");
+      log.push("Tailwind CDN + CSS de mapas injetados no index.html publicado");
     }
 
     log.push(`Artefatos estáticos em ${outDir} (${indexStat.size} bytes index.html)`);

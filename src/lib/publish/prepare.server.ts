@@ -15,6 +15,7 @@ import {
   inferDescriptionFromBrief,
   optimizeUnsplashUrlsInSource,
 } from "@/lib/publish/seo-meta";
+import { fixBrokenImagesInSource } from "@/lib/pipeline/source-images";
 import { syncPublishedSeoPages } from "@/lib/publish/seo-pages.server";
 import { isImobiliaria360 } from "@/lib/skills/detect";
 import {
@@ -119,7 +120,8 @@ export async function prepareProjectForPublish(input: {
   for (const rel of paths) {
     try {
       const raw = await readProjectFile(input.projectId, rel);
-      const next = optimizeUnsplashUrlsInSource(raw);
+      let next = fixBrokenImagesInSource(raw);
+      next = optimizeUnsplashUrlsInSource(next);
       if (next !== raw) {
         await writeProjectFile(input.projectId, rel, next);
         optimized += 1;
@@ -129,7 +131,7 @@ export async function prepareProjectForPublish(input: {
     }
   }
   if (optimized > 0) {
-    log.push(`WebP Unsplash em ${optimized} arquivo(s)`);
+    log.push(`Imagens + WebP Unsplash em ${optimized} arquivo(s)`);
   }
 
   try {

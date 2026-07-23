@@ -1,4 +1,5 @@
 /** Gera meta tags HTML para index.html no publish. */
+import { injectPublishHeadAssets } from "@/lib/publish/publish-assets";
 export type PublishSeoInput = {
   siteName: string;
   description: string;
@@ -16,7 +17,7 @@ export function buildPublishIndexHtml(input: PublishSeoInput): string {
     "https://images.unsplash.com/photo-1613490493576-7fde63acd811?w=1200&fm=webp&q=80";
   const theme = input.themeColor ?? "#D4AF37";
 
-  return `<!doctype html>
+  return injectPublishHeadAssets(`<!doctype html>
 <html lang="pt-BR">
   <head>
     <meta charset="UTF-8" />
@@ -42,7 +43,7 @@ export function buildPublishIndexHtml(input: PublishSeoInput): string {
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
-`;
+`);
 }
 
 export function buildRobotsTxt(siteUrl: string): string {
