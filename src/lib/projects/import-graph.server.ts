@@ -13,10 +13,16 @@ import {
   repairKnownRuntimeImportsInSource,
   type UndeclaredJsxIdentifier,
 } from "@/lib/projects/jsx-scope";
+import {
+  findUnrepairableLucideImportsInSource,
+  formatInvalidLucideMessage,
+  repairInvalidLucideImportsInSource,
+  type InvalidLucideImport,
+} from "@/lib/projects/lucide-validate";
 import { SANDPACK_ALLOWED_PACKAGES } from "@/lib/projects/sandpack-setup";
 
-export type { UndeclaredJsxIdentifier };
-export { formatUndeclaredJsxMessage };
+export type { UndeclaredJsxIdentifier, InvalidLucideImport };
+export { formatUndeclaredJsxMessage, formatInvalidLucideMessage };
 
 export type BrokenImport = {
   file: string;
@@ -179,11 +185,38 @@ export async function findUndeclaredJsxIdentifiers(
   return undeclared;
 }
 
+/** Imports de lucide-react com nomes inexistentes (quebram vite build). */
+export async function findInvalidLucideImports(
+  projectId: string,
+): Promise<InvalidLucideImport[]> {
+  const tree = await listProjectTree(projectId);
+  const files = listSourceFiles(tree).filter((f) => /\.tsx?$/i.test(f));
+  const invalid: InvalidLucideImport[] = [];
+
+  for (const file of files) {
+    let content: string;
+    try {
+      content = await readProjectFile(projectId, file);
+    } catch {
+      continue;
+    }
+    invalid.push(...findUnrepairableLucideImportsInSource(content, file));
+  }
+
+  return invalid;
+}
+
+function repairSourceFileContent(content: string): string {
+  return repairKnownRuntimeImportsInSource(
+    repairInvalidLucideImportsInSource(content),
+  );
+}
+
 /**
- * Corrige imports faltantes de lucide-react / framer-motion em arquivos TSX.
+ * Corrige imports JSX faltantes e ícones lucide inválidos em arquivos TSX.
  * Retorna paths alterados.
  */
-export async function repairUndeclaredJsxImports(
+export async function repairProjectSourceIssues(
   projectId: string,
 ): Promise<string[]> {
   const tree = await listProjectTree(projectId);
@@ -197,11 +230,18 @@ export async function repairUndeclaredJsxImports(
     } catch {
       continue;
     }
-    const repaired = repairKnownRuntimeImportsInSource(content);
+    const repaired = repairSourceFileContent(content);
     if (repaired === content) continue;
     await writeProjectFile(projectId, file, repaired);
     changed.push(file);
   }
 
   return changed;
+}
+
+/** @deprecated use repairProjectSourceIssues */
+export async function repairUndeclaredJsxImports(
+  projectId: string,
+): Promise<string[]> {
+  return repairProjectSourceIssues(projectId);
 }

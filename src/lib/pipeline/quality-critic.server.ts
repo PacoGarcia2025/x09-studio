@@ -3,9 +3,11 @@ import { fileExists, readProjectFile } from "@/lib/projects/fs.server";
 import {
   findBrokenImports,
   findDisallowedNpmImports,
+  findInvalidLucideImports,
   findUndeclaredJsxIdentifiers,
   formatBrokenImportMessage,
   formatDisallowedNpmMessage,
+  formatInvalidLucideMessage,
   formatUndeclaredJsxMessage,
 } from "@/lib/projects/import-graph.server";
 import { IMOBILIARIA_PAGES } from "@/lib/skills/imobiliaria-360";
@@ -223,6 +225,16 @@ export async function critiqueGeneratedApp(
     issues.push({
       code: "undeclared_jsx",
       message: formatUndeclaredJsxMessage(undeclaredJsx),
+      severity: "error",
+    });
+    score -= 35;
+  }
+
+  const invalidLucide = await findInvalidLucideImports(projectId);
+  if (invalidLucide.length > 0) {
+    issues.push({
+      code: "invalid_lucide",
+      message: formatInvalidLucideMessage(invalidLucide),
       severity: "error",
     });
     score -= 35;

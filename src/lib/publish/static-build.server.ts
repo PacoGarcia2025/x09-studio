@@ -6,7 +6,7 @@ import path from "node:path";
 import { promisify } from "node:util";
 import { projectDirExists } from "@/lib/projects/fs.server";
 import { ensureProjectDependencies } from "@/lib/publish/project-deps.server";
-import { repairUndeclaredJsxImports } from "@/lib/projects/import-graph.server";
+import { repairProjectSourceIssues } from "@/lib/projects/import-graph.server";
 import { getProjectDir, getStaticClientsRoot } from "@/lib/projects/paths";
 
 const execFileAsync = promisify(execFile);
@@ -72,9 +72,9 @@ export async function buildStaticSiteForPublish(input: {
   const outDir = path.join(getStaticClientsRoot(), input.slug);
 
   try {
-    const repairedFiles = await repairUndeclaredJsxImports(input.projectId);
+    const repairedFiles = await repairProjectSourceIssues(input.projectId);
     if (repairedFiles.length > 0) {
-      log.push(`Imports JSX corrigidos: ${repairedFiles.join(", ")}`);
+      log.push(`Código corrigido (imports/ícones): ${repairedFiles.join(", ")}`);
     }
 
     const addedDeps = await ensureProjectDependencies(input.projectId);

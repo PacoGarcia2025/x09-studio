@@ -18,6 +18,8 @@ import {
 import { getProjectDir } from "@/lib/projects/paths";
 import { ensureProjectScaffold } from "@/lib/projects/scaffold.server";
 import { fixBrokenImagesInSource } from "@/lib/pipeline/source-images";
+import { repairKnownRuntimeImportsInSource } from "@/lib/projects/jsx-scope";
+import { repairInvalidLucideImportsInSource } from "@/lib/projects/lucide-validate";
 
 export type BuilderTaskInput = {
   type: PlanTaskType;
@@ -129,7 +131,13 @@ async function upsertEnv(
 function polishGeneratedSource(path: string, content: string): string {
   const normalized = path.replace(/\\/g, "/");
   if (!/\.(tsx|ts|jsx|js)$/.test(normalized)) return content;
-  return fixBrokenImagesInSource(content);
+  let next = fixBrokenImagesInSource(content);
+  if (/\.tsx$/i.test(normalized)) {
+    next = repairKnownRuntimeImportsInSource(
+      repairInvalidLucideImportsInSource(next),
+    );
+  }
+  return next;
 }
 
 function isHomePagePath(filePath: string): boolean {

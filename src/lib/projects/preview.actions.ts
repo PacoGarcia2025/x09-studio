@@ -11,7 +11,7 @@ import { ensureProjectScaffold } from "@/lib/projects/scaffold.server";
 import {
   findBrokenImports,
   formatBrokenImportMessage,
-  repairUndeclaredJsxImports,
+  repairProjectSourceIssues,
 } from "@/lib/projects/import-graph.server";
 import { toSandpackVirtualPath, parseDotEnv, patchSupabaseEnvInCode, prepareSandpackFileContent } from "@/lib/projects/preview-map";
 
@@ -80,7 +80,7 @@ export async function getProjectPreviewFiles(
       await ensureProjectScaffold(projectId, { briefPrompt });
     }
 
-    await repairUndeclaredJsxImports(projectId);
+    await repairProjectSourceIssues(projectId);
 
     const broken = await findBrokenImports(projectId);
     if (broken.length > 0) {

@@ -9,6 +9,7 @@
     "lint": "eslint src",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
+    "generate:lucide-icons": "node scripts/generate-lucide-icons.mjs",
     "validate:supabase": "node scripts/validate-supabase.mjs"
   },
   "dependencies": {
@@ -32,6 +33,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "15.5.20",
+    "lucide-react": "^0.468.0",
     "tailwindcss": "^4",
     "typescript": "^5",
     "vitest": "^3.2.7"

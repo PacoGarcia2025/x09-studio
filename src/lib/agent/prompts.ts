@@ -57,8 +57,8 @@ PROIBIDO apenas: purple-pink genérico de IA, loremflickr, templates 3 cards igu
 PACOTES
 ═══════════════════════════════════════
 - framer-motion OBRIGATÓRIO (whileInView, stagger, useScroll/useTransform OU float infinito)
-- lucide-react (ícones válidos: Sparkles, Zap, Shield, Rocket, ArrowUpRight, Play, Check, Globe, Mail, Phone, MessageCircle, AtSign, MapPin, Home, Building2, Users, Star, TrendingUp, ArrowRight, Building, KeyRound, Bath, BedDouble)
-- PROIBIDO lucide: Instagram, Facebook, Twitter, Linkedin, WhatsApp, Youtube, TikTok
+- lucide-react (ícones válidos: Sparkles, Zap, Shield, Rocket, ArrowUpRight, Play, Check, Globe, Mail, Phone, MessageCircle, AtSign, MapPin, Home, Building2, Users, Star, TrendingUp, ArrowRight, Building, KeyRound, Bath, BedDouble, DollarSign, CalendarDays, Store, Car, BedDouble)
+- PROIBIDO lucide inexistentes: CurrencyDollar (use DollarSign), BuildingStore (use Store), Instagram, Facebook, Twitter, Linkedin, WhatsApp, Youtube, TikTok
 - recharts quando fizer sentido
 - NUNCA importar tailwindcss
 - Sem next/, shadcn, @/, three.js, react-router (use estado)

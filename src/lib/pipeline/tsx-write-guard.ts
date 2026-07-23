@@ -3,6 +3,8 @@ import {
   hasValidTsxSyntax,
   isTsxPath,
 } from "@/lib/pipeline/jsx-validate";
+import { repairKnownRuntimeImportsInSource } from "@/lib/projects/jsx-scope";
+import { repairInvalidLucideImportsInSource } from "@/lib/projects/lucide-validate";
 import { prepareSandpackFileContent } from "@/lib/projects/preview-map";
 
 function toVirtualPath(projectPath: string): string {
@@ -13,7 +15,10 @@ function toVirtualPath(projectPath: string): string {
 
 export function prepareTsxForProject(path: string, content: string): string {
   if (!isTsxPath(path)) return content;
-  return prepareSandpackFileContent(toVirtualPath(path), content);
+  const repaired = repairKnownRuntimeImportsInSource(
+    repairInvalidLucideImportsInSource(content),
+  );
+  return prepareSandpackFileContent(toVirtualPath(path), repaired);
 }
 
 export function assertValidTsxOrThrow(path: string, content: string): void {
