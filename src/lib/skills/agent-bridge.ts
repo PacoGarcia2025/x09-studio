@@ -1,4 +1,6 @@
 import { CINEMATIC_PREMIUM_BAR, STACK_RULES } from "@/lib/skills/premium-design";
+import { isLuxuryLight } from "@/lib/skills/detect";
+import { LUXURY_LIGHT_BAR } from "@/lib/skills/luxury-light";
 import { resolveSkills } from "@/lib/skills/resolve";
 import { templatePlannerAddon } from "@/lib/skills/templates/skill";
 
@@ -28,10 +30,12 @@ Regras Agent:
 
 export function buildAgentBuildSkillAddon(prompt: string): string {
   const skills = resolveSkills(prompt);
+  const luxury = isLuxuryLight(prompt);
+  const visualBar = luxury ? LUXURY_LIGHT_BAR : CINEMATIC_PREMIUM_BAR;
 
   return `
 ═══ X09 SKILLS — BUILD PREMIUM ═══
-${CINEMATIC_PREMIUM_BAR}
+${visualBar}
 
 ${STACK_RULES.replace(/src\//g, "").replace(/HomePage/g, "Home")}
 

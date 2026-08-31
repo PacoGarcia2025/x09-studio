@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { CSSProperties } from "react";
 import { LandingHeroPrompt } from "@/components/landing/LandingHeroPrompt";
+import { StudioAtmosphere } from "@/components/brand/StudioAtmosphere";
 import { X09Robot } from "@/components/brand/X09Robot";
 import { authLink } from "@/lib/auth/paths";
 
@@ -41,9 +42,7 @@ type Props = {
 export function StudioLanding({ authError }: Props) {
   return (
     <main className="x09-landing relative min-h-screen overflow-hidden text-zinc-100">
-      <div className="x09-cosmos" aria-hidden />
-      <div className="x09-cosmos-grid" aria-hidden />
-      <div className="x09-cosmos-stars" aria-hidden />
+      <StudioAtmosphere />
 
       <div className="relative mx-auto flex min-h-screen max-w-7xl flex-col px-5 py-5 md:px-8">
         <header className="flex items-center justify-between gap-4">

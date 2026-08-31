@@ -10,45 +10,45 @@ export const dynamic = "force-dynamic";
 const TEMPLATES = [
   {
     title: "Landing premium",
-    description: "Site de alta conversão",
+    description: "Showcase cinematográfico",
     hue: 265,
     prompt:
-      "Landing page premium de alta conversão para minha marca, com hero cinematográfico, prova social e CTA forte",
+      "Landing page premium cinematográfica de alta conversão para minha marca, com hero imersivo, prova social, bento de serviços e CTA forte",
   },
   {
     title: "Loja virtual",
     description: "Catálogo e carrinho",
-    hue: 320,
+    hue: 200,
     prompt:
-      "Loja virtual moderna com catálogo de produtos, carrinho e checkout simplificado",
+      "Loja virtual premium cinematográfica com catálogo de produtos, carrinho e checkout simplificado, visual dark com cor de marca",
   },
   {
     title: "Sistema de reservas",
     description: "Agenda e confirmação",
-    hue: 200,
+    hue: 175,
     prompt:
-      "Sistema de reservas online com calendário, confirmação por e-mail e painel administrativo",
+      "Sistema de reservas online premium com calendário, confirmação por e-mail e painel administrativo cinematográfico",
   },
   {
     title: "Dashboard SaaS",
     description: "Métricas e gráficos",
     hue: 240,
     prompt:
-      "Dashboard SaaS com métricas, gráficos recharts, cards KPI e layout profissional dark",
+      "Dashboard SaaS cinematográfico premium com métricas, gráficos recharts, cards KPI e layout profissional dark",
   },
   {
     title: "CRM leve",
     description: "Contatos e pipeline",
-    hue: 175,
+    hue: 155,
     prompt:
-      "CRM leve com pipeline de vendas, contatos, status e dashboard para equipe comercial",
+      "CRM leve premium com pipeline de vendas, contatos, status e dashboard cinematográfico para equipe comercial",
   },
   {
     title: "Portfólio",
-    description: "Cases e contato",
+    description: "Showcase e cases",
     hue: 290,
     prompt:
-      "Site portfólio criativo com cases, sobre mim e formulário de contato elegante",
+      "Site portfólio showcase premium cinematográfico com cases em bento, sobre mim e formulário de contato elegante",
   },
 ] as const;
 
@@ -79,33 +79,43 @@ export default async function ProjectsPage({
       avatarLabel={avatarLabel}
       activeHref="/projects"
     >
-      <div className="min-h-full bg-[#F7F7F8]">
+      <div className="min-h-full">
         {params.createError ? (
           <div className="px-4 pt-4">
-            <p className="mx-auto max-w-3xl rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            <p className="mx-auto max-w-3xl rounded-2xl border border-red-400/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">
               {params.createError}
             </p>
           </div>
         ) : null}
-        {/* Hero Lovable */}
+
         <div className="px-3 pt-3 md:px-4 md:pt-4">
-          <div className="relative overflow-hidden rounded-[28px] bg-[linear-gradient(135deg,#8B5CF6_0%,#D946EF_45%,#6366F1_100%)] px-4 pb-28 pt-10 md:px-8 md:pb-32 md:pt-14">
-            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_30%_0%,rgba(255,255,255,0.35),transparent_50%),radial-gradient(ellipse_at_90%_100%,rgba(49,46,129,0.35),transparent_45%)]" />
+          <div className="x09-card relative overflow-hidden rounded-[28px] px-4 pb-28 pt-10 md:px-8 md:pb-32 md:pt-14">
+            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_20%_0%,rgba(122,60,255,0.28),transparent_50%),radial-gradient(ellipse_at_90%_100%,rgba(74,131,255,0.18),transparent_45%)]" />
 
             <div className="relative mx-auto flex max-w-3xl flex-col items-center text-center">
               <Link
                 href="/billing"
-                className="mb-7 inline-flex items-center gap-2 rounded-full bg-[#1e3a5f]/90 px-3.5 py-1.5 text-xs font-medium text-white shadow-sm backdrop-blur transition hover:bg-[#1e3a5f]"
+                className="mb-7 inline-flex items-center gap-2 rounded-full border border-violet-400/25 bg-violet-500/10 px-3.5 py-1.5 text-xs font-medium text-violet-100 transition hover:bg-violet-500/20"
               >
-                <span className="rounded-full bg-white/20 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide">
+                <span className="rounded-full bg-white/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide">
                   Novo
                 </span>
                 Créditos, GitHub e deploy em um só fluxo →
               </Link>
 
-              <h1 className="text-[2.35rem] font-bold leading-[1.1] tracking-[-0.04em] text-zinc-950 md:text-5xl">
-                Vamos construir algo, {firstName}
+              <p className="mb-3 text-xs font-bold uppercase tracking-[0.24em] text-violet-300">
+                Inteligência aplicada
+              </p>
+              <h1 className="text-[2.35rem] font-semibold leading-[1.1] tracking-[-0.04em] text-white md:text-5xl">
+                Vamos construir algo,{" "}
+                <span className="bg-gradient-to-r from-violet-200 via-fuchsia-200 to-sky-200 bg-clip-text text-transparent">
+                  {firstName}
+                </span>
               </h1>
+              <p className="mt-3 max-w-xl text-sm leading-6 text-zinc-400 md:text-base">
+                Descreva a ideia. O Studio entrega showcase cinematográfico premium
+                por padrão — só muda o visual se você pedir.
+              </p>
 
               <form
                 id="prompt"
@@ -113,21 +123,20 @@ export default async function ProjectsPage({
                 method="get"
                 className="mt-8 w-full max-w-[640px]"
               >
-                <div className="flex items-center gap-2 rounded-[28px] border border-white/70 bg-white p-2 shadow-[0_20px_60px_rgba(15,23,42,0.18)] md:p-3">
-                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full text-zinc-400">
+                <div className="x09-hero-prompt flex items-center gap-2 p-2 md:p-3">
+                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full text-zinc-500">
                     +
                   </span>
                   <input
                     name="q"
                     placeholder="Peça ao Studio X09 para criar uma landing page para o meu…"
-                    className="min-w-0 flex-1 border-0 bg-transparent text-[15px] text-zinc-900 outline-none placeholder:text-zinc-400 md:text-[17px]"
+                    className="x09-hero-prompt-input min-w-0 flex-1 border-0 bg-transparent text-[15px] outline-none md:text-[17px]"
                   />
                   <button
                     type="submit"
-                    className="inline-flex h-10 shrink-0 items-center gap-1.5 rounded-full bg-zinc-900 px-3.5 text-sm font-semibold text-white transition hover:bg-zinc-800"
+                    className="x09-button-primary h-10 shrink-0 px-4 text-sm"
                   >
                     Construir
-                    <span className="opacity-70">▾</span>
                   </button>
                 </div>
               </form>
@@ -135,14 +144,13 @@ export default async function ProjectsPage({
           </div>
         </div>
 
-        {/* Painel branco de projetos */}
         <div className="relative z-10 -mt-20 px-3 pb-10 md:-mt-24 md:px-4">
-          <div className="mx-auto min-h-[420px] max-w-[1120px] rounded-[28px] bg-white px-4 py-5 shadow-[0_12px_40px_rgba(15,23,42,0.10)] md:px-6 md:py-6">
+          <div className="x09-card mx-auto min-h-[420px] max-w-[1120px] rounded-[28px] px-4 py-5 md:px-6 md:py-6">
             <div className="mb-6 flex flex-wrap items-center gap-1">
               <span className="inline-flex items-center gap-1.5 rounded-full px-3 py-2 text-sm font-medium text-zinc-500">
                 ⌕ Procurar
               </span>
-              <span className="rounded-full bg-zinc-900 px-3.5 py-2 text-sm font-medium text-white">
+              <span className="rounded-full bg-violet-500/20 px-3.5 py-2 text-sm font-medium text-violet-100 ring-1 ring-violet-400/25">
                 Meus projetos
               </span>
               <span className="rounded-full px-3.5 py-2 text-sm font-medium text-zinc-500">
@@ -153,7 +161,7 @@ export default async function ProjectsPage({
               </span>
               <Link
                 href="/billing"
-                className="ml-auto text-sm font-medium text-violet-700 transition hover:text-violet-800"
+                className="ml-auto text-sm font-medium text-violet-300 transition hover:text-violet-200"
               >
                 Planos →
               </Link>
@@ -223,49 +231,41 @@ function HeroPreview({
   const short = title.length > 28 ? `${title.slice(0, 26)}…` : title;
 
   return (
-    <div className="relative aspect-[16/10] overflow-hidden rounded-2xl bg-zinc-100 shadow-[0_1px_2px_rgba(0,0,0,0.04)] ring-1 ring-zinc-200/80 transition group-hover:-translate-y-0.5 group-hover:shadow-[0_12px_28px_rgba(15,23,42,0.12)]">
+    <div className="relative aspect-[16/10] overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03] shadow-[0_12px_40px_rgba(0,0,0,0.25)] transition group-hover:-translate-y-0.5 group-hover:border-violet-400/30">
       <div
         className="absolute inset-0"
         style={{
-          background: `linear-gradient(145deg, hsl(${hue} 72% 58%), hsl(${(hue + 55) % 360} 78% 52%), hsl(${(hue + 110) % 360} 65% 45%))`,
+          background: `linear-gradient(145deg, hsl(${hue} 55% 28%), hsl(${(hue + 55) % 360} 60% 22%), hsl(${(hue + 110) % 360} 50% 14%))`,
         }}
       >
-        <div className="absolute inset-x-3 top-3 overflow-hidden rounded-xl bg-white/95 shadow-lg shadow-black/10">
-          <div className="flex items-center gap-1.5 border-b border-zinc-100 px-3 py-2">
-            <span className="h-1.5 w-1.5 rounded-full bg-zinc-300" />
-            <span className="h-1.5 w-1.5 rounded-full bg-zinc-300" />
-            <span className="h-1.5 w-1.5 rounded-full bg-zinc-300" />
-            <span className="ml-2 h-1.5 flex-1 rounded-full bg-zinc-100" />
+        <div className="absolute inset-x-3 top-3 overflow-hidden rounded-xl border border-white/10 bg-black/50 shadow-lg backdrop-blur-md">
+          <div className="flex items-center gap-1.5 border-b border-white/8 px-3 py-2">
+            <span className="h-1.5 w-1.5 rounded-full bg-zinc-500" />
+            <span className="h-1.5 w-1.5 rounded-full bg-zinc-500" />
+            <span className="h-1.5 w-1.5 rounded-full bg-zinc-500" />
+            <span className="ml-2 h-1.5 flex-1 rounded-full bg-white/10" />
           </div>
           <div className="space-y-2.5 px-4 pb-4 pt-3">
             <div className="flex items-center justify-between">
-              <span className="text-[9px] font-semibold text-zinc-800">
+              <span className="text-[9px] font-semibold text-zinc-200">
                 {short.split(" ")[0] || "App"}
               </span>
-              <span
-                className="rounded-full px-2 py-0.5 text-[8px] font-semibold text-white"
-                style={{ background: `hsl(${hue} 70% 45%)` }}
-              >
+              <span className="rounded-full bg-violet-500/80 px-2 py-0.5 text-[8px] font-semibold text-white">
                 Começar
               </span>
             </div>
-            <p className="text-[11px] font-bold leading-tight tracking-tight text-zinc-900">
+            <p className="text-[11px] font-bold leading-tight tracking-tight text-white">
               {short}
             </p>
             {subtitle ? (
-              <p className="line-clamp-2 text-[9px] leading-snug text-zinc-500">
+              <p className="line-clamp-2 text-[9px] leading-snug text-zinc-400">
                 {subtitle}
               </p>
-            ) : (
-              <div className="space-y-1 pt-0.5">
-                <div className="h-1 w-[80%] rounded-full bg-zinc-200" />
-                <div className="h-1 w-[60%] rounded-full bg-zinc-100" />
-              </div>
-            )}
+            ) : null}
             <div
               className="mt-1 h-10 rounded-lg opacity-90"
               style={{
-                background: `linear-gradient(90deg, hsl(${hue} 65% 92%), hsl(${(hue + 40) % 360} 70% 88%))`,
+                background: `linear-gradient(90deg, hsl(${hue} 50% 35% / 0.5), hsl(${(hue + 40) % 360} 55% 40% / 0.35))`,
               }}
             />
           </div>
@@ -295,9 +295,7 @@ function CardMeta({
         {title.trim().charAt(0).toUpperCase() || "A"}
       </span>
       <div className="min-w-0">
-        <p className="truncate text-[13px] font-semibold text-zinc-900">
-          {title}
-        </p>
+        <p className="truncate text-[13px] font-semibold text-white">{title}</p>
         <p className="text-[12px] text-zinc-500">{subtitle}</p>
       </div>
     </div>

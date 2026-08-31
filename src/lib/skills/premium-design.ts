@@ -6,11 +6,16 @@ import {
 } from "@/lib/pipeline/page-sections";
 
 /**
- * Barra de qualidade visual cinematográfica (nível agência R$15–30k).
- * Compartilhada entre skills de geração.
+ * Barra de qualidade visual cinematográfica / premium showcase (nível agência R$15–30k).
+ * PADRÃO GLOBAL de todos os sites/apps gerados — só muda se o brief pedir outro estilo
+ * (ex.: luxury light, minimal flat, brutalist).
  */
 export const CINEMATIC_PREMIUM_BAR = `
-BARRA DE QUALIDADE VISUAL (OBRIGATÓRIA — produto premium vendável):
+PADRÃO VISUAL OBRIGATÓRIO (cinematográfico / premium showcase):
+- Use este padrão em TODAS as páginas (Home, Login, Dashboard, listagens) a menos que o brief peça EXPLICITAMENTE outro estilo (ex.: "luxury light", "minimalista flat", "brutalista", "só branco clean").
+- Showcase premium: hero imersivo, profundidade, motion, ritmo de seções, CTAs fortes — produto vendável, não protótipo.
+
+BARRA DE QUALIDADE:
 - Profundidade: gradientes mesh (ex: from-zinc-950 via-zinc-900 to-[cor-marca]/30), orbs decorativos (blur-[100px] opacity-20–40), glass cards (backdrop-blur-xl bg-white/5 border border-white/10).
 - Motion: import { motion } from "framer-motion" — hero com fade/slide, staggerChildren nas seções, hover sutil (scale 1.02, shadow glow da marca).
 - Tipografia: headlines text-4xl md:text-6xl lg:text-7xl font-bold tracking-tight; corpo text-base md:text-lg leading-relaxed; hierarquia clara.
@@ -19,7 +24,7 @@ BARRA DE QUALIDADE VISUAL (OBRIGATÓRIA — produto premium vendável):
 - Ícones: lucide-react (Sparkles, ArrowRight, Shield, Building2, Phone, Mail, MapPin, Star, Check, etc.).
 - Imagens: gradientes + Unsplash real (https://images.unsplash.com/photo-...) OU composições CSS — nunca placeholder vazio.
 - Copy: persuasiva, específica do negócio, números e provas quando possível.
-- PROIBIDO: aesthetic "template de IA" (roxo/rosa genérico sem brief), lorem, "Sua Empresa", página chapada, hero só com retângulo colorido.
+- Cor de marca: use a cor do brief do cliente. PROIBIDO aesthetic "template de IA" (roxo/rosa genérico sem brief), lorem, "Sua Empresa", página chapada, hero só com retângulo colorido.
 `.trim();
 
 export const STACK_RULES = `

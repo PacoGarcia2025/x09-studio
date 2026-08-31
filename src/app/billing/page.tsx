@@ -72,23 +72,26 @@ export default async function BillingPage({
         <div className="mb-8">
           <Link
             href="/projects"
-            className="text-sm font-medium text-zinc-500 transition hover:text-zinc-800"
+            className="text-sm font-medium text-zinc-500 transition hover:text-violet-200"
           >
             ← Voltar ao painel
           </Link>
-          <h1 className="mt-4 text-3xl font-bold tracking-[-0.03em] text-zinc-900 md:text-4xl">
+          <p className="mt-4 text-xs font-bold uppercase tracking-[0.24em] text-violet-300">
+            Assinatura
+          </p>
+          <h1 className="mt-2 text-3xl font-semibold tracking-[-0.03em] text-white md:text-4xl">
             Planos e créditos
           </h1>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-500">
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-400">
             Cada Build consome 1 crédito. Escolha um pacote e pague com Mercado
             Pago. Seu saldo atual:{" "}
-            <span className="font-semibold text-violet-700">
+            <span className="font-semibold text-violet-200">
               {balance} créditos
             </span>
             .
           </p>
           {params.status === "return" ? (
-            <p className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+            <p className="mt-3 rounded-xl border border-emerald-400/25 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-200">
               Pagamento retornado. Se aprovado, os créditos entram em instantes.
             </p>
           ) : null}
@@ -98,36 +101,34 @@ export default async function BillingPage({
           {PLANS.map((plan) => (
             <article
               key={plan.code}
-              className={`rounded-[28px] border bg-white p-6 shadow-sm ${
-                plan.highlighted
-                  ? "border-violet-300 ring-2 ring-violet-100"
-                  : "border-zinc-200"
+              className={`x09-card rounded-[28px] p-6 ${
+                plan.highlighted ? "ring-1 ring-violet-400/40" : ""
               }`}
             >
               {plan.highlighted ? (
-                <span className="mb-3 inline-flex rounded-full bg-violet-600 px-2.5 py-1 text-[11px] font-semibold text-white">
+                <span className="mb-3 inline-flex rounded-full bg-violet-500/20 px-2.5 py-1 text-[11px] font-semibold text-violet-100 ring-1 ring-violet-400/30">
                   Mais popular
                 </span>
               ) : (
                 <span className="mb-3 inline-block h-6" />
               )}
-              <h2 className="text-xl font-semibold text-zinc-900">{plan.name}</h2>
-              <p className="mt-1 text-sm text-zinc-500">{plan.blurb}</p>
-              <p className="mt-5 text-4xl font-bold tracking-tight text-zinc-900">
+              <h2 className="text-xl font-semibold text-white">{plan.name}</h2>
+              <p className="mt-1 text-sm text-zinc-400">{plan.blurb}</p>
+              <p className="mt-5 text-4xl font-bold tracking-tight text-white">
                 {plan.priceLabel}
-                <span className="text-base font-medium text-zinc-400">
+                <span className="text-base font-medium text-zinc-500">
                   {" "}
                   / pacote
                 </span>
               </p>
-              <p className="mt-1 text-sm font-medium text-violet-700">
+              <p className="mt-1 text-sm font-medium text-violet-200">
                 {plan.credits} créditos
               </p>
 
-              <ul className="mt-5 space-y-2 text-sm text-zinc-600">
+              <ul className="mt-5 space-y-2 text-sm text-zinc-400">
                 {plan.features.map((feature) => (
                   <li key={feature} className="flex gap-2">
-                    <span className="text-violet-600">✓</span>
+                    <span className="text-violet-300">✓</span>
                     {feature}
                   </li>
                 ))}
@@ -137,11 +138,11 @@ export default async function BillingPage({
                 <input type="hidden" name="planCode" value={plan.code} />
                 <button
                   type="submit"
-                  className={`w-full rounded-full px-4 py-3 text-sm font-semibold transition ${
+                  className={
                     plan.highlighted
-                      ? "bg-violet-600 text-white hover:bg-violet-700"
-                      : "bg-zinc-900 text-white hover:bg-zinc-800"
-                  }`}
+                      ? "x09-button-primary w-full px-4 py-3 text-sm"
+                      : "x09-button-secondary w-full px-4 py-3 text-sm"
+                  }
                 >
                   Assinar {plan.name}
                 </button>

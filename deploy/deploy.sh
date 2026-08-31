@@ -8,6 +8,11 @@ cd "$APP_DIR"
 
 git pull --ff-only
 
+if [ ! -f .env ] && [ ! -f .env.local ]; then
+  echo "ERRO: .env ou .env.local necessário (NEXT_PUBLIC_SUPABASE_* embutido no build)"
+  exit 1
+fi
+
 # --- Next.js BFF (API) ---
 npm ci
 rm -rf .next

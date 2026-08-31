@@ -61,7 +61,9 @@ export const TEMPLATE_PROFILES: TemplateProfile[] = [
   },
 ];
 
-const DEFAULT_PROFILE = TEMPLATE_PROFILES[0]!;
+const DEFAULT_PROFILE =
+  TEMPLATE_PROFILES.find((p) => p.id === "landing-premium") ??
+  TEMPLATE_PROFILES[0]!;
 
 export function pickTemplateProfile(prompt: string): TemplateProfile {
   const text = prompt.trim();
@@ -72,6 +74,7 @@ export function pickTemplateProfile(prompt: string): TemplateProfile {
   }
 
   for (const profile of TEMPLATE_PROFILES) {
+    if (profile.id === "imobiliaria-360") continue;
     if (profile.match.test(text)) return profile;
   }
 

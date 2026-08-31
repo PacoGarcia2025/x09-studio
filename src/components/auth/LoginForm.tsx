@@ -1,6 +1,5 @@
 "use client";
 
-import { createClient } from "@/lib/supabase/client";
 import { sanitizeNextPath } from "@/lib/auth/paths";
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
@@ -28,40 +27,47 @@ export function LoginForm({
     setInfo(null);
     setPending(true);
 
-    const supabase = createClient();
-
     try {
-      if (mode === "signup") {
-        const origin =
-          typeof window !== "undefined" ? window.location.origin : "";
-        const { data, error: signUpError } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            data: { full_name: fullName || undefined },
-            emailRedirectTo: `${origin}/auth/callback?next=${encodeURIComponent(safeNext)}`,
-          },
-        });
-        if (signUpError) throw signUpError;
+      const endpoint = mode === "signup" ? "/api/auth/signup" : "/api/auth/login";
+      const payload =
+        mode === "signup"
+          ? { email, password, fullName, next: safeNext }
+          : { email, password };
 
-        if (!data.session) {
-          setInfo(
-            "Enviamos um link de confirmação para seu e-mail. Após confirmar, você será redirecionado ao Studio.",
-          );
-          return;
-        }
-      } else {
-        const { error: signInError } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
-        if (signInError) throw signInError;
+      const res = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      const data = (await res.json().catch(() => ({}))) as {
+        error?: string;
+        needsEmailConfirmation?: boolean;
+      };
+
+      if (!res.ok) {
+        throw new Error(data.error ?? "Falha na autenticação");
+      }
+
+      if (mode === "signup" && data.needsEmailConfirmation) {
+        setInfo(
+          "Enviamos um link de confirmação para seu e-mail. Após confirmar, você será redirecionado ao Studio.",
+        );
+        return;
       }
 
       router.replace(safeNext);
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Falha na autenticação");
+      const message =
+        err instanceof Error ? err.message : "Falha na autenticação";
+      if (/failed to fetch/i.test(message)) {
+        setError(
+          "Não foi possível conectar ao servidor. Verifique sua internet ou tente novamente.",
+        );
+      } else {
+        setError(message);
+      }
     } finally {
       setPending(false);
     }

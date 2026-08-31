@@ -1,7 +1,8 @@
 import Link from "next/link";
+import { StudioAtmosphere } from "@/components/brand/StudioAtmosphere";
 import { signOut } from "@/lib/projects/actions";
 
-  const PRIMARY = [
+const PRIMARY = [
   { href: "/projects", label: "Painel", icon: "▦" },
   { href: "/projects#prompt", label: "Procurar", icon: "⌕", hint: "Ctrl K" },
   { href: "/ai", label: "Recursos", icon: "✦" },
@@ -19,7 +20,6 @@ export function AppShell({
   workspaceName = "Studio X09",
   avatarLabel = "X",
   activeHref = "/projects",
-  hideHeader = true,
 }: {
   children: React.ReactNode;
   workspaceName?: string;
@@ -28,27 +28,26 @@ export function AppShell({
   hideHeader?: boolean;
 }) {
   return (
-    <div className="flex min-h-screen bg-[#F7F7F8] text-zinc-800">
-      <aside className="sticky top-0 hidden h-screen w-[260px] shrink-0 flex-col bg-[#F7F7F8] lg:flex">
+    <div className="x09-landing relative flex min-h-screen overflow-hidden text-zinc-100">
+      <StudioAtmosphere />
+
+      <aside className="relative z-10 sticky top-0 hidden h-screen w-[260px] shrink-0 flex-col border-r border-white/8 bg-black/25 backdrop-blur-xl lg:flex">
         <div className="flex items-center justify-between px-4 pb-1 pt-3.5">
-          <Link href="/projects" className="flex items-center" title="Studio X09">
-            <span className="grid h-8 w-8 place-items-center rounded-[10px] bg-gradient-to-br from-violet-600 via-fuchsia-500 to-indigo-500 text-[10px] font-bold tracking-tight text-white shadow-[0_6px_16px_rgba(124,58,237,0.35)]">
+          <Link href="/projects" className="flex items-center gap-2.5" title="Studio X09">
+            <span className="grid h-9 w-9 place-items-center rounded-2xl bg-violet-500/20 text-[10px] font-bold tracking-tight text-violet-100 ring-1 ring-violet-400/30">
               X09
             </span>
+            <span className="text-sm font-semibold text-white">Studio</span>
           </Link>
-          <span className="grid h-8 w-8 place-items-center rounded-lg text-zinc-400">
-            ‹
-          </span>
         </div>
 
-        <div className="mx-3 mb-3 flex items-center gap-2 rounded-xl px-2 py-2">
-          <span className="grid h-6 w-6 place-items-center rounded-full bg-gradient-to-br from-violet-600 to-fuchsia-500 text-[10px] font-semibold text-white">
+        <div className="mx-3 mb-3 flex items-center gap-2 rounded-xl border border-white/8 bg-white/[0.03] px-2.5 py-2">
+          <span className="grid h-6 w-6 place-items-center rounded-full bg-gradient-to-br from-violet-500 to-sky-400 text-[10px] font-semibold text-white">
             {avatarLabel}
           </span>
-          <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-zinc-800">
+          <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-zinc-200">
             {workspaceName}
           </span>
-          <span className="text-zinc-400">▾</span>
         </div>
 
         <nav className="flex flex-1 flex-col gap-5 overflow-y-auto px-3">
@@ -63,16 +62,14 @@ export function AppShell({
                   href={item.href}
                   className={`flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-[13px] font-medium transition ${
                     active && item.href !== "/projects#prompt"
-                      ? "bg-zinc-200/90 text-zinc-900"
-                      : "text-zinc-600 hover:bg-zinc-200/50 hover:text-zinc-900"
+                      ? "bg-violet-500/15 text-white ring-1 ring-violet-400/20"
+                      : "text-zinc-400 hover:bg-white/[0.04] hover:text-zinc-100"
                   }`}
                 >
-                  <span className="text-base leading-none text-zinc-600">
-                    {item.icon}
-                  </span>
+                  <span className="text-base leading-none">{item.icon}</span>
                   <span className="flex-1">{item.label}</span>
                   {"hint" in item && item.hint ? (
-                    <kbd className="rounded-md bg-zinc-100 px-1.5 py-0.5 text-[10px] font-medium text-zinc-500">
+                    <kbd className="rounded-md border border-white/10 bg-white/[0.04] px-1.5 py-0.5 text-[10px] font-medium text-zinc-500">
                       {item.hint}
                     </kbd>
                   ) : null}
@@ -82,7 +79,7 @@ export function AppShell({
           </div>
 
           <div>
-            <p className="mb-1 px-2.5 text-[11px] font-medium text-zinc-400">
+            <p className="mb-1 px-2.5 text-[11px] font-medium uppercase tracking-[0.18em] text-zinc-500">
               Projetos
             </p>
             <div className="space-y-0.5">
@@ -90,7 +87,7 @@ export function AppShell({
                 <Link
                   key={item.label}
                   href={item.href}
-                  className="flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-[13px] font-medium text-zinc-600 transition hover:bg-zinc-200/50 hover:text-zinc-900"
+                  className="flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-[13px] font-medium text-zinc-400 transition hover:bg-white/[0.04] hover:text-zinc-100"
                 >
                   <span className="text-base leading-none">{item.icon}</span>
                   {item.label}
@@ -101,9 +98,8 @@ export function AppShell({
         </nav>
 
         <div className="mt-auto space-y-2 p-3">
-          <div className="rounded-2xl bg-white p-3 shadow-[0_1px_3px_rgba(0,0,0,0.06)] ring-1 ring-zinc-200/80">
-            <div className="mb-0.5 flex items-center gap-2 text-[13px] font-semibold text-zinc-900">
-              <span>🎁</span>
+          <div className="x09-card-soft rounded-2xl p-3">
+            <div className="mb-0.5 flex items-center gap-2 text-[13px] font-semibold text-white">
               Indique o Studio
             </div>
             <p className="text-[11px] leading-4 text-zinc-500">
@@ -113,10 +109,9 @@ export function AppShell({
 
           <Link
             href="/billing"
-            className="block w-full rounded-2xl bg-white p-3 text-left shadow-[0_1px_3px_rgba(0,0,0,0.06)] ring-1 ring-zinc-200/80 transition hover:ring-violet-300"
+            className="x09-card-soft block w-full rounded-2xl p-3 text-left transition hover:border-violet-400/30"
           >
-            <div className="mb-0.5 flex items-center gap-2 text-[13px] font-semibold text-zinc-900">
-              <span>⚡</span>
+            <div className="mb-0.5 flex items-center gap-2 text-[13px] font-semibold text-white">
               Faça o upgrade
             </div>
             <p className="text-[11px] leading-4 text-zinc-500">
@@ -125,13 +120,13 @@ export function AppShell({
           </Link>
 
           <div className="flex items-center justify-between px-0.5 pt-1">
-            <span className="grid h-8 w-8 place-items-center rounded-full bg-gradient-to-br from-violet-600 to-fuchsia-500 text-xs font-semibold text-white">
+            <span className="grid h-8 w-8 place-items-center rounded-full bg-gradient-to-br from-violet-500 to-sky-400 text-xs font-semibold text-white">
               {avatarLabel}
             </span>
             <form action={signOut}>
               <button
                 type="submit"
-                className="rounded-lg px-2 py-1.5 text-xs font-medium text-zinc-500 transition hover:bg-zinc-200/70 hover:text-zinc-800"
+                className="rounded-lg px-2 py-1.5 text-xs font-medium text-zinc-500 transition hover:bg-white/[0.06] hover:text-zinc-200"
                 title="Sair"
               >
                 Sair
@@ -141,46 +136,25 @@ export function AppShell({
         </div>
       </aside>
 
-      <div className="flex min-w-0 flex-1 flex-col">
-        {!hideHeader ? (
-          <header className="sticky top-0 z-30 border-b border-zinc-200 bg-white/80 backdrop-blur-xl lg:hidden">
-            <div className="flex items-center justify-between px-4 py-3">
-              <Link href="/projects" className="flex items-center gap-2">
-                <span className="grid h-8 w-8 place-items-center rounded-xl bg-gradient-to-br from-violet-600 to-fuchsia-500 text-[10px] font-bold text-white">
-                  X09
-                </span>
-                <span className="text-sm font-semibold text-zinc-900">Studio</span>
-              </Link>
-              <form action={signOut}>
-                <button
-                  type="submit"
-                  className="rounded-full bg-zinc-900 px-3 py-1.5 text-xs font-medium text-white"
-                >
-                  Sair
-                </button>
-              </form>
-            </div>
-          </header>
-        ) : (
-          <header className="sticky top-0 z-30 border-b border-zinc-200 bg-white/80 backdrop-blur-xl lg:hidden">
-            <div className="flex items-center justify-between px-4 py-3">
-              <Link href="/projects" className="flex items-center gap-2">
-                <span className="grid h-8 w-8 place-items-center rounded-xl bg-gradient-to-br from-violet-600 to-fuchsia-500 text-[10px] font-bold text-white">
-                  X09
-                </span>
-                <span className="text-sm font-semibold text-zinc-900">Studio</span>
-              </Link>
-              <form action={signOut}>
-                <button
-                  type="submit"
-                  className="rounded-full bg-zinc-900 px-3 py-1.5 text-xs font-medium text-white"
-                >
-                  Sair
-                </button>
-              </form>
-            </div>
-          </header>
-        )}
+      <div className="relative z-10 flex min-w-0 flex-1 flex-col">
+        <header className="sticky top-0 z-30 border-b border-white/8 bg-black/40 backdrop-blur-xl lg:hidden">
+          <div className="flex items-center justify-between px-4 py-3">
+            <Link href="/projects" className="flex items-center gap-2">
+              <span className="grid h-8 w-8 place-items-center rounded-xl bg-violet-500/20 text-[10px] font-bold text-violet-100 ring-1 ring-violet-400/30">
+                X09
+              </span>
+              <span className="text-sm font-semibold text-white">Studio</span>
+            </Link>
+            <form action={signOut}>
+              <button
+                type="submit"
+                className="x09-button-secondary px-3 py-1.5 text-xs"
+              >
+                Sair
+              </button>
+            </form>
+          </div>
+        </header>
 
         <main className="min-h-0 flex-1">{children}</main>
       </div>

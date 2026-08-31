@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { StudioAtmosphere } from "@/components/brand/StudioAtmosphere";
 import { ProjectSettingsForm } from "@/components/projects/ProjectSettingsForm";
 import { getProjectSettingsAction } from "@/lib/projects/settings.actions";
 import { createClient } from "@/lib/supabase/server";
@@ -20,24 +21,27 @@ export default async function ProjectSettingsPage({ params }: Props) {
   if (!settings.ok) notFound();
 
   return (
-    <div className="min-h-screen bg-[#F7F7F8] text-zinc-900">
-      <header className="flex h-12 items-center gap-3 border-b border-zinc-200 bg-white px-4">
+    <div className="x09-landing relative min-h-screen overflow-hidden text-zinc-100">
+      <StudioAtmosphere />
+      <header className="relative z-10 flex h-12 items-center gap-3 border-b border-white/8 bg-black/30 px-4 backdrop-blur-xl">
         <Link
           href={`/projects/${id}`}
-          className="text-sm text-zinc-500 hover:text-zinc-800"
+          className="text-sm text-zinc-500 transition hover:text-violet-200"
         >
           ← Voltar ao projeto
         </Link>
-        <h1 className="text-sm font-semibold text-zinc-900">
+        <h1 className="text-sm font-semibold text-white">
           Configurações — {settings.name}
         </h1>
       </header>
-      <main className="x09-settings-light px-4 py-8">
-        <ProjectSettingsForm
-          projectId={id}
-          initialBrief={settings.briefPrompt}
-          initialFacts={settings.companyFacts}
-        />
+      <main className="relative z-10 px-4 py-8">
+        <div className="x09-card mx-auto max-w-3xl rounded-[2rem] p-6">
+          <ProjectSettingsForm
+            projectId={id}
+            initialBrief={settings.briefPrompt}
+            initialFacts={settings.companyFacts}
+          />
+        </div>
       </main>
     </div>
   );

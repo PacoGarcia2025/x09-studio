@@ -21,6 +21,7 @@ Responda APENAS JSON: { "content": string } com o arquivo TSX inteiro.
 Regras OBRIGATÓRIAS:
 - export function HomePage() { ... } (named export).
 - NÃO use AppShell, router, next/*, nem "Meu App".
+- PADRÃO: showcase cinematográfico premium (hero imersivo, motion, profundidade). Só mude o visual se o brief pedir outro estilo explicitamente.
 - Landing visualmente rica, pronta para conversão, em português do Brasil.
 - Use Tailwind (className). Sem importar CSS/tailwindcss.
 - Pode usar lucide-react e framer-motion.
@@ -32,12 +33,14 @@ const LOGIN_BASE = `Você gera LoginPage completa (Vite + React + TypeScript + S
 Responda APENAS JSON: { "content": string }.
 - export function LoginPage({ onNavigateHome, onNavigateApp }: { onNavigateHome?: () => void; onNavigateApp?: () => void })
 - import { getSupabase } from "../lib/supabase"
+- Visual alinhado ao padrão cinematográfico premium (glass, profundidade, cor de marca) — não formulário chapado.
 - Sem next/*, sem AppShell, sem stub.`;
 
 const DASHBOARD_BASE = `Você gera DashboardPage (área logada) Vite + React + TypeScript + Supabase.
 Responda APENAS JSON: { "content": string }.
 - export function DashboardPage({ onNavigateHome, onSignOut }: { onNavigateHome?: () => void; onSignOut?: () => void })
 - import { getSupabase } from "../lib/supabase"
+- Visual cinematográfico premium (KPIs, cards glass, motion sutil) — não painel cinza genérico.
 - Sem next/*, sem stub "em breve".`;
 
 const FILE_BASE = `Você é o gerador de conteúdo de UMA única task do Builder X09 Studio.
@@ -67,6 +70,7 @@ export function resolveSkills(prompt: string): ResolvedSkills {
   const visualBar = luxury ? LUXURY_LIGHT_BAR : CINEMATIC_PREMIUM_BAR;
 
   const plannerAddon = joinBlocks([
+    "PADRÃO VISUAL GLOBAL: cinematográfico / premium showcase em todas as páginas, a menos que o brief peça outro estilo explicitamente.",
     templatePlannerAddon(prompt),
     ...skills.map((s) => (s.plannerRules ? `[${s.name}]\n${s.plannerRules}` : "")),
   ]);
@@ -85,11 +89,13 @@ export function resolveSkills(prompt: string): ResolvedSkills {
 
   const loginPageSystem = joinBlocks([
     LOGIN_BASE,
+    visualBar,
     ...skills.map((s) => s.loginPageRules),
   ]);
 
   const dashboardPageSystem = joinBlocks([
     DASHBOARD_BASE,
+    visualBar,
     ...skills.map((s) => s.dashboardPageRules),
   ]);
 

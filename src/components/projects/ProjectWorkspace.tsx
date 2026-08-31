@@ -390,7 +390,7 @@ export function ProjectWorkspace({
   }
 
   return (
-    <div className="fixed inset-0 z-40 flex flex-col bg-[#F7F7F8]">
+    <div className="fixed inset-0 z-40 flex flex-col bg-[#03040a] text-zinc-100">
       <AutoPlanBootstrap
         projectId={project.id}
         prompt={initialPrompt || ""}
@@ -493,25 +493,25 @@ export function ProjectWorkspace({
         }}
       />
 
-      <header className="flex h-12 shrink-0 items-center gap-2 border-b border-zinc-200 bg-white px-3">
+      <header className="flex h-12 shrink-0 items-center gap-2 border-b border-white/8 bg-black/40 px-3 backdrop-blur-xl">
         <Link
           href="/projects"
-          className="grid h-8 w-8 place-items-center rounded-lg text-zinc-500 transition hover:bg-zinc-100 hover:text-zinc-800"
+          className="grid h-8 w-8 place-items-center rounded-lg text-zinc-400 transition hover:bg-white/[0.06] hover:text-zinc-100"
           title="Voltar"
         >
           ←
         </Link>
-        <span className="grid h-7 w-7 place-items-center rounded-lg bg-gradient-to-br from-violet-600 via-fuchsia-500 to-indigo-500 text-[9px] font-bold text-white">
+        <span className="grid h-7 w-7 place-items-center rounded-lg bg-violet-500/20 text-[9px] font-bold text-violet-100 ring-1 ring-violet-400/30">
           X09
         </span>
         <div className="min-w-0">
-          <p className="truncate text-sm font-semibold text-zinc-900">
+          <p className="truncate text-sm font-semibold text-white">
             {project.name}
           </p>
           <p className="truncate text-[11px] text-zinc-500">{statusLabel}</p>
         </div>
 
-        <div className="mx-auto hidden h-9 items-center gap-0.5 rounded-full bg-zinc-100 p-1 sm:flex">
+        <div className="mx-auto hidden h-9 items-center gap-0.5 rounded-full border border-white/8 bg-white/[0.04] p-1 sm:flex">
           {tabs.map(([id, label]) => (
             <button
               key={id}
@@ -519,8 +519,8 @@ export function ProjectWorkspace({
               onClick={() => setMainTab(id)}
               className={`h-7 rounded-full px-3 text-xs font-medium transition ${
                 mainTab === id
-                  ? "bg-white text-zinc-900 shadow-sm"
-                  : "text-zinc-500 hover:text-zinc-800"
+                  ? "bg-violet-500/25 text-white ring-1 ring-violet-400/30"
+                  : "text-zinc-500 hover:text-zinc-200"
               }`}
             >
               {label}
@@ -531,7 +531,7 @@ export function ProjectWorkspace({
         <div className="ml-auto flex items-center gap-1.5">
           <Link
             href={`/projects/${project.id}/settings`}
-            className="rounded-lg px-2 py-1.5 text-xs text-zinc-500 hover:bg-zinc-100"
+            className="rounded-lg px-2 py-1.5 text-xs text-zinc-400 hover:bg-white/[0.06] hover:text-zinc-100"
             title="Configurações da empresa"
           >
             Configurações
@@ -539,7 +539,7 @@ export function ProjectWorkspace({
           <button
             type="button"
             onClick={() => setPreviewKey((k) => k + 1)}
-            className="rounded-lg px-2 py-1.5 text-xs text-zinc-500 hover:bg-zinc-100"
+            className="rounded-lg px-2 py-1.5 text-xs text-zinc-400 hover:bg-white/[0.06] hover:text-zinc-100"
           >
             Atualizar preview
           </button>
@@ -554,8 +554,8 @@ export function ProjectWorkspace({
             }}
             className={`rounded-full px-3 py-1.5 text-xs font-medium ${
               developerMode
-                ? "bg-orange-100 text-orange-800"
-                : "bg-zinc-100 text-zinc-600"
+                ? "bg-orange-500/20 text-orange-200 ring-1 ring-orange-400/30"
+                : "bg-white/[0.06] text-zinc-400"
             }`}
             title="Ferramentas avançadas"
           >
@@ -566,7 +566,7 @@ export function ProjectWorkspace({
               type="button"
               data-publish-trigger
               onClick={openPublishPanel}
-              className="rounded-full bg-sky-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-sky-700"
+              className="x09-button-primary px-3 py-1.5 text-xs"
               title={publishedUrl ?? "Publicar site"}
             >
               {publishButtonLabel}
@@ -587,9 +587,9 @@ export function ProjectWorkspace({
       </header>
 
       <div className="flex min-h-0 flex-1 overflow-hidden">
-        <aside className="flex w-full max-w-[380px] shrink-0 flex-col border-r border-zinc-200 bg-white md:w-[32%]">
-          <div className="border-b border-zinc-100 px-4 py-3">
-            <p className="text-sm font-semibold text-zinc-900">Chat X09</p>
+        <aside className="flex w-full max-w-[380px] shrink-0 flex-col border-r border-white/8 bg-black/35 backdrop-blur-xl md:w-[32%]">
+          <div className="border-b border-white/8 px-4 py-3">
+            <p className="text-sm font-semibold text-white">Chat X09</p>
             <p className="mt-0.5 text-xs text-zinc-500">
               IA: {activeModel ?? "X09 Router"}
             </p>
@@ -597,7 +597,7 @@ export function ProjectWorkspace({
 
           <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-3">
             {chatLog.length === 0 ? (
-              <p className="px-2 py-8 text-center text-sm text-zinc-400">
+              <p className="px-2 py-8 text-center text-sm text-zinc-500">
                 Descreva o que quer criar ou alterar.
               </p>
             ) : (
@@ -605,7 +605,7 @@ export function ProjectWorkspace({
                 if (msg.kind === "user") {
                   return (
                     <div key={`u-${index}`} className="flex justify-end">
-                      <div className="max-w-[90%] rounded-2xl bg-zinc-900 px-3.5 py-2.5 text-sm leading-6 text-white">
+                      <div className="max-w-[90%] rounded-2xl bg-violet-500/25 px-3.5 py-2.5 text-sm leading-6 text-violet-50 ring-1 ring-violet-400/25">
                         {msg.text}
                       </div>
                     </div>
@@ -615,25 +615,25 @@ export function ProjectWorkspace({
                 if (msg.kind === "plan") {
                   return (
                     <div key={`p-${msg.planId}`} className="flex justify-start">
-                      <div className="max-w-[95%] rounded-2xl bg-violet-50 px-3.5 py-3 text-sm leading-6 text-zinc-800 ring-1 ring-violet-100">
-                        <p className="font-semibold text-zinc-900">
+                      <div className="max-w-[95%] rounded-2xl border border-violet-400/20 bg-violet-500/10 px-3.5 py-3 text-sm leading-6 text-zinc-200">
+                        <p className="font-semibold text-white">
                           Resumo do app
                         </p>
-                        <p className="mt-1 text-zinc-700">
+                        <p className="mt-1 text-zinc-300">
                           {msg.plan.summary}
                         </p>
                         <p className="mt-2 text-xs text-zinc-500">
                           Páginas: {plainPlanBlurb(msg.plan)}
                         </p>
                         {msg.approved ? (
-                          <p className="mt-3 text-xs font-medium text-violet-700">
+                          <p className="mt-3 text-xs font-medium text-violet-200">
                             Aprovado — gerando…
                           </p>
                         ) : (
                           <button
                             type="button"
                             onClick={() => approvePlan(msg.planId)}
-                            className="mt-3 rounded-full bg-violet-600 px-4 py-2 text-xs font-semibold text-white hover:bg-violet-700"
+                            className="x09-button-primary mt-3 px-4 py-2 text-xs"
                           >
                             OK, construir app
                           </button>
@@ -645,10 +645,10 @@ export function ProjectWorkspace({
 
                 return (
                   <div key={`a-${index}`} className="flex justify-start">
-                    <div className="max-w-[90%] rounded-2xl bg-zinc-50 px-3.5 py-2.5 text-sm leading-6 text-zinc-800 ring-1 ring-zinc-100">
+                    <div className="max-w-[90%] rounded-2xl border border-white/8 bg-white/[0.04] px-3.5 py-2.5 text-sm leading-6 text-zinc-200">
                       {msg.text}
                       {msg.working ? (
-                        <span className="mt-2 block text-xs text-violet-600">
+                        <span className="mt-2 block text-xs text-violet-300">
                           Trabalhando…
                         </span>
                       ) : null}
@@ -659,15 +659,15 @@ export function ProjectWorkspace({
             )}
           </div>
 
-          <div className="border-t border-zinc-100 p-3">
-            <div className="rounded-[22px] border border-zinc-200 bg-white p-2 shadow-sm">
+          <div className="border-t border-white/8 p-3">
+            <div className="x09-hero-prompt rounded-[22px] p-2">
               <textarea
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
                 placeholder="Pergunte ao X09…"
                 rows={2}
                 disabled={busy || planning}
-                className="w-full resize-none border-0 bg-transparent px-2 py-2 text-sm text-zinc-900 outline-none placeholder:text-zinc-400 disabled:opacity-60"
+                className="x09-hero-prompt-input w-full resize-none border-0 bg-transparent px-2 py-2 text-sm outline-none disabled:opacity-60"
                 onKeyDown={(e) => {
                   if (e.key === "Enter" && !e.shiftKey) {
                     e.preventDefault();
@@ -680,7 +680,7 @@ export function ProjectWorkspace({
                   type="button"
                   onClick={sendChat}
                   disabled={busy || planning || !prompt.trim()}
-                  className="rounded-full bg-zinc-900 px-3.5 py-2 text-xs font-semibold text-white hover:bg-zinc-800 disabled:opacity-50"
+                  className="x09-button-primary px-3.5 py-2 text-xs disabled:opacity-50"
                 >
                   Construir
                 </button>
@@ -689,7 +689,7 @@ export function ProjectWorkspace({
           </div>
         </aside>
 
-        <section className="relative min-w-0 flex-1 overflow-hidden bg-zinc-100">
+        <section className="relative min-w-0 flex-1 overflow-hidden bg-[#08060f]">
           {mainTab === "preview" ? (
             <ProjectLivePreview
               projectId={project.id}
@@ -698,13 +698,13 @@ export function ProjectWorkspace({
           ) : null}
 
           {mainTab === "code" ? (
-            <div className="absolute inset-0 overflow-auto bg-white p-4">
+            <div className="absolute inset-0 overflow-auto bg-[#08060f] p-4">
               <ProjectFilesPanel projectId={project.id} />
             </div>
           ) : null}
 
           {mainTab === "layers" ? (
-            <div className="absolute inset-0 grid place-items-center bg-white">
+            <div className="absolute inset-0 grid place-items-center bg-[#08060f]">
               <p className="text-sm text-zinc-500">
                 Camadas / Visual Edits em breve
               </p>
@@ -713,7 +713,7 @@ export function ProjectWorkspace({
 
           {developerMode ? (
             <div
-              className={`absolute inset-0 space-y-4 overflow-y-auto bg-[#F7F7F8] p-4 ${
+              className={`absolute inset-0 space-y-4 overflow-y-auto bg-[#08060f] p-4 ${
                 mainTab === "pipeline" ? "block" : "hidden"
               }`}
             >

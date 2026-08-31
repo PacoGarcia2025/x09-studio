@@ -20,6 +20,12 @@ function loadEnvLocal() {
   return env;
 }
 
+function fail(message, ...extra) {
+  console.error(message, ...extra);
+  process.exitCode = 1;
+  throw new Error(String(message));
+}
+
 const env = loadEnvLocal();
 const url = env.NEXT_PUBLIC_SUPABASE_URL;
 const publishable =
@@ -27,16 +33,54 @@ const publishable =
 const secret = env.SUPABASE_SECRET_KEY || env.SUPABASE_SERVICE_ROLE_KEY;
 
 if (!url || !publishable || !secret) {
-  console.error("FAIL missing supabase env");
-  process.exit(1);
+  fail("FAIL missing supabase env");
 }
+
+let urlHost;
+try {
+  urlHost = new URL(url).host;
+} catch {
+  fail("FAIL NEXT_PUBLIC_SUPABASE_URL inválida:", url);
+}
+
+console.log("CHECK_URL", urlHost);
+
+async function checkAuthHealth() {
+  const base = url.replace(/\/$/, "");
+  try {
+    const probe = await fetch(`${base}/auth/v1/health`, {
+      headers: { apikey: publishable },
+    });
+    if (probe.ok) {
+      console.log("AUTH_HEALTH_OK");
+      return;
+    }
+    if (probe.status === 401 || probe.status === 403) {
+      fail(
+        "FAIL auth health HTTP",
+        probe.status,
+        urlHost,
+        "— confira se publishable/secret são do MESMO projeto Supabase.",
+      );
+    }
+    fail("FAIL auth health HTTP", probe.status, urlHost);
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    if (msg.startsWith("FAIL ")) throw e;
+    fail(
+      "FAIL cannot reach Supabase at",
+      urlHost,
+      "— confira o project ref em supabase.com/dashboard e se o projeto não está pausado.",
+      msg,
+    );
+  }
+}
+
 if (!publishable.startsWith("sb_publishable_")) {
-  console.error("FAIL publishable key must start with sb_publishable_");
-  process.exit(1);
+  fail("FAIL publishable key must start with sb_publishable_");
 }
 if (!secret.startsWith("sb_secret_")) {
-  console.error("FAIL secret key must start with sb_secret_");
-  process.exit(1);
+  fail("FAIL secret key must start with sb_secret_");
 }
 
 const admin = createClient(url, secret, {
@@ -50,14 +94,14 @@ const email = `studio.validate.${Date.now()}@gmail.com`;
 const password = "TestStudio123!";
 
 async function main() {
+  await checkAuthHealth();
+
   const adminProbe = await admin.from("projects").select("id").limit(1);
   if (adminProbe.error) {
-    console.error("ADMIN_PROBE", adminProbe.error.message, adminProbe.error.code);
-    process.exit(1);
+    fail("ADMIN_PROBE", adminProbe.error.message, adminProbe.error.code);
   }
   console.log("ADMIN_PROBE_OK");
 
-  // Cria usuário confirmado (Auth Admin API + secret key)
   const created = await admin.auth.admin.createUser({
     email,
     password,
@@ -65,15 +109,13 @@ async function main() {
     user_metadata: { full_name: "Validador Studio" },
   });
   if (created.error) {
-    console.error("SIGNUP_FAIL", created.error.message);
-    process.exit(1);
+    fail("SIGNUP_FAIL", created.error.message);
   }
   console.log("SIGNUP_OK");
 
   const signIn = await client.auth.signInWithPassword({ email, password });
   if (signIn.error) {
-    console.error("LOGIN_FAIL", signIn.error.message);
-    process.exit(1);
+    fail("LOGIN_FAIL", signIn.error.message);
   }
   console.log("LOGIN_OK");
 
@@ -85,8 +127,7 @@ async function main() {
     .maybeSingle();
 
   if (ws.error) {
-    console.error("WORKSPACE_SELECT_FAIL", ws.error.message);
-    process.exit(1);
+    fail("WORKSPACE_SELECT_FAIL", ws.error.message);
   }
 
   if (!ws.data) {
@@ -96,8 +137,7 @@ async function main() {
       .select("id")
       .single();
     if (createdWs.error) {
-      console.error("WORKSPACE_CREATE_FAIL", createdWs.error.message);
-      process.exit(1);
+      fail("WORKSPACE_CREATE_FAIL", createdWs.error.message);
     }
     ws = createdWs;
     console.log("WORKSPACE_CREATED");
@@ -118,12 +158,7 @@ async function main() {
     .single();
 
   if (project.error) {
-    console.error(
-      "PROJECT_CREATE_FAIL",
-      project.error.message,
-      project.error.code,
-    );
-    process.exit(1);
+    fail("PROJECT_CREATE_FAIL", project.error.message, project.error.code);
   }
   console.log("PROJECT_OK", project.data.slug);
 
@@ -132,12 +167,10 @@ async function main() {
     .select("id")
     .eq("id", project.data.id);
   if (list.error || !list.data?.length) {
-    console.error("PROJECT_LIST_FAIL", list.error?.message);
-    process.exit(1);
+    fail("PROJECT_LIST_FAIL", list.error?.message);
   }
   console.log("PROJECT_LIST_OK");
 
-  // Também valida signUp público (publishable), se a política de e-mail permitir
   const publicEmail = `studio.public.${Date.now()}@gmail.com`;
   const publicSignUp = await client.auth.signUp({
     email: publicEmail,
@@ -154,6 +187,8 @@ async function main() {
 }
 
 main().catch((e) => {
-  console.error("UNEXPECTED", e instanceof Error ? e.message : e);
-  process.exit(1);
+  if (!process.exitCode) {
+    console.error("UNEXPECTED", e instanceof Error ? e.message : e);
+    process.exitCode = 1;
+  }
 });
