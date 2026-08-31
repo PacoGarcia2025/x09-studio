@@ -1,10 +1,14 @@
 import type { SandpackProviderProps } from "@codesandbox/sandpack-react";
 import { STUDIO_RUNTIME_DEPENDENCIES } from "@/lib/projects/runtime-deps";
 
+/** Pacotes já embutidos no template react-ts do Sandpack — não bloquear no Verify. */
+export const SANDPACK_BUILTIN_PACKAGES = new Set(["react", "react-dom"]);
+
 /** Pacotes NPM permitidos no preview Sandpack (única fonte de verdade). */
-export const SANDPACK_ALLOWED_PACKAGES = new Set(
-  Object.keys(STUDIO_RUNTIME_DEPENDENCIES),
-);
+export const SANDPACK_ALLOWED_PACKAGES = new Set([
+  ...Object.keys(STUDIO_RUNTIME_DEPENDENCIES),
+  ...SANDPACK_BUILTIN_PACKAGES,
+]);
 
 /** Dependências fixadas — espelha visual-mvp + imobiliária. */
 export const sandpackCustomSetup: SandpackProviderProps["customSetup"] = {

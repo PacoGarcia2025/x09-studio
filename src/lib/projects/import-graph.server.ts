@@ -212,6 +212,110 @@ function repairSourceFileContent(content: string): string {
   );
 }
 
+function resolveImportTargetPath(fromFile: string, spec: string): string {
+  const dir = path.posix.dirname(fromFile.replace(/\\/g, "/"));
+  const base = path.posix.normalize(path.posix.join(dir, spec));
+  if (base.endsWith(".ts") || base.endsWith(".tsx")) return base;
+  return `${base}.ts`;
+}
+
+function collectNamedImportsFromSpec(
+  content: string,
+  spec: string,
+): { defaultImport?: string; named: string[] } {
+  const escaped = spec.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const defaultRe = new RegExp(
+    `import\\s+([A-Za-z_$][\\w$]*)\\s+from\\s+["']${escaped}["']`,
+  );
+  const namedRe = new RegExp(
+    `import\\s+(?:type\\s+)?\\{([^}]+)\\}\\s+from\\s+["']${escaped}["']`,
+  );
+  const defaultImport = content.match(defaultRe)?.[1];
+  const namedBlock = content.match(namedRe)?.[1];
+  const named =
+    namedBlock
+      ?.split(",")
+      .map((part) => part.trim())
+      .filter(Boolean)
+      .map((part) => {
+        const asMatch = part.match(
+          /(?:type\s+)?([A-Za-z_$][\w$]*)\s+as\s+([A-Za-z_$][\w$]*)/,
+        );
+        if (asMatch) return asMatch[2]!;
+        return part.replace(/^type\s+/, "").trim().split(/\s+/)[0]!;
+      })
+      .filter(Boolean) ?? [];
+
+  return { defaultImport, named };
+}
+
+function stubModuleSource(
+  modulePath: string,
+  imports: { defaultImport?: string; named: string[] },
+): string {
+  const base = path.posix.basename(modulePath, path.posix.extname(modulePath));
+  const lines: string[] = [
+    "// Auto-gerado pelo X09 Studio para destravar preview/build.",
+  ];
+
+  for (const name of [...new Set(imports.named)]) {
+    lines.push(
+      `export function ${name}(...args: unknown[]) { return args[0] ?? null; }`,
+    );
+  }
+
+  if (imports.defaultImport) {
+    lines.push(`export default function ${imports.defaultImport}(...args: unknown[]) {
+  return args[0] ?? null;
+}`);
+  } else if (base === "jsonld") {
+    lines.push(`export function buildJsonLd(data: Record<string, unknown>) {
+  return data;
+}`);
+    lines.push("export default buildJsonLd;");
+  } else {
+    lines.push("export default {};");
+  }
+
+  return `${lines.join("\n")}\n`;
+}
+
+/** Cria stubs mínimos para imports relativos quebrados (ex.: ../lib/jsonld). */
+export async function repairBrokenRelativeImports(
+  projectId: string,
+): Promise<string[]> {
+  const tree = await listProjectTree(projectId);
+  const files = listSourceFiles(tree);
+  const fileSet = new Set(files.map((f) => f.replace(/\\/g, "/")));
+  const broken = await findBrokenImports(projectId);
+  const changed: string[] = [];
+
+  for (const { file, spec } of broken) {
+    const target = resolveImportTargetPath(file, spec);
+    if (fileSet.has(target) || fileSet.has(target.replace(/\.ts$/, ".tsx"))) {
+      continue;
+    }
+
+    let content = "";
+    try {
+      content = await readProjectFile(projectId, file);
+    } catch {
+      continue;
+    }
+
+    const imports = collectNamedImportsFromSpec(content, spec);
+    await writeProjectFile(
+      projectId,
+      target,
+      stubModuleSource(target, imports),
+    );
+    fileSet.add(target);
+    changed.push(target);
+  }
+
+  return changed;
+}
+
 /**
  * Corrige imports JSX faltantes e ícones lucide inválidos em arquivos TSX.
  * Retorna paths alterados.
@@ -219,6 +323,8 @@ function repairSourceFileContent(content: string): string {
 export async function repairProjectSourceIssues(
   projectId: string,
 ): Promise<string[]> {
+  await repairBrokenRelativeImports(projectId);
+
   const tree = await listProjectTree(projectId);
   const files = listSourceFiles(tree).filter((f) => /\.tsx$/i.test(f));
   const changed: string[] = [];

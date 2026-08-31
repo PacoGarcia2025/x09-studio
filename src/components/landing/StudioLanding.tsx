@@ -118,9 +118,11 @@ export function StudioLanding({ authError }: Props) {
             </div>
           </div>
 
-          <div className="relative flex items-center justify-center lg:justify-end">
-            <X09Robot />
-            <div className="x09-card absolute bottom-4 left-2 right-2 rounded-3xl p-4 sm:left-6 sm:right-6 lg:bottom-8">
+          <div className="relative flex min-h-[420px] flex-col items-center justify-center lg:min-h-[480px]">
+            <div className="relative z-10 flex w-full max-w-md flex-col items-center">
+              <X09Robot />
+            </div>
+            <div className="x09-card relative z-20 mt-6 w-full max-w-md rounded-3xl p-4 lg:mt-8">
               <div className="flex items-center justify-between text-xs text-zinc-500">
                 <span>Pipeline ativo</span>
                 <span className="font-medium text-emerald-300">online</span>

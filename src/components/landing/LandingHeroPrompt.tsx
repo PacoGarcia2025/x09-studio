@@ -20,14 +20,18 @@ export function LandingHeroPrompt({ isAuthenticated = false }: Props) {
   function onSubmit(e: FormEvent) {
     e.preventDefault();
     const value = prompt.trim();
-    if (value.length < 3) return;
 
     if (isAuthenticated) {
-      router.push(projectCreatePath(value));
+      router.push(value.length >= 3 ? projectCreatePath(value) : "/projects#prompt");
       return;
     }
 
-    router.push(signupForPrompt(value));
+    if (value.length >= 3) {
+      router.push(signupForPrompt(value));
+      return;
+    }
+
+    router.push("/signup");
   }
 
   const loginHref =

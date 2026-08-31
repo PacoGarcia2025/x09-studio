@@ -68,7 +68,6 @@ export function SilentBuildRunner({
       }
       if (!resume.resumed) {
         runningRef.current = false;
-        onSuccess?.();
         return;
       }
     }

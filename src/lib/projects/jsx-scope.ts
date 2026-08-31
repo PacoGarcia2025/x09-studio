@@ -63,6 +63,37 @@ function collectLocalBindings(content: string): Set<string> {
   return bindings;
 }
 
+const DOM_INTERFACE_NAMES = new Set([
+  "HTMLDivElement",
+  "HTMLElement",
+  "HTMLInputElement",
+  "HTMLButtonElement",
+  "HTMLFormElement",
+  "HTMLAnchorElement",
+  "HTMLImageElement",
+  "HTMLSpanElement",
+  "HTMLParagraphElement",
+  "HTMLSelectElement",
+  "HTMLTextAreaElement",
+  "HTMLCanvasElement",
+  "HTMLVideoElement",
+  "HTMLAudioElement",
+  "HTMLTableElement",
+  "HTMLHeadingElement",
+  "SVGElement",
+  "Element",
+  "Document",
+  "Window",
+  "Node",
+  "Event",
+  "MouseEvent",
+  "KeyboardEvent",
+]);
+
+function isDomInterfaceName(name: string): boolean {
+  return DOM_INTERFACE_NAMES.has(name) || /^HTML[A-Z][A-Za-z]*Element$/.test(name);
+}
+
 function findJsxIdentifierRefs(
   content: string,
 ): Array<{ name: string; line: number }> {
@@ -101,6 +132,7 @@ export function findUndeclaredJsxInSource(
   const seen = new Set<string>();
 
   for (const ref of findJsxIdentifierRefs(content)) {
+    if (isDomInterfaceName(ref.name)) continue;
     const key = `${ref.name}:${ref.line}`;
     if (seen.has(key) || inScope.has(ref.name)) continue;
     seen.add(key);

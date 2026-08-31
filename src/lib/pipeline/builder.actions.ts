@@ -260,6 +260,11 @@ export async function tickBuildAction(planId: string): Promise<
     });
 
     if (tick.done && !tick.failed) {
+      const { repairProjectSourceIssues } = await import(
+        "@/lib/projects/import-graph.server"
+      );
+      await repairProjectSourceIssues(gate.project.id);
+
       const { data: planRow } = await gate.supabase
         .from("plans")
         .select("prompt")

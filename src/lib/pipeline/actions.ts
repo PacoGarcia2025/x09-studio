@@ -357,6 +357,11 @@ export async function chatProjectAction(
         message: trimmed,
       });
 
+      const { repairProjectSourceIssues } = await import(
+        "@/lib/projects/import-graph.server"
+      );
+      await repairProjectSourceIssues(projectId);
+
       const { critiqueGeneratedApp } = await import(
         "@/lib/pipeline/quality-critic.server"
       );

@@ -13,6 +13,10 @@ import {
 } from "@/lib/projects/sandpack-setup";
 import { getProjectPreviewFiles } from "@/lib/projects/preview.actions";
 import { ensureAppDefaultExport, sanitizeCodeForSandpack } from "@/lib/projects/preview-map";
+import {
+  isPlaceholderPreviewContent,
+  PreviewBuildingScreen,
+} from "@/components/projects/PreviewBuildingScreen";
 
 const INDEX_HTML = `<!DOCTYPE html>
 <html lang="pt-BR">
@@ -68,9 +72,14 @@ function toSandpackFiles(raw: Record<string, string>): SandpackFiles {
 type Props = {
   projectId: string;
   refreshKey?: number;
+  isBuilding?: boolean;
 };
 
-export function ProjectLivePreview({ projectId, refreshKey = 0 }: Props) {
+export function ProjectLivePreview({
+  projectId,
+  refreshKey = 0,
+  isBuilding = false,
+}: Props) {
   const [files, setFiles] = useState<Record<string, string> | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -123,10 +132,26 @@ export function ProjectLivePreview({ projectId, refreshKey = 0 }: Props) {
     [files],
   );
 
-  if (loading) {
+  const showBuildingOverlay =
+    isBuilding ||
+    loading ||
+    (files != null && isPlaceholderPreviewContent(files));
+
+  if (showBuildingOverlay && !error) {
     return (
-      <div className="absolute inset-0 grid place-items-center bg-white text-sm text-zinc-500">
-        Carregando preview…
+      <div className="absolute inset-0 overflow-hidden bg-[#08060f]">
+        <PreviewBuildingScreen
+          title={
+            isBuilding || loading
+              ? "Construindo seu showcase…"
+              : "Gerando seu app…"
+          }
+          subtitle={
+            isBuilding || loading
+              ? "Agentes de IA planejando, codando e verificando cada detalhe."
+              : "Em instantes esta página será substituída pelo conteúdo do seu produto."
+          }
+        />
       </div>
     );
   }

@@ -88,3 +88,18 @@ describe("formatUndeclaredJsxMessage", () => {
     expect(msg).toContain("HomePage.tsx:160");
   });
 });
+
+describe("dom interface false positives", () => {
+  it("ignora tipos DOM em generics (useRef<HTMLDivElement>)", () => {
+    const source = `import { useRef } from "react";
+
+export default function PropertyMap() {
+  const ref = useRef<HTMLDivElement>(null);
+  return <div ref={ref} />;
+}
+`;
+    expect(findUndeclaredJsxInSource(source, "src/components/PropertyMap.tsx")).toEqual(
+      [],
+    );
+  });
+});

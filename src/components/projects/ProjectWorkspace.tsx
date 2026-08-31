@@ -694,6 +694,7 @@ export function ProjectWorkspace({
             <ProjectLivePreview
               projectId={project.id}
               refreshKey={previewKey}
+              isBuilding={isGenerating || busy}
             />
           ) : null}
 

@@ -9,19 +9,30 @@ type AuthShellProps = {
   footer: React.ReactNode;
 };
 
-/** Login / signup no mesmo visual cosmos da landing. */
+/** Login / signup — cosmos da landing, robô grande sem sobrepor o card. */
 export function AuthShell({ title, subtitle, children, footer }: AuthShellProps) {
   return (
-    <main className="x09-landing relative grid min-h-screen place-items-center overflow-hidden p-6 text-zinc-100">
+    <main className="x09-landing relative min-h-screen overflow-hidden p-4 text-zinc-100 sm:p-6">
       <StudioAtmosphere />
-      <div className="relative z-10 grid w-full max-w-5xl gap-10 lg:grid-cols-[1fr_400px]">
-        <div className="hidden flex-col items-center justify-center gap-6 lg:flex">
-          <X09Robot compact />
+
+      <Link
+        href="/"
+        className="absolute left-4 top-4 z-20 text-xs font-medium text-zinc-500 transition hover:text-violet-200 sm:left-6 sm:top-6"
+      >
+        ← Voltar
+      </Link>
+
+      <div className="relative z-10 mx-auto flex min-h-[calc(100vh-2rem)] w-full max-w-6xl flex-col items-center justify-center gap-10 py-16 lg:flex-row lg:items-center lg:justify-between lg:gap-16 lg:py-8">
+        <div className="flex w-full max-w-md flex-col items-center gap-5 lg:max-w-lg lg:flex-1 lg:items-center">
+          <div className="x09-auth-robot">
+            <X09Robot />
+          </div>
           <p className="max-w-xs text-center text-sm leading-6 text-zinc-500">
             Pipeline Plan → Build → Verify → Fix → Preview → Deploy
           </p>
         </div>
-        <div className="x09-card x09-fade-in rounded-[2rem] p-8">
+
+        <div className="x09-card x09-fade-in w-full max-w-[420px] shrink-0 rounded-[2rem] p-8 lg:relative lg:z-10">
           <div className="mb-8 space-y-3">
             <p className="text-xs uppercase tracking-[0.28em] text-violet-300">
               X09 Studio
@@ -35,12 +46,6 @@ export function AuthShell({ title, subtitle, children, footer }: AuthShellProps)
           <div className="mt-6 text-sm text-zinc-500">{footer}</div>
         </div>
       </div>
-      <Link
-        href="/"
-        className="absolute left-5 top-5 z-10 text-xs font-medium text-zinc-500 transition hover:text-violet-200"
-      >
-        ← Voltar
-      </Link>
     </main>
   );
 }
