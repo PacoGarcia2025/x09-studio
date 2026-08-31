@@ -9,8 +9,8 @@ import {
 
 const MAX_STEPS = 250;
 const MAX_IDLE_TICKS = 120;
-const IDLE_DELAY_MS = 2_500;
-const TICK_DELAY_MS = 400;
+const IDLE_DELAY_MS = 1_500;
+const TICK_DELAY_MS = 80;
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -28,7 +28,7 @@ export function SilentBuildRunner({
   enabled,
   freshStart = false,
   runToken = 0,
-  onProgress,
+  onBuilding,
   onPreviewUpdate,
   onSuccess,
   onError,
@@ -39,7 +39,8 @@ export function SilentBuildRunner({
   freshStart?: boolean;
   /** Incrementa a cada novo "OK, construir" para permitir reexecução. */
   runToken?: number;
-  onProgress?: (message: string) => void;
+  /** Chamado quando o build está ativo (sem mensagens técnicas). */
+  onBuilding?: () => void;
   onPreviewUpdate?: () => void;
   onSuccess?: () => void;
   onError?: (message: string) => void;
@@ -50,7 +51,7 @@ export function SilentBuildRunner({
   const run = useCallback(async () => {
     if (!planId || runningRef.current) return;
     runningRef.current = true;
-    onProgress?.("Montando as páginas do seu app…");
+    onBuilding?.();
 
     if (freshStart) {
       const start = await startBuildAction(planId);
@@ -83,8 +84,6 @@ export function SilentBuildRunner({
         return;
       }
 
-      if (tick.message) onProgress?.(tick.message);
-
       if (tick.done) {
         runningRef.current = false;
         if (tick.failed) {
@@ -101,7 +100,7 @@ export function SilentBuildRunner({
         if (idleTicks >= MAX_IDLE_TICKS) {
           runningRef.current = false;
           onError?.(
-            "A IA demorou mais que o esperado. Tente no chat: “continuar a geração” — o progresso salvo será retomado.",
+            "A geração demorou mais que o esperado. Recarregue a página — o progresso salvo será retomado.",
           );
           return;
         }
@@ -123,7 +122,7 @@ export function SilentBuildRunner({
     onError?.(
       "A geração demorou demais. Recarregue a página — o progresso salvo será retomado.",
     );
-  }, [freshStart, onError, onPreviewUpdate, onProgress, onSuccess, planId]);
+  }, [freshStart, onBuilding, onError, onPreviewUpdate, onSuccess, planId]);
 
   useEffect(() => {
     if (!enabled || !planId) return;

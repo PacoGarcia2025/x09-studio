@@ -5,7 +5,6 @@ import {
   buildProjectSubdomainHost,
   buildProjectPathUrl,
   isSubdomainPublishReady,
-  resolveProjectPublishUrl,
   resolvePublicShareUrl,
 } from "@/lib/projects/publish-url";
 import { publishProjectAction } from "@/lib/projects/publish.actions";
@@ -55,14 +54,11 @@ export function PublishPanel({
 
   useEffect(() => {
     if (!open) return;
-    function onPointerDown(e: MouseEvent) {
-      const target = e.target as Node;
-      if (panelRef.current?.contains(target)) return;
-      if ((target as HTMLElement).closest?.("[data-publish-trigger]")) return;
-      onClose();
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") onClose();
     }
-    document.addEventListener("mousedown", onPointerDown);
-    return () => document.removeEventListener("mousedown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
   }, [open, onClose]);
 
   const runPublish = useCallback(async () => {
@@ -107,155 +103,121 @@ export function PublishPanel({
   if (!open) return null;
 
   return (
-    <div
-      ref={panelRef}
-      className="absolute right-0 top-full z-50 mt-2 w-[min(100vw-1rem,380px)] rounded-2xl border border-zinc-200 bg-white p-4 shadow-xl ring-1 ring-black/5"
-    >
-      <div className="flex items-start justify-between gap-3">
-        <h2 className="text-base font-semibold text-zinc-900">
-          {published ? "Publicado" : busy ? "Publicando…" : "Publicar site"}
-        </h2>
-        <span className="inline-flex items-center gap-1 rounded-full bg-zinc-100 px-2 py-0.5 text-xs text-zinc-500">
-          <span aria-hidden>👁</span> 0
-        </span>
-      </div>
-
-      <div className="mt-4">
-        <div className="flex items-center justify-between gap-2">
-          <p className="text-xs font-medium text-zinc-500">URL do site</p>
+    <div className="fixed inset-0 z-[200] flex items-start justify-center p-4 pt-16 sm:justify-end sm:p-6 sm:pt-20">
+      <button
+        type="button"
+        aria-label="Fechar"
+        className="absolute inset-0 bg-black/50 backdrop-blur-[2px]"
+        onClick={onClose}
+      />
+      <div
+        ref={panelRef}
+        className="x09-card relative z-10 w-full max-w-[400px] rounded-2xl p-5 shadow-2xl ring-1 ring-white/10"
+      >
+        <div className="flex items-start justify-between gap-3">
+          <h2 className="text-base font-semibold text-white">
+            {published ? "Publicado" : busy ? "Publicando…" : "Publicar site"}
+          </h2>
           <button
             type="button"
-            onClick={() => setShowDomainSettings((v) => !v)}
-            className="inline-flex items-center gap-1 text-xs font-medium text-sky-600 hover:text-sky-700"
+            onClick={onClose}
+            className="rounded-lg px-2 py-1 text-xs text-zinc-500 hover:bg-white/5 hover:text-zinc-200"
           >
-            <span aria-hidden>🔗</span>
-            Adicionar domínio próprio
-            <span className="rounded bg-violet-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-violet-700">
-              Pro
+            Fechar
+          </button>
+        </div>
+
+        <div className="mt-4">
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-xs font-medium text-zinc-500">URL do site</p>
+            <button
+              type="button"
+              onClick={() => setShowDomainSettings((v) => !v)}
+              className="text-xs font-medium text-violet-300 hover:text-violet-200"
+            >
+              Domínio próprio
+            </button>
+          </div>
+
+          <div className="mt-2 flex items-center gap-2 rounded-xl border border-white/10 bg-black/30 px-3 py-2.5">
+            <span className="min-w-0 flex-1 truncate text-sm text-zinc-200">
+              {subdomainReady ? host : url.replace(/^https:\/\//, "")}
             </span>
-          </button>
-        </div>
+            <button
+              type="button"
+              onClick={() => void copyUrl()}
+              className="shrink-0 rounded-lg px-2 py-1 text-xs text-zinc-400 hover:bg-white/5 hover:text-white"
+              title="Copiar link"
+            >
+              {copied ? "Copiado" : "Copiar"}
+            </button>
+          </div>
 
-        <div className="mt-2 flex items-center gap-2 rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2.5">
-          <span className="min-w-0 flex-1 truncate text-sm text-zinc-800">
-            {subdomainReady ? host : url.replace(/^https:\/\//, "")}
-          </span>
-          <button
-            type="button"
-            onClick={() => void copyUrl()}
-            className="shrink-0 rounded-lg p-1.5 text-zinc-500 hover:bg-white hover:text-zinc-800"
-            title="Copiar link"
-          >
-            {copied ? "✓" : "⎘"}
-          </button>
-        </div>
-
-        {!subdomainReady ? (
-          <div className="mt-3 rounded-xl border border-sky-200 bg-sky-50 px-3 py-2.5 text-xs text-sky-900">
-            <p className="font-medium">Link público ativo</p>
-            <p className="mt-1 text-sky-800">
-              Compartilhe o endereço acima — ele já funciona para visitantes.
-              Subdomínio{" "}
-              <code className="rounded bg-white/70 px-1">{host}</code>{" "}
-              fica disponível quando o certificado wildcard estiver ativo na VPS.
+          {!subdomainReady ? (
+            <p className="mt-3 text-xs leading-5 text-zinc-500">
+              Link público ativo em{" "}
+              <span className="text-zinc-300">{url.replace(/^https:\/\//, "")}</span>
             </p>
+          ) : null}
+
+          {published || canPublish ? (
             <a
               href={url}
               target="_blank"
               rel="noopener noreferrer"
-              className="mt-2 inline-block font-medium text-sky-700 hover:underline"
+              className="mt-3 inline-block text-xs font-medium text-violet-300 hover:text-violet-200"
             >
-              Abrir site publicado
+              Abrir site publicado →
             </a>
-          </div>
-        ) : (
-          <a
-            href={url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="mt-3 inline-block text-xs font-medium text-sky-700 hover:underline"
-          >
-            Abrir site publicado
-          </a>
-        )}
-      </div>
-
-      {showDomainSettings ? (
-        <div className="mt-4 rounded-xl border border-dashed border-zinc-200 bg-zinc-50/80 p-3">
-          <p className="text-xs font-medium text-zinc-700">Domínio personalizado</p>
-          <input
-            disabled
-            placeholder="www.seusite.com.br"
-            className="mt-2 w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-400"
-          />
-          <p className="mt-2 text-xs text-zinc-500">
-            Wizard DNS + SSL em breve. Por enquanto use o subdomínio{" "}
-            <strong>{host}</strong>.
-          </p>
+          ) : null}
         </div>
-      ) : null}
 
-      <div className="mt-4 border-t border-zinc-100 pt-4">
+        {showDomainSettings ? (
+          <div className="mt-4 rounded-xl border border-dashed border-white/10 bg-black/20 p-3">
+            <p className="text-xs font-medium text-zinc-300">Domínio personalizado</p>
+            <input
+              disabled
+              placeholder="www.seusite.com.br"
+              className="mt-2 w-full rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-500"
+            />
+            <p className="mt-2 text-xs text-zinc-500">
+              Wizard DNS + SSL em breve. Por enquanto use o subdomínio{" "}
+              <strong className="text-zinc-300">{host}</strong>.
+            </p>
+          </div>
+        ) : null}
+
         {!canPublish ? (
-          <div className="mb-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-xs text-amber-900">
+          <div className="mt-4 rounded-xl border border-amber-400/20 bg-amber-500/10 px-3 py-2.5 text-xs text-amber-100">
             <p className="font-medium">App ainda não pronto para publicar</p>
-            <p className="mt-1">
+            <p className="mt-1 text-amber-100/80">
               {publishBlockReason ??
                 "Confirme «OK, construir app» no chat e aguarde o preview carregar."}
             </p>
           </div>
         ) : null}
-        <p className="text-xs font-medium text-zinc-500">
-          Quem pode ver este site
-        </p>
-        <div className="mt-2 flex items-start gap-2">
-          <span className="text-lg leading-none" aria-hidden>
-            🌐
-          </span>
-          <div>
-            <p className="text-sm font-semibold text-zinc-900">Público</p>
-            <p className="text-xs text-zinc-500">Qualquer pessoa com o link</p>
-          </div>
-        </div>
-      </div>
 
-      {error ? (
-        <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">
-          {error}
-        </p>
-      ) : null}
+        {error ? (
+          <p className="mt-3 rounded-lg bg-red-500/10 px-3 py-2 text-xs text-red-200 ring-1 ring-red-400/20">
+            {error}
+          </p>
+        ) : null}
 
-      <div className="mt-4 grid grid-cols-2 gap-2">
         <button
           type="button"
-          disabled
-          className="rounded-xl border border-zinc-200 px-3 py-2 text-xs font-medium text-zinc-400"
+          onClick={() => void runPublish()}
+          disabled={busy || !canPublish}
+          className="x09-button-primary mt-4 w-full py-2.5 text-sm disabled:opacity-50"
         >
-          Revisar segurança
-        </button>
-        <button
-          type="button"
-          onClick={() => setShowDomainSettings(true)}
-          className="rounded-xl border border-zinc-200 px-3 py-2 text-xs font-medium text-zinc-700 hover:bg-zinc-50"
-        >
-          Editar configurações
+          {busy
+            ? "Publicando…"
+            : !canPublish
+              ? "Aguardando preview"
+              : published
+                ? "Atualizar site"
+                : "Publicar agora"}
         </button>
       </div>
-
-      <button
-        type="button"
-        onClick={() => void runPublish()}
-        disabled={busy || !canPublish}
-        className="mt-3 w-full rounded-xl bg-sky-600 py-2.5 text-sm font-semibold text-white hover:bg-sky-700 disabled:opacity-60"
-      >
-        {busy
-          ? "Atualizando…"
-          : !canPublish
-            ? "Construa o app primeiro"
-            : published
-              ? "Atualizar"
-              : "Publicar agora"}
-      </button>
     </div>
   );
 }

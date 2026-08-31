@@ -133,9 +133,9 @@ export function ProjectLivePreview({
   );
 
   const showBuildingOverlay =
-    isBuilding ||
     loading ||
-    (files != null && isPlaceholderPreviewContent(files));
+    (files != null && isPlaceholderPreviewContent(files) && isBuilding) ||
+    (files == null && isBuilding);
 
   if (showBuildingOverlay && !error) {
     return (

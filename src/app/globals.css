@@ -418,10 +418,76 @@ body {
   background: #08060f;
 }
 
+.x09-preview-building-scroll {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 0;
+  padding: clamp(16px, 3vh, 28px) clamp(16px, 4vw, 28px);
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.x09-preview-building-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: min(100%, 320px);
+  max-height: 100%;
+  gap: clamp(8px, 1.8vh, 14px);
+  text-align: center;
+}
+
 .x09-preview-robot-wrap {
   position: relative;
-  width: min(100%, 220px);
-  aspect-ratio: 1;
+  width: clamp(72px, 11vh, 96px);
+  height: clamp(72px, 11vh, 96px);
+  overflow: visible;
+  padding-top: 6px;
+  flex-shrink: 0;
+}
+
+.x09-preview-mascot-glow {
+  inset: 4%;
+  filter: blur(16px);
+}
+
+.x09-preview-mascot-orbit {
+  inset: 2%;
+}
+
+.x09-preview-mascot-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  animation: none !important;
+  filter: drop-shadow(0 0 20px rgba(115, 92, 255, 0.28));
+}
+
+.x09-preview-copy {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(4px, 0.8vh, 8px);
+  width: 100%;
+}
+
+.x09-preview-title {
+  font-size: clamp(1rem, 2.4vh, 1.35rem);
+  line-height: 1.25;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: #fff;
+}
+
+.x09-preview-subtitle {
+  font-size: clamp(0.72rem, 1.6vh, 0.82rem);
+  line-height: 1.45;
+  color: #a1a1aa;
+}
+
+.x09-preview-pipeline {
+  flex-shrink: 0;
 }
 
 .x09-preview-step-bar {
@@ -461,5 +527,59 @@ body {
   50% {
     opacity: 1;
     transform: scale(1.15);
+  }
+}
+
+.x09-build-runner-track {
+  position: relative;
+  width: 40px;
+  height: 40px;
+  overflow: hidden;
+}
+
+.x09-build-runner-img {
+  width: 36px;
+  height: 36px;
+  object-fit: contain;
+  animation: x09-run-bob 0.85s ease-in-out infinite;
+  filter: drop-shadow(0 0 8px rgba(115, 92, 255, 0.35));
+}
+
+.x09-build-dot {
+  display: block;
+  width: 5px;
+  height: 5px;
+  border-radius: 9999px;
+  background: rgba(167, 139, 250, 0.85);
+  animation: x09-build-dot 1.2s ease-in-out infinite;
+}
+
+.x09-build-dot-delay-1 {
+  animation-delay: 0.2s;
+}
+
+.x09-build-dot-delay-2 {
+  animation-delay: 0.4s;
+}
+
+@keyframes x09-run-bob {
+  0%,
+  100% {
+    transform: translateX(0) translateY(0);
+  }
+  50% {
+    transform: translateX(6px) translateY(-3px);
+  }
+}
+
+@keyframes x09-build-dot {
+  0%,
+  100% {
+    opacity: 0.25;
+    transform: translateY(0);
+  }
+  50% {
+    opacity: 1;
+    transform: translateY(-3px);
   }
 }

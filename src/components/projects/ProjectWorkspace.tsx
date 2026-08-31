@@ -16,18 +16,31 @@ import { getBuildState } from "@/lib/pipeline/builder.actions";
 import type { StudioPlan } from "@/lib/pipeline/plan-schema";
 import { PublishPanel } from "@/components/projects/PublishPanel";
 import { resolvePublicShareUrl } from "@/lib/projects/publish-url";
+import {
+  BuildProgressBubble,
+  humanizeBuildError,
+} from "@/components/projects/BuildProgressBubble";
 
 type MainTab = "preview" | "code" | "layers" | "pipeline";
 
 type ChatItem =
   | { kind: "user"; text: string }
-  | { kind: "ai"; text: string; working?: boolean }
+  | { kind: "ai"; text: string }
+  | { kind: "building" }
   | {
       kind: "plan";
       planId: string;
       plan: StudioPlan;
       approved?: boolean;
     };
+
+function stripBuildingMessages(items: ChatItem[]): ChatItem[] {
+  return items.filter((m) => m.kind !== "building");
+}
+
+function appendBuildingBubble(items: ChatItem[]): ChatItem[] {
+  return [...stripBuildingMessages(items), { kind: "building" }];
+}
 
 type Props = {
   project: {
@@ -113,7 +126,6 @@ export function ProjectWorkspace({
 
     items.push({
       kind: "ai",
-      working: autoStart && !planId,
       text:
         autoStart && !planId
           ? "Entendi seu pedido. Estou preparando a estrutura do app…"
@@ -240,7 +252,7 @@ export function ProjectWorkspace({
       setIsGenerating(false);
       setBusy(false);
       setChatLog((prev) => [
-        ...prev.filter((m) => !(m.kind === "ai" && m.working)),
+        ...stripBuildingMessages(prev),
         {
           kind: "ai",
           text: `Pronto. Vou criar: ${next.plan.summary.slice(0, 220)}`,
@@ -268,11 +280,7 @@ export function ProjectWorkspace({
           ? { ...m, approved: true }
           : m,
       ),
-      {
-        kind: "ai",
-        working: true,
-        text: "Ótimo! Estou construindo o preview do seu app…",
-      },
+      { kind: "building" },
     ]);
   }, []);
 
@@ -285,11 +293,7 @@ export function ProjectWorkspace({
       setChatLog((prev) => [
         ...prev,
         { kind: "user", text: value },
-        {
-          kind: "ai",
-          working: true,
-          text: "Entendi. Estou analisando o melhor caminho…",
-        },
+        { kind: "building" },
       ]);
       setPrompt("");
 
@@ -300,10 +304,10 @@ export function ProjectWorkspace({
         setBusy(false);
         setIsGenerating(false);
         setChatLog((prev) => [
-          ...prev.filter((m) => !(m.kind === "ai" && m.working)),
+          ...stripBuildingMessages(prev),
           {
             kind: "ai",
-            text: `Não consegui montar agora: ${result.error}`,
+            text: `Não consegui montar agora: ${humanizeBuildError(result.error)}`,
           },
         ]);
         return;
@@ -314,7 +318,7 @@ export function ProjectWorkspace({
         setIsGenerating(false);
         setActiveModel(result.model);
         setChatLog((prev) => [
-          ...prev.filter((m) => !(m.kind === "ai" && m.working)),
+          ...stripBuildingMessages(prev),
           { kind: "ai", text: result.answer },
         ]);
         return;
@@ -327,10 +331,10 @@ export function ProjectWorkspace({
         setActiveModel(result.model);
         setPreviewKey((k) => k + 1);
         setChatLog((prev) => [
-          ...prev.filter((m) => !(m.kind === "ai" && m.working)),
+          ...stripBuildingMessages(prev),
           {
             kind: "ai",
-            text: `${result.summary}\n\nArquivos atualizados: ${result.paths.join(", ")}. O preview já foi atualizado.`,
+            text: `${result.summary}\n\nPronto — suas alterações já estão no preview.`,
           },
         ]);
         router.refresh();
@@ -345,21 +349,13 @@ export function ProjectWorkspace({
         setBuildToken((t) => t + 1);
         setBuildEnabled(true);
         setIsGenerating(true);
-        setChatLog((prev) => [
-          ...prev.filter((m) => !(m.kind === "ai" && m.working)),
-          {
-            kind: "ai",
-            working: true,
-            text:
-              result.recoveredTasks > 0
-                ? `Retomando a geração (${result.pendingTasks} etapa(s) pendente(s); ${result.recoveredTasks} recuperada(s) após travamento).`
-                : `Retomando a geração (${result.pendingTasks} etapa(s) pendente(s))…`,
-          },
-        ]);
+        setChatLog((prev) => appendBuildingBubble(prev));
         return;
       }
 
       // create → plano para OK
+      setBusy(false);
+      setIsGenerating(false);
       presentPlanForApproval(result);
     },
     [busy, planning, presentPlanForApproval, project.id, router],
@@ -399,14 +395,7 @@ export function ProjectWorkspace({
         onStarted={() => {
           setIsGenerating(true);
           setBusy(true);
-          setChatLog((prev) => [
-            ...prev.filter((m) => !(m.kind === "ai" && m.working)),
-            {
-              kind: "ai",
-              working: true,
-              text: "Entendi seu pedido. Estou preparando a estrutura do app…",
-            },
-          ]);
+          setChatLog((prev) => appendBuildingBubble(prev));
         }}
         onReady={(next) => {
           if (awaitApproval) {
@@ -418,24 +407,17 @@ export function ProjectWorkspace({
             setBuildFreshStart(true);
             setBuildToken((t) => t + 1);
             setBuildEnabled(true);
-            setChatLog((prev) => [
-              ...prev.filter((m) => !(m.kind === "ai" && m.working)),
-              {
-                kind: "ai",
-                working: true,
-                text: "Plano pronto. Construindo o preview…",
-              },
-            ]);
+            setChatLog((prev) => appendBuildingBubble(prev));
           }
         }}
         onError={(message) => {
           setBusy(false);
           setIsGenerating(false);
           setChatLog((prev) => [
-            ...prev.filter((m) => !(m.kind === "ai" && m.working)),
+            ...stripBuildingMessages(prev),
             {
               kind: "ai",
-              text: `Não consegui montar agora: ${message}`,
+              text: `Não consegui montar agora: ${humanizeBuildError(message)}`,
             },
           ]);
         }}
@@ -446,16 +428,8 @@ export function ProjectWorkspace({
         enabled={buildEnabled && !developerMode}
         freshStart={buildFreshStart}
         runToken={buildToken}
-        onProgress={(message) => {
-          setChatLog((prev) => {
-            const withoutWorking = prev.filter(
-              (m) => !(m.kind === "ai" && m.working),
-            );
-            return [
-              ...withoutWorking,
-              { kind: "ai", working: true, text: message },
-            ];
-          });
+        onBuilding={() => {
+          setChatLog((prev) => appendBuildingBubble(prev));
         }}
         onPreviewUpdate={() => setPreviewKey((k) => k + 1)}
         onSuccess={() => {
@@ -469,7 +443,7 @@ export function ProjectWorkspace({
           setPreviewKey((k) => k + 1);
           setVerifyToken((t) => t + 1);
           setChatLog((prev) => [
-            ...prev.filter((m) => !(m.kind === "ai" && m.working)),
+            ...stripBuildingMessages(prev),
             {
               kind: "ai",
               text: "Pronto! Seu app já está no preview. Peça ajustes pelo chat quando quiser.",
@@ -484,16 +458,16 @@ export function ProjectWorkspace({
           setBuildFreshStart(false);
           setProjectStatus("error");
           setChatLog((prev) => [
-            ...prev.filter((m) => !(m.kind === "ai" && m.working)),
+            ...stripBuildingMessages(prev),
             {
               kind: "ai",
-              text: `Algo deu errado na geração: ${message}`,
+              text: humanizeBuildError(message),
             },
           ]);
         }}
       />
 
-      <header className="flex h-12 shrink-0 items-center gap-2 border-b border-white/8 bg-black/40 px-3 backdrop-blur-xl">
+      <header className="relative z-50 flex h-12 shrink-0 items-center gap-2 border-b border-white/8 bg-black/40 px-3 backdrop-blur-xl">
         <Link
           href="/projects"
           className="grid h-8 w-8 place-items-center rounded-lg text-zinc-400 transition hover:bg-white/[0.06] hover:text-zinc-100"
@@ -612,6 +586,14 @@ export function ProjectWorkspace({
                   );
                 }
 
+                if (msg.kind === "building") {
+                  return (
+                    <div key={`b-${index}`} className="flex justify-start">
+                      <BuildProgressBubble />
+                    </div>
+                  );
+                }
+
                 if (msg.kind === "plan") {
                   return (
                     <div key={`p-${msg.planId}`} className="flex justify-start">
@@ -626,9 +608,9 @@ export function ProjectWorkspace({
                           Páginas: {plainPlanBlurb(msg.plan)}
                         </p>
                         {msg.approved ? (
-                          <p className="mt-3 text-xs font-medium text-violet-200">
-                            Aprovado — gerando…
-                          </p>
+                          <div className="mt-3">
+                            <BuildProgressBubble />
+                          </div>
                         ) : (
                           <button
                             type="button"
@@ -647,11 +629,6 @@ export function ProjectWorkspace({
                   <div key={`a-${index}`} className="flex justify-start">
                     <div className="max-w-[90%] rounded-2xl border border-white/8 bg-white/[0.04] px-3.5 py-2.5 text-sm leading-6 text-zinc-200">
                       {msg.text}
-                      {msg.working ? (
-                        <span className="mt-2 block text-xs text-violet-300">
-                          Trabalhando…
-                        </span>
-                      ) : null}
                     </div>
                   </div>
                 );
@@ -689,7 +666,7 @@ export function ProjectWorkspace({
           </div>
         </aside>
 
-        <section className="relative min-w-0 flex-1 overflow-hidden bg-[#08060f]">
+        <section className="relative h-full min-h-0 min-w-0 flex-1 overflow-hidden bg-[#08060f]">
           {mainTab === "preview" ? (
             <ProjectLivePreview
               projectId={project.id}
