@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   SandpackLayout,
   SandpackPreview,
@@ -84,11 +84,13 @@ export function ProjectLivePreview({
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadAttempt, setLoadAttempt] = useState(0);
+  const hasLoadedOnceRef = useRef(false);
 
   useEffect(() => {
     let cancelled = false;
-    setLoading(true);
-    setError(null);
+    const firstLoad = !hasLoadedOnceRef.current;
+    if (firstLoad) setLoading(true);
+    if (firstLoad) setError(null);
 
     const timeout = window.setTimeout(() => {
       if (cancelled) return;
@@ -103,13 +105,19 @@ export function ProjectLivePreview({
         const result = await getProjectPreviewFiles(projectId);
         if (cancelled) return;
         if (!result.ok) {
+          if (result.generating && isBuilding) {
+            setLoading(false);
+            return;
+          }
           setError(result.error);
           setFiles(null);
           setLoading(false);
           return;
         }
         setFiles(result.files);
+        setError(null);
         setLoading(false);
+        hasLoadedOnceRef.current = true;
       } catch (err) {
         if (cancelled) return;
         setError(
@@ -125,17 +133,21 @@ export function ProjectLivePreview({
       cancelled = true;
       window.clearTimeout(timeout);
     };
-  }, [projectId, refreshKey, loadAttempt]);
+  }, [projectId, refreshKey, loadAttempt, isBuilding]);
 
   const sandpackFiles = useMemo(
     () => (files ? toSandpackFiles(files) : null),
     [files],
   );
 
+  const isPlaceholder =
+    files != null && isPlaceholderPreviewContent(files);
+  const hasRealPreview = files != null && !isPlaceholder;
+
   const showBuildingOverlay =
-    loading ||
-    (files != null && isPlaceholderPreviewContent(files) && isBuilding) ||
-    (files == null && isBuilding);
+    isBuilding &&
+    !hasRealPreview &&
+    (files == null ? loading || !hasLoadedOnceRef.current : isPlaceholder);
 
   if (showBuildingOverlay && !error) {
     return (

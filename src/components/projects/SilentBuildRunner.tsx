@@ -20,6 +20,22 @@ function isWaitingTick(message: string): boolean {
   return /Aguardando task em execução\/retry/i.test(message);
 }
 
+async function finalizeCompletedBuild(planId: string): Promise<
+  | { ok: true; done: true; failed: boolean; message: string }
+  | { ok: true; done: false }
+  | { ok: false; error: string }
+> {
+  const tick = await tickBuildAction(planId);
+  if (!tick.ok) return { ok: false, error: tick.error };
+  if (!tick.done) return { ok: true, done: false };
+  return {
+    ok: true,
+    done: true,
+    failed: tick.failed,
+    message: tick.message,
+  };
+}
+
 /**
  * Roda o Builder sem UI técnica — só callbacks de progresso.
  */
@@ -68,7 +84,20 @@ export function SilentBuildRunner({
         return;
       }
       if (!resume.resumed) {
+        const finalized = await finalizeCompletedBuild(planId);
         runningRef.current = false;
+        if (!finalized.ok) {
+          onError?.(finalized.error);
+          return;
+        }
+        if (finalized.done) {
+          if (finalized.failed) {
+            onError?.(finalized.message || "Não consegui terminar a geração.");
+          } else {
+            onPreviewUpdate?.();
+            onSuccess?.();
+          }
+        }
         return;
       }
     }

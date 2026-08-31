@@ -12,7 +12,7 @@ import { ProjectLivePreview } from "@/components/projects/ProjectLivePreview";
 import { SilentBuildRunner } from "@/components/projects/SilentBuildRunner";
 import { VerifyPanel } from "@/components/verify/VerifyPanel";
 import { chatProjectAction } from "@/lib/pipeline/actions";
-import { getBuildState } from "@/lib/pipeline/builder.actions";
+import { getBuildState, tickBuildAction } from "@/lib/pipeline/builder.actions";
 import type { StudioPlan } from "@/lib/pipeline/plan-schema";
 import { PublishPanel } from "@/components/projects/PublishPanel";
 import { resolvePublicShareUrl } from "@/lib/projects/publish-url";
@@ -149,6 +149,72 @@ export function ProjectWorkspace({
   const [publishReady, setPublishReady] = useState(canPublish);
   const [publishBlockMsg, setPublishBlockMsg] = useState(publishBlockReason);
   const [planning, setPlanning] = useState(false);
+  const finalizePollRef = useRef(false);
+
+  const handleBuildSuccess = useCallback(() => {
+    setBusy(false);
+    setIsGenerating(false);
+    setBuildEnabled(false);
+    setBuildFreshStart(false);
+    setProjectStatus("ready");
+    setPublishReady(true);
+    setPublishBlockMsg(undefined);
+    setPreviewKey((k) => k + 1);
+    setVerifyToken((t) => t + 1);
+    setChatLog((prev) => {
+      const cleaned = stripBuildingMessages(prev);
+      if (
+        cleaned.some(
+          (m) =>
+            m.kind === "ai" &&
+            m.text.includes("Pronto! Seu app já está no preview"),
+        )
+      ) {
+        return cleaned;
+      }
+      return [
+        ...cleaned,
+        {
+          kind: "ai",
+          text: "Pronto! Seu app já está no preview. Peça ajustes pelo chat quando quiser.",
+        },
+      ];
+    });
+    router.refresh();
+  }, [router]);
+
+  const handleBuildError = useCallback((message: string) => {
+    setBusy(false);
+    setIsGenerating(false);
+    setBuildEnabled(false);
+    setBuildFreshStart(false);
+    setProjectStatus("error");
+    setPreviewKey((k) => k + 1);
+    setChatLog((prev) => [
+      ...stripBuildingMessages(prev),
+      {
+        kind: "ai",
+        text: humanizeBuildError(message),
+      },
+    ]);
+    router.refresh();
+  }, [router]);
+
+  useEffect(() => {
+    finalizePollRef.current = false;
+  }, [buildToken, activePlanId]);
+
+  useEffect(() => {
+    if (project.status === "ready" && isGenerating) {
+      handleBuildSuccess();
+    } else if (project.status === "error" && isGenerating) {
+      setIsGenerating(false);
+      setBusy(false);
+      setBuildEnabled(false);
+      setProjectStatus("error");
+      setPreviewKey((k) => k + 1);
+    }
+  }, [handleBuildSuccess, isGenerating, project.status]);
 
   useEffect(() => {
     setPublishReady(canPublish);
@@ -170,53 +236,76 @@ export function ProjectWorkspace({
   }, [activePlanId, developerMode, projectStatus]);
 
   useEffect(() => {
-    if (!activePlanId || !isGenerating || developerMode || buildEnabled) return;
+    if (!activePlanId || !isGenerating || developerMode) return;
 
     const poll = async () => {
       const result = await getBuildState(activePlanId);
       if (!result.ok) return;
 
-      const { counts, planStatus } = result.data;
+      const { counts, planStatus, projectStatus: remoteProjectStatus } =
+        result.data;
+
+      if (remoteProjectStatus === "ready") {
+        handleBuildSuccess();
+        return;
+      }
+
+      if (remoteProjectStatus === "error") {
+        handleBuildError("A geração encontrou um problema. Tente de novo pelo chat.");
+        return;
+      }
+
       if (counts.done > lastDoneTasksRef.current) {
         lastDoneTasksRef.current = counts.done;
         setPreviewKey((k) => k + 1);
       }
 
-      const finished =
+      const tasksFinished =
+        counts.total > 0 &&
         counts.queued === 0 &&
         counts.running === 0 &&
         counts.retrying === 0 &&
-        (planStatus === "built" || counts.done + counts.failed === counts.total);
+        counts.done + counts.failed === counts.total;
 
-      if (!finished) return;
+      if (!tasksFinished && planStatus !== "built") return;
 
       if (counts.failed > 0) {
-        setIsGenerating(false);
-        setProjectStatus("error");
-        setPreviewKey((k) => k + 1);
-        router.refresh();
+        handleBuildError("Algumas etapas falharam durante a geração.");
         return;
       }
 
-      setIsGenerating(false);
-      setProjectStatus("ready");
-      setPublishReady(true);
-      setPublishBlockMsg(undefined);
-      setPreviewKey((k) => k + 1);
-      router.refresh();
+      if (finalizePollRef.current) return;
+      finalizePollRef.current = true;
+
+      const tick = await tickBuildAction(activePlanId);
+      if (!tick.ok) {
+        finalizePollRef.current = false;
+        return;
+      }
+
+      if (tick.done) {
+        if (tick.failed) {
+          handleBuildError(tick.message);
+        } else {
+          handleBuildSuccess();
+        }
+        return;
+      }
+
+      finalizePollRef.current = false;
     };
 
     const id = window.setInterval(() => {
       void poll();
-    }, 5_000);
+    }, 4_000);
     void poll();
     return () => window.clearInterval(id);
   }, [
     activePlanId,
-    buildEnabled,
     developerMode,
+    handleBuildError,
+    handleBuildSuccess,
     isGenerating,
-    router,
   ]);
 
   const statusLabel = useMemo(() => {
@@ -432,39 +521,8 @@ export function ProjectWorkspace({
           setChatLog((prev) => appendBuildingBubble(prev));
         }}
         onPreviewUpdate={() => setPreviewKey((k) => k + 1)}
-        onSuccess={() => {
-          setBusy(false);
-          setIsGenerating(false);
-          setBuildEnabled(false);
-          setBuildFreshStart(false);
-          setProjectStatus("ready");
-          setPublishReady(true);
-          setPublishBlockMsg(undefined);
-          setPreviewKey((k) => k + 1);
-          setVerifyToken((t) => t + 1);
-          setChatLog((prev) => [
-            ...stripBuildingMessages(prev),
-            {
-              kind: "ai",
-              text: "Pronto! Seu app já está no preview. Peça ajustes pelo chat quando quiser.",
-            },
-          ]);
-          router.refresh();
-        }}
-        onError={(message) => {
-          setBusy(false);
-          setIsGenerating(false);
-          setBuildEnabled(false);
-          setBuildFreshStart(false);
-          setProjectStatus("error");
-          setChatLog((prev) => [
-            ...stripBuildingMessages(prev),
-            {
-              kind: "ai",
-              text: humanizeBuildError(message),
-            },
-          ]);
-        }}
+        onSuccess={handleBuildSuccess}
+        onError={handleBuildError}
       />
 
       <header className="relative z-50 flex h-12 shrink-0 items-center gap-2 border-b border-white/8 bg-black/40 px-3 backdrop-blur-xl">
@@ -671,7 +729,7 @@ export function ProjectWorkspace({
             <ProjectLivePreview
               projectId={project.id}
               refreshKey={previewKey}
-              isBuilding={isGenerating || busy}
+              isBuilding={isGenerating && projectStatus !== "ready"}
             />
           ) : null}
 

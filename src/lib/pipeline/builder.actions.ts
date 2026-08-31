@@ -25,7 +25,7 @@ async function assertPlanOwner(planId: string) {
 
   const { data: project } = await supabase
     .from("projects")
-    .select("id, name, workspace_id, brief_prompt")
+    .select("id, name, workspace_id, brief_prompt, status")
     .eq("id", plan.project_id)
     .maybeSingle();
 
@@ -47,6 +47,7 @@ async function assertPlanOwner(planId: string) {
 export type BuildState = {
   planId: string;
   planStatus: string;
+  projectStatus: string;
   tasks: Array<{
     id: string;
     task_key: string;
@@ -78,7 +79,7 @@ export async function getBuildState(
   planId: string,
 ): Promise<{ ok: true; data: BuildState } | { ok: false; error: string }> {
   const gate = await assertPlanOwner(planId);
-  if (gate.error || !gate.supabase || !gate.plan) {
+  if (gate.error || !gate.supabase || !gate.plan || !gate.project) {
     return { ok: false, error: gate.error ?? "Erro" };
   }
 
@@ -103,6 +104,7 @@ export async function getBuildState(
     data: {
       planId,
       planStatus: gate.plan.status,
+      projectStatus: gate.project.status ?? "draft",
       tasks: list,
       logs: logs ?? [],
       counts: {
