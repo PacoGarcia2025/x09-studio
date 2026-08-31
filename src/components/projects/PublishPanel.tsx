@@ -43,7 +43,6 @@ export function PublishPanel({
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [showDomainSettings, setShowDomainSettings] = useState(false);
-  const autoPublishStarted = useRef(false);
 
   useEffect(() => {
     if (!open) return;
@@ -95,16 +94,6 @@ export function PublishPanel({
     }
   }, [canPublish, onPublished, projectId, projectSlug, publishBlockReason, subdomainReady]);
 
-  useEffect(() => {
-    if (!open) {
-      autoPublishStarted.current = false;
-      return;
-    }
-    if (!canPublish || published || autoPublishStarted.current || busy) return;
-    autoPublishStarted.current = true;
-    void runPublish();
-  }, [open, published, busy, runPublish, canPublish]);
-
   async function copyUrl() {
     try {
       await navigator.clipboard.writeText(url);
@@ -124,7 +113,7 @@ export function PublishPanel({
     >
       <div className="flex items-start justify-between gap-3">
         <h2 className="text-base font-semibold text-zinc-900">
-          {published ? "Publicado" : "Publicando…"}
+          {published ? "Publicado" : busy ? "Publicando…" : "Publicar site"}
         </h2>
         <span className="inline-flex items-center gap-1 rounded-full bg-zinc-100 px-2 py-0.5 text-xs text-zinc-500">
           <span aria-hidden>👁</span> 0

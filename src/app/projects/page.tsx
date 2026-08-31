@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { AppShell } from "@/components/AppShell";
 import { ProjectHeroCard } from "@/components/projects/ProjectHeroCard";
+import { projectCreatePath } from "@/lib/auth/paths";
 import { listProjects } from "@/lib/projects/actions";
 import { createClient } from "@/lib/supabase/server";
 
@@ -11,31 +12,43 @@ const TEMPLATES = [
     title: "Landing premium",
     description: "Site de alta conversão",
     hue: 265,
+    prompt:
+      "Landing page premium de alta conversão para minha marca, com hero cinematográfico, prova social e CTA forte",
   },
   {
     title: "Loja virtual",
     description: "Catálogo e carrinho",
     hue: 320,
+    prompt:
+      "Loja virtual moderna com catálogo de produtos, carrinho e checkout simplificado",
   },
   {
     title: "Sistema de reservas",
     description: "Agenda e confirmação",
     hue: 200,
+    prompt:
+      "Sistema de reservas online com calendário, confirmação por e-mail e painel administrativo",
   },
   {
     title: "Dashboard SaaS",
     description: "Métricas e gráficos",
     hue: 240,
+    prompt:
+      "Dashboard SaaS com métricas, gráficos recharts, cards KPI e layout profissional dark",
   },
   {
     title: "CRM leve",
     description: "Contatos e pipeline",
     hue: 175,
+    prompt:
+      "CRM leve com pipeline de vendas, contatos, status e dashboard para equipe comercial",
   },
   {
     title: "Portfólio",
     description: "Cases e contato",
     hue: 290,
+    prompt:
+      "Site portfólio criativo com cases, sobre mim e formulário de contato elegante",
   },
 ] as const;
 
@@ -151,7 +164,7 @@ export default async function ProjectsPage({
                 {TEMPLATES.map((template) => (
                   <Link
                     key={template.title}
-                    href="/projects/new"
+                    href={projectCreatePath(template.prompt)}
                     className="group text-left"
                   >
                     <HeroPreview

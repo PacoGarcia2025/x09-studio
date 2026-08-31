@@ -89,7 +89,7 @@ export default async function ProjectDetailPage({ params, searchParams }: Props)
       initialPlan={latest?.plan ?? null}
       initialModel={latest?.model}
       autoStart={shouldAutoStart}
-      awaitApproval={!latest && shouldAutoStart}
+      awaitApproval={needsBuildApproval}
       needsBuildApproval={needsBuildApproval}
       canPublish={publishReadiness.ready}
       publishBlockReason={publishReadiness.reason}

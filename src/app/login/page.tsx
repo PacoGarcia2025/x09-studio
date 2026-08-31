@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { LoginForm } from "@/components/auth/LoginForm";
 import { X09Robot } from "@/components/brand/X09Robot";
+import { authLink, sanitizeNextPath } from "@/lib/auth/paths";
 
 type LoginPageProps = {
   searchParams: Promise<{
@@ -11,6 +12,7 @@ type LoginPageProps = {
 export default async function LoginPage({ searchParams }: LoginPageProps) {
   const params = await searchParams;
   const nextParam = Array.isArray(params.next) ? params.next[0] : params.next;
+  const safeNext = sanitizeNextPath(nextParam);
 
   return (
     <main className="x09-bg relative grid min-h-screen place-items-center overflow-hidden p-6 text-zinc-100">
@@ -31,11 +33,14 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
             </p>
           </div>
 
-          <LoginForm mode="login" nextPath={nextParam || "/projects"} />
+          <LoginForm mode="login" nextPath={safeNext} />
 
           <p className="mt-6 text-sm text-zinc-500">
             Ainda sem conta?{" "}
-            <Link href="/signup" className="text-violet-200 underline-offset-4 hover:underline">
+            <Link
+              href={authLink("/signup", safeNext)}
+              className="text-violet-200 underline-offset-4 hover:underline"
+            >
               Criar conta
             </Link>
           </p>

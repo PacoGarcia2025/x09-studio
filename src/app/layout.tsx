@@ -13,8 +13,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "X09 Studio",
-  description: "Gerador de software com IA — X09 Studio",
+  title: "X09 Studio — Construa software com IA",
+  description:
+    "Descreva sua ideia. O X09 Studio planeja, constrói, verifica e publica apps completos a partir do seu prompt.",
 };
 
 export default function RootLayout({

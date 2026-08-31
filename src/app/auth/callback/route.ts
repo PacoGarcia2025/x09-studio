@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
+import { sanitizeNextPath } from "@/lib/auth/paths";
 import { createClient } from "@/lib/supabase/server";
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const code = url.searchParams.get("code");
-  const next = url.searchParams.get("next") || "/";
+  const next = sanitizeNextPath(url.searchParams.get("next"));
   const origin = url.origin;
 
   if (code) {

@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { sanitizeNextPath } from "@/lib/auth/paths";
 import {
   getSupabasePublishableKey,
   getSupabaseUrl,
@@ -38,19 +39,22 @@ export async function updateSession(request: NextRequest) {
   // Páginas Next usam sessão por cookie. APIs do Visual MVP validam o Bearer
   // Supabase dentro de cada handler; redirecioná-las aqui quebraria clientes
   // Vite autenticados que não compartilham o cookie SSR.
-  const isProtected = path.startsWith("/projects");
+  const isProtected =
+    path.startsWith("/projects") || path.startsWith("/billing");
 
   if (!user && isProtected) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
-    url.searchParams.set("next", path);
+    const nextPath =
+      request.nextUrl.pathname + (request.nextUrl.search || "");
+    url.searchParams.set("next", nextPath);
     return NextResponse.redirect(url);
   }
 
   if (user && isAuthPage) {
-    const url = request.nextUrl.clone();
-    url.pathname = "/projects";
-    return NextResponse.redirect(url);
+    const nextParam = request.nextUrl.searchParams.get("next");
+    const destination = sanitizeNextPath(nextParam);
+    return NextResponse.redirect(new URL(destination, request.url));
   }
 
   return supabaseResponse;
