@@ -8,8 +8,6 @@ import {
   isMissingRelationError,
 } from "@/lib/assets/schema";
 
-export const maxDuration = 1800;
-
 export async function tickAssetQueueAction(): Promise<
   | {
       ok: true;
