@@ -89,6 +89,21 @@ export const ecosystemConnectors: EcosystemConnector[] = [
     automation: ["DNS", "SSL", "Domínio próprio", "CDN"],
   },
   {
+    id: "ai-engine",
+    name: "AI Engine",
+    category: "Inteligência Artificial",
+    status: "planned",
+    description:
+      "Worker isolado para gerar assets (GLB, imagem, áudio, textura) via providers substituíveis. Sem API paga.",
+    envVars: [
+      "STUDIO_ASSET_STORAGE",
+      "STUDIO_ASSET_PROCESSOR",
+      "STUDIO_ASSET_WORKER_SECRET",
+      "STUDIO_AI_ENGINE_GENERATION_ENABLED",
+    ],
+    automation: ["Fila de jobs", "Providers", "Assets"],
+  },
+  {
     id: "docker",
     name: "Docker Preview",
     category: "Preview e Runtime",

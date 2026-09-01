@@ -37,6 +37,9 @@ yarn-error.log*
 .env.*.local
 !.env.example
 
+# TRELLIS vendor (clone via services/trellis-worker/setup.sh)
+services/trellis-worker/vendor/
+
 # vercel
 .vercel
 

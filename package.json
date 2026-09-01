@@ -9,6 +9,7 @@
     "lint": "eslint src",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
+    "asset-worker": "npx tsx services/asset-worker/main.ts",
     "generate:lucide-icons": "node scripts/generate-lucide-icons.mjs",
     "validate:supabase": "node scripts/validate-supabase.mjs"
   },

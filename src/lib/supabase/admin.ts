@@ -1,16 +1,7 @@
 import "server-only";
-import { createClient } from "@supabase/supabase-js";
-import {
-  getSupabaseSecretKey,
-  getSupabaseUrl,
-} from "@/lib/supabase/env";
+import { createServiceClient } from "@/lib/supabase/service-client";
 
-/** Admin client — só no server. Usa Secret Key (nunca no browser). */
+/** Admin client — só no server Next. Usa Secret Key (nunca no browser). */
 export function createAdminClient() {
-  return createClient(getSupabaseUrl(), getSupabaseSecretKey(), {
-    auth: {
-      persistSession: false,
-      autoRefreshToken: false,
-    },
-  });
+  return createServiceClient();
 }

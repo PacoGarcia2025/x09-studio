@@ -43,6 +43,8 @@ npm run dev
 
 Fluxo: **Planner → Builder → Verify → Fix → Verify… → Preview (próxima sprint)**
 
+AI Engine (assets, fila, Providers): [`docs/ai-engine-architecture.md`](docs/ai-engine-architecture.md). Núcleo congelado — motores novos só como Provider.
+
 Defina no `.env.local`:
 
 ```bash

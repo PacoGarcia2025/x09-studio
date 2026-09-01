@@ -34,7 +34,7 @@ export default function EcosystemPage() {
             <div className="grid gap-3 sm:grid-cols-3">
               <Metric label="Conectados" value="2" />
               <Metric label="Disponíveis" value="8" />
-              <Metric label="Planejados" value="2" />
+              <Metric label="Planejados" value="3" />
             </div>
           </div>
         </section>

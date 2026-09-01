@@ -5,6 +5,7 @@ import { signOut } from "@/lib/projects/actions";
 const PRIMARY = [
   { href: "/projects", label: "Painel", icon: "▦" },
   { href: "/projects#prompt", label: "Procurar", icon: "⌕", hint: "Ctrl K" },
+  { href: "/assets", label: "Assets", icon: "◇" },
   { href: "/ai", label: "Recursos", icon: "✦" },
   { href: "/ecosystem", label: "Conectores", icon: "⧉" },
 ] as const;
@@ -55,7 +56,9 @@ export function AppShell({
             {PRIMARY.map((item) => {
               const active =
                 item.href === activeHref ||
-                (item.href === "/projects" && activeHref.startsWith("/projects"));
+                (item.href === "/projects" &&
+                  activeHref.startsWith("/projects")) ||
+                (item.href === "/assets" && activeHref.startsWith("/assets"));
               return (
                 <Link
                   key={item.label}

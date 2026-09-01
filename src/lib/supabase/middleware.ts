@@ -40,7 +40,9 @@ export async function updateSession(request: NextRequest) {
   // Supabase dentro de cada handler; redirecioná-las aqui quebraria clientes
   // Vite autenticados que não compartilham o cookie SSR.
   const isProtected =
-    path.startsWith("/projects") || path.startsWith("/billing");
+    path.startsWith("/projects") ||
+    path.startsWith("/billing") ||
+    path.startsWith("/assets");
 
   if (!user && isProtected) {
     const url = request.nextUrl.clone();
