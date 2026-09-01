@@ -1,9 +1,8 @@
 import { tickAssetJobQueue } from "@/lib/asset-jobs/queue";
-import { ASSET_JOB_TICK_MAX_DURATION_SEC } from "@/lib/asset-jobs/config";
 import { createServiceClient } from "@/lib/supabase/service-client";
 
 export const dynamic = "force-dynamic";
-export const maxDuration = ASSET_JOB_TICK_MAX_DURATION_SEC;
+export const maxDuration = 1800;
 
 function authorized(request: Request): boolean {
   const secret = process.env.STUDIO_ASSET_WORKER_SECRET?.trim();

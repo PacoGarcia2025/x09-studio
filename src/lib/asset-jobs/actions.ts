@@ -1,7 +1,6 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { ASSET_JOB_TICK_MAX_DURATION_SEC } from "@/lib/asset-jobs/config";
 import { assertWorkspaceOwner } from "@/lib/ai-engine/ownership";
 import { tickAssetJobQueue } from "@/lib/asset-jobs/queue";
 import {
@@ -9,7 +8,7 @@ import {
   isMissingRelationError,
 } from "@/lib/assets/schema";
 
-export const maxDuration = ASSET_JOB_TICK_MAX_DURATION_SEC;
+export const maxDuration = 1800;
 
 export async function tickAssetQueueAction(): Promise<
   | {

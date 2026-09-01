@@ -5,12 +5,11 @@ import { AssetUploadForm } from "@/components/assets/AssetUploadForm";
 import { StubMeshGenerateControls } from "@/components/assets/StubMeshGenerateControls";
 import { listLibraryAssets } from "@/lib/assets/actions";
 import { assetsRootConfigured } from "@/lib/assets/paths";
-import { ASSET_JOB_TICK_MAX_DURATION_SEC } from "@/lib/asset-jobs/config";
 import { getAssetProcessor } from "@/lib/asset-jobs/processors/registry";
 import { getAssetStorage } from "@/lib/storage/registry";
 
 export const dynamic = "force-dynamic";
-export const maxDuration = ASSET_JOB_TICK_MAX_DURATION_SEC;
+export const maxDuration = 1800;
 
 export default async function AssetsPage() {
   const library = await listLibraryAssets();

@@ -8,7 +8,7 @@ export const DEFAULT_ASSET_JOB_STALE_MS = 40 * 60 * 1000;
 
 const MIN_ASSET_JOB_STALE_MS = 60 * 1000;
 
-/** Segundos — export estático nos endpoints de tick (Next maxDuration). */
+/** Segundos do tick HTTP. Nos routes/pages o Next exige literal: `export const maxDuration = 1800`. */
 export const ASSET_JOB_TICK_MAX_DURATION_SEC = 1800;
 
 export function getAssetJobStaleMs(

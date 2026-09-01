@@ -110,7 +110,7 @@ export async function uploadAssetAction(
   }
 
   const projectIdRaw = String(formData.get("project_id") ?? "").trim();
-  let projectId: string | null = projectIdRaw || null;
+  const projectId: string | null = projectIdRaw || null;
   if (projectId) {
     const projectGate = await assertProjectInWorkspace(projectId, gate.workspaceId);
     if (!projectGate.ok) return { ok: false, error: projectGate.error };
