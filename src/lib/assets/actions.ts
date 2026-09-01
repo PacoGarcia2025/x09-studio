@@ -88,21 +88,43 @@ export async function uploadAssetAction(
   _prev: AssetActionResult | null,
   formData: FormData,
 ): Promise<AssetActionResult> {
+  try {
+    return await uploadAssetActionInner(formData);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Falha ao enviar o arquivo";
+    if (/body.*exceeded|body.*limit|too large|payload/i.test(message)) {
+      return {
+        ok: false,
+        error: "Arquivo acima do limite do servidor. Use até 24 MB.",
+      };
+    }
+    return { ok: false, error: message };
+  }
+}
+
+async function uploadAssetActionInner(
+  formData: FormData,
+): Promise<AssetActionResult> {
   const gate = await assertWorkspaceOwner();
   if (gate.error || !gate.user || !gate.workspaceId) {
     return { ok: false, error: gate.error ?? "Erro ao validar workspace" };
   }
 
   const file = formData.get("file");
-  if (!(file instanceof File) || file.size === 0) {
+  if (!(file instanceof Blob) || file.size === 0) {
     return { ok: false, error: "Selecione um arquivo." };
   }
   if (!isAllowedByteSize(file.size)) {
     return { ok: false, error: "Arquivo acima do limite (24 MB)." };
   }
 
+  const filename =
+    file instanceof File && file.name.trim()
+      ? file.name
+      : String(formData.get("filename") ?? "arquivo");
+
   const classified = classifyUpload(
-    file.name,
+    filename,
     String(formData.get("kind") ?? "").trim() || null,
   );
   if ("error" in classified) {
