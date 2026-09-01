@@ -26,7 +26,9 @@ Regras OBRIGATÓRIAS:
 - Use Tailwind (className). Sem importar CSS/tailwindcss.
 - Pode usar lucide-react e framer-motion.
 - Conteúdo REAL do brief — nunca Lorem/Bem-vindo/página vazia.
-- Aceite prop opcional onNavigateToLogin?: () => void e use no CTA "Entrar".
+- Hero: imagem de fundo do tema + PNG/recorte transparente sobreposto (produto/pessoa do nicho); cards de serviços com foto em cada card.
+- Se o app tiver área logada (SaaS/CRM/painel): aceite prop opcional onNavigateToLogin?: () => void e use no CTA "Entrar" discreto no header.
+- Landing simples SEM painel: PROIBIDO botões Entrar, Cadastrar ou Login.
 - CRÍTICO: TSX válido — feche todas as tags. Termine com } válido.`;
 
 const LOGIN_BASE = `Você gera LoginPage completa (Vite + React + TypeScript + Supabase Auth).

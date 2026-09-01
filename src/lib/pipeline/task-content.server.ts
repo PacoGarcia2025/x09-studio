@@ -343,6 +343,14 @@ Se a task não precisar instalar nada, use "npm install" mesmo assim ou a instru
   }
 }
 
+/** App.tsx só Home — fase 1 (landing simples ou preview inicial). */
+export const LANDING_HOME_ONLY_APP_TSX = `import { HomePage } from "./pages/HomePage";
+
+export default function App() {
+  return <HomePage />;
+}
+`;
+
 /** App.tsx com Home + Login + Dashboard (sem chrome Meu App). */
 export const LANDING_APP_TSX = `import { useState } from "react";
 import { HomePage } from "./pages/HomePage";

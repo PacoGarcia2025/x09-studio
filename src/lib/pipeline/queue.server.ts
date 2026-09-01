@@ -74,6 +74,7 @@ export type TickResult = {
     retrying: number;
     done: number;
     failed: number;
+    skipped: number;
     total: number;
   };
 };
@@ -85,6 +86,7 @@ function counts(tasks: DbTask[]) {
     retrying: tasks.filter((t) => t.status === "retrying").length,
     done: tasks.filter((t) => t.status === "done").length,
     failed: tasks.filter((t) => t.status === "failed").length,
+    skipped: tasks.filter((t) => t.status === "skipped").length,
     total: tasks.length,
   };
 }
@@ -395,6 +397,7 @@ export async function tickBuilderQueue(
         retrying: statusList.filter((s) => s === "retrying").length,
         done: statusList.filter((s) => s === "done").length,
         failed: statusList.filter((s) => s === "failed").length,
+        skipped: statusList.filter((s) => s === "skipped").length,
         total: statusList.length,
       },
     };

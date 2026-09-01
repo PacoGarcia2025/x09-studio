@@ -84,7 +84,7 @@ export const studioPlanSchema = z.object({
       }),
     )
     .default([]),
-  tasks: z.array(planTaskSchema).min(3).max(40),
+  tasks: z.array(planTaskSchema).min(1).max(40),
 });
 
 export type StudioPlan = z.infer<typeof studioPlanSchema>;

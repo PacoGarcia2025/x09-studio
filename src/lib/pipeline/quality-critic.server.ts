@@ -37,6 +37,108 @@ function words(content: string): number {
   return (content.match(/[A-Za-zÀ-ÿ]{4,}/g) ?? []).length;
 }
 
+/** Critic da fase 1 — só HomePage premium, sem exigir Login/App. */
+export async function critiqueHomePreview(
+  projectId: string,
+  briefPrompt?: string,
+): Promise<QualityReport> {
+  const issues: QualityIssue[] = [];
+  let score = 100;
+
+  const homeExists = await fileExists(projectId, "src/pages/HomePage.tsx");
+  if (!homeExists) {
+    issues.push({
+      code: "missing_home",
+      message: "Falta src/pages/HomePage.tsx",
+      severity: "error",
+    });
+    score -= 50;
+  } else {
+    const home = await readProjectFile(projectId, "src/pages/HomePage.tsx");
+
+    for (const gate of evaluateHomeWithSkills(home, briefPrompt ?? "")) {
+      issues.push({
+        code: gate.code,
+        message: gate.message,
+        severity: gate.severity,
+      });
+      score -= gate.penalty;
+    }
+
+    if (/Bem-vindo|Este app foi gerado pelo X09|Lorem ipsum|Meu App/i.test(home)) {
+      issues.push({
+        code: "generic_copy",
+        message: "Home ainda tem texto genérico do template",
+        severity: "error",
+      });
+      score -= 30;
+    }
+
+    const sections = countPageSections(home);
+    if (!meetsPremiumSectionBar(home, 4)) {
+      issues.push({
+        code: "thin_home",
+        message: `Home precisa de mais estrutura (${sections} blocos — premium exige 4+ seções ou conteúdo denso)`,
+        severity: "error",
+      });
+      score -= 20;
+    }
+
+    if (home.length < 1800) {
+      issues.push({
+        code: "short_home",
+        message: "Home muito rasa para padrão cinematográfico premium",
+        severity: "error",
+      });
+      score -= 25;
+    }
+  }
+
+  const broken = await findBrokenImports(projectId);
+  if (broken.length > 0) {
+    issues.push({
+      code: "broken_imports",
+      message: formatBrokenImportMessage(broken),
+      severity: "error",
+    });
+    score -= 35;
+  }
+
+  const disallowed = await findDisallowedNpmImports(projectId);
+  if (disallowed.length > 0) {
+    issues.push({
+      code: "disallowed_npm",
+      message: formatDisallowedNpmMessage(disallowed),
+      severity: "error",
+    });
+    score -= 30;
+  }
+
+  const undeclaredJsx = await findUndeclaredJsxIdentifiers(projectId);
+  if (undeclaredJsx.length > 0) {
+    issues.push({
+      code: "undeclared_jsx",
+      message: formatUndeclaredJsxMessage(undeclaredJsx),
+      severity: "error",
+    });
+    score -= 35;
+  }
+
+  const invalidLucide = await findInvalidLucideImports(projectId);
+  if (invalidLucide.length > 0) {
+    issues.push({
+      code: "invalid_lucide",
+      message: formatInvalidLucideMessage(invalidLucide),
+      severity: "error",
+    });
+    score -= 35;
+  }
+
+  score = Math.max(0, Math.min(100, score));
+  const hasError = issues.some((i) => i.severity === "error");
+  return { ok: !hasError && score >= 55, score, issues };
+}
+
 /**
  * Critic pós-build: bloqueia “Pronto” se o app ainda for genérico/incompleto.
  */

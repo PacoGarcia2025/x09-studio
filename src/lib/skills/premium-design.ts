@@ -23,6 +23,8 @@ BARRA DE QUALIDADE:
 - CTAs: botões com cor de marca + shadow-lg shadow-[cor]/25 — proibido botão cinza genérico em todo o site.
 - Ícones: lucide-react (Sparkles, ArrowRight, Shield, Building2, Phone, Mail, MapPin, Star, Check, etc.).
 - Imagens: gradientes + Unsplash real (https://images.unsplash.com/photo-...) OU composições CSS — nunca placeholder vazio.
+- Hero fase 1: fundo imersivo (gradiente/mesh/Unsplash) + elemento PNG/recorte transparente sobreposto (produto, pessoa ou objeto do nicho via <img> com object-contain ou composição CSS) — efeito showcase de agência.
+- Cards de serviços/benefícios: CADA card com foto correspondente ao tema (Unsplash), não só ícone.
 - Copy: persuasiva, específica do negócio, números e provas quando possível.
 - Cor de marca: use a cor do brief do cliente. PROIBIDO aesthetic "template de IA" (roxo/rosa genérico sem brief), lorem, "Sua Empresa", página chapada, hero só com retângulo colorido.
 `.trim();

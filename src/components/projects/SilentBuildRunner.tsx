@@ -21,7 +21,13 @@ function isWaitingTick(message: string): boolean {
 }
 
 async function finalizeCompletedBuild(planId: string): Promise<
-  | { ok: true; done: true; failed: boolean; message: string }
+  | {
+      ok: true;
+      done: true;
+      failed: boolean;
+      message: string;
+      homePhaseOnly?: boolean;
+    }
   | { ok: true; done: false }
   | { ok: false; error: string }
 > {
@@ -33,6 +39,7 @@ async function finalizeCompletedBuild(planId: string): Promise<
     done: true,
     failed: tick.failed,
     message: tick.message,
+    homePhaseOnly: tick.homePhaseOnly,
   };
 }
 
@@ -47,6 +54,7 @@ export function SilentBuildRunner({
   onBuilding,
   onPreviewUpdate,
   onSuccess,
+  onHomeReady,
   onError,
 }: {
   planId: string | null;
@@ -59,6 +67,8 @@ export function SilentBuildRunner({
   onBuilding?: () => void;
   onPreviewUpdate?: () => void;
   onSuccess?: () => void;
+  /** Fase 1 concluída — home premium pronta, demais tasks skipped. */
+  onHomeReady?: () => void;
   onError?: (message: string) => void;
 }) {
   const runningRef = useRef(false);
@@ -93,6 +103,9 @@ export function SilentBuildRunner({
         if (finalized.done) {
           if (finalized.failed) {
             onError?.(finalized.message || "Não consegui terminar a geração.");
+          } else if (finalized.homePhaseOnly) {
+            onPreviewUpdate?.();
+            onHomeReady?.();
           } else {
             onPreviewUpdate?.();
             onSuccess?.();
@@ -117,6 +130,9 @@ export function SilentBuildRunner({
         runningRef.current = false;
         if (tick.failed) {
           onError?.(tick.message || "Não consegui terminar a geração.");
+        } else if (tick.homePhaseOnly) {
+          onPreviewUpdate?.();
+          onHomeReady?.();
         } else {
           onPreviewUpdate?.();
           onSuccess?.();
@@ -151,7 +167,7 @@ export function SilentBuildRunner({
     onError?.(
       "A geração demorou demais. Recarregue a página — o progresso salvo será retomado.",
     );
-  }, [freshStart, onBuilding, onError, onPreviewUpdate, onSuccess, planId]);
+  }, [freshStart, onBuilding, onError, onHomeReady, onPreviewUpdate, onSuccess, planId]);
 
   useEffect(() => {
     if (!enabled || !planId) return;

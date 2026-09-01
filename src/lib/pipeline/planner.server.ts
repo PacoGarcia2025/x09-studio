@@ -1,4 +1,5 @@
 import type { LlmProvider } from "@/lib/llm/types";
+import { needsAuthPanel } from "@/lib/pipeline/build-phases";
 import { ensureImobiliaria360Tasks } from "@/lib/pipeline/planner-imobiliaria";
 import { isImobiliaria360 } from "@/lib/skills/detect";
 import { resolveSkills } from "@/lib/skills/resolve";
@@ -19,17 +20,17 @@ Regras obrigatórias:
 - NÃO planeje Next.js App Router. NÃO use paths como src/app/page.tsx.
 - Paths reais do template (use estes):
   - src/App.tsx
-  - src/pages/HomePage.tsx  (página principal — SEMPRE)
-  - src/pages/LoginPage.tsx (login/signup — SEMPRE, com getSupabase().auth)
+  - src/pages/HomePage.tsx  (página principal — SEMPRE, fase 1)
+  - src/pages/LoginPage.tsx (SOMENTE se SaaS/CRM/painel/admin — fase 2)
   - src/pages/DashboardPage.tsx (obrigatório se SaaS/CRM/painel/admin)
   - src/lib/supabase.ts
   - src/index.css
-- App COMPLETO (não só uma página):
-  - Task #1: update_file src/App.tsx — navegação Home + Login (+ Dashboard se SaaS), SEM AppShell, SEM "Meu App".
-  - Task #2: update_file src/pages/HomePage.tsx — página principal COMPLETA com copy real do negócio.
-  - Task #3: update_file src/pages/LoginPage.tsx — auth real via getSupabase().auth.signInWithPassword / signUp.
-  - SaaS/CRM/dashboard/painel: Task DashboardPage com lista + formulário CRUD (supabase.from).
-  - Evite tasks de migrate/build/typecheck.
+- FASE 1 (primeira construção): dedique-se EXCLUSIVAMENTE à HomePage perfeita — cinematográfica, premium showcase, imagens reais do tema, cards com fotos, hero com PNG transparente ou composição premium. SEM botão Entrar/Cadastrar na home se for landing simples.
+- FASE 2 (após OK do usuário): Login + App + Dashboard — SOMENTE quando o brief pedir painel admin, área logada, SaaS ou CRM.
+- App COMPLETO (fase 2+):
+  - Task App.tsx — navegação Home + Login (+ Dashboard se SaaS), SEM AppShell, SEM "Meu App".
+  - Task HomePage.tsx — página principal COMPLETA (fase 1).
+  - Task LoginPage.tsx — auth real via getSupabase().auth (fase 2, se painel).
 - NÃO escreva o código-fonte completo no JSON do plano (só instruções).
 - Em "tasks.instruction", inclua nome da marca, paleta de cores, contatos e cidade EXATOS do pedido do usuário.
 - Em "tasks.instruction", descreva seções e tom em 3–6 frases para Home/Login.
@@ -130,8 +131,9 @@ export async function runPlanner(
   };
 }
 
-/** Garante App + Home + Login com instruções fortes (app completo). */
+/** Garante Home premium na fase 1; Login/App só se painel for necessário. */
 function ensureFullAppTasks(plan: StudioPlan, prompt: string): StudioPlan {
+  const authPanel = needsAuthPanel(prompt);
   const tasks = [...plan.tasks];
   const pathOf = (p: string) =>
     tasks.findIndex((t) => t.path?.replace(/\\/g, "/") === p);
@@ -169,11 +171,34 @@ function ensureFullAppTasks(plan: StudioPlan, prompt: string): StudioPlan {
   const homeId = ensureTask({
     id: "t_home_full",
     path: "src/pages/HomePage.tsx",
-    title: "Página principal completa",
-    instruction: `Crie a página principal COMPLETA para: ${prompt.slice(0, 600)}. Use nome da empresa, cores, WhatsApp/telefone/e-mail/endereço/registro profissional citados no pedido (CRECI só se imobiliária). Header com CTA Entrar, hero, 3+ seções, prova social/galeria, CTA final, footer. Textos reais — nunca fictícios. Aceite prop opcional onNavigateToLogin?.()`,
+    title: "Página principal premium (fase 1)",
+    instruction: `Crie a HomePage PERFEITA — cinematográfica / premium showcase — para: ${prompt.slice(0, 600)}.
+OBRIGATÓRIO: hero imersivo com imagem de fundo Unsplash do tema + elemento PNG/recorte transparente sobreposto (produto/pessoa/objeto do nicho via img ou composição CSS); cards de serviços/benefícios CADA UM com foto correspondente ao tema; framer-motion; 5+ seções; copy real do brief.
+${authPanel ? "Inclua CTA Entrar discreto no header (onNavigateToLogin) — painel virá na fase 2." : "PROIBIDO botão Entrar, Cadastrar ou Login — landing simples sem área logada."}
+WhatsApp/telefone/e-mail/endereço quando citados. Nunca lorem.`,
     dependsOn: [],
     insertAt: 0,
   });
+
+  if (!authPanel) {
+    const pages = [...plan.pages];
+    if (!pages.some((p) => p.path === "/" || p.path === "/home")) {
+      pages.unshift({
+        path: "/",
+        name: "Home",
+        description: "Landing premium",
+      });
+    }
+    return {
+      ...plan,
+      pages: pages.filter((p) => !/\/login|entrar|auth/i.test(p.path)),
+      tasks: tasks.filter(
+        (t) =>
+          t.path?.replace(/\\/g, "/") === "src/pages/HomePage.tsx" ||
+          t.id === homeId,
+      ),
+    };
+  }
 
   const loginId = ensureTask({
     id: "t_login_full",
@@ -236,7 +261,7 @@ function ensureFullAppTasks(plan: StudioPlan, prompt: string): StudioPlan {
     pages.push({
       path: "/login",
       name: "Login",
-      description: "Entrar e criar conta",
+      description: "Entrar e criar conta (fase 2)",
     });
   }
   if (

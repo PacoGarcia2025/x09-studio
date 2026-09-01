@@ -5,9 +5,11 @@ import { resolveCommandPlan } from "@/lib/pipeline/commands.allowlist";
 import {
   generateTaskPayload,
   LANDING_APP_TSX,
+  LANDING_HOME_ONLY_APP_TSX,
   MINIMAL_DASHBOARD_PAGE_TSX,
 } from "@/lib/pipeline/task-content.server";
 import { isImobiliaria360 } from "@/lib/skills/detect";
+import { needsAuthPanel } from "@/lib/pipeline/build-phases";
 import type { PlanTaskType } from "@/lib/pipeline/plan-schema";
 import {
   deleteProjectFile,
@@ -183,15 +185,11 @@ export async function applyBuilderTask(
       if (isHomePagePath(task.path)) {
         const brief = options?.briefPrompt ?? "";
         if (!isImobiliaria360(brief)) {
-          await writeProjectFile(projectId, "src/App.tsx", LANDING_APP_TSX);
-          if (!(await fileExists(projectId, "src/pages/DashboardPage.tsx"))) {
-            await writeProjectFile(
-              projectId,
-              "src/pages/DashboardPage.tsx",
-              MINIMAL_DASHBOARD_PAGE_TSX,
-            );
-          }
-          log += " + App.tsx sem AppShell";
+          const appSource = needsAuthPanel(brief)
+            ? LANDING_HOME_ONLY_APP_TSX
+            : LANDING_HOME_ONLY_APP_TSX;
+          await writeProjectFile(projectId, "src/App.tsx", appSource);
+          log += " + App.tsx home-only (fase 1)";
         }
       }
 

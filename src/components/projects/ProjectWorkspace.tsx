@@ -12,6 +12,10 @@ import { ProjectLivePreview } from "@/components/projects/ProjectLivePreview";
 import { SilentBuildRunner } from "@/components/projects/SilentBuildRunner";
 import { VerifyPanel } from "@/components/verify/VerifyPanel";
 import { chatProjectAction } from "@/lib/pipeline/actions";
+import {
+  homeReadyChatMessage,
+  needsAuthPanel,
+} from "@/lib/pipeline/build-phases";
 import { getBuildState, tickBuildAction } from "@/lib/pipeline/builder.actions";
 import type { StudioPlan } from "@/lib/pipeline/plan-schema";
 import { PublishPanel } from "@/components/projects/PublishPanel";
@@ -150,6 +154,39 @@ export function ProjectWorkspace({
   const [publishBlockMsg, setPublishBlockMsg] = useState(publishBlockReason);
   const [planning, setPlanning] = useState(false);
   const finalizePollRef = useRef(false);
+  const briefText = useMemo(
+    () => initialPrompt?.trim() ?? "",
+    [initialPrompt],
+  );
+
+  const handleHomeReady = useCallback(() => {
+    setBusy(false);
+    setIsGenerating(false);
+    setBuildEnabled(false);
+    setBuildFreshStart(false);
+    setProjectStatus("ready");
+    setPublishReady(true);
+    setPublishBlockMsg(undefined);
+    setPreviewKey((k) => k + 1);
+    setMainTab("preview");
+    const authPanel = needsAuthPanel(briefText);
+    const msg = homeReadyChatMessage(briefText, authPanel);
+    setChatLog((prev) => {
+      const cleaned = stripBuildingMessages(prev);
+      const marker = authPanel
+        ? "página principal está pronta"
+        : "landing está no ar";
+      if (
+        cleaned.some(
+          (m) => m.kind === "ai" && m.text.includes(marker),
+        )
+      ) {
+        return cleaned;
+      }
+      return [...cleaned, { kind: "ai", text: msg }];
+    });
+    router.refresh();
+  }, [briefText, router]);
 
   const handleBuildSuccess = useCallback(() => {
     setBusy(false);
@@ -183,6 +220,30 @@ export function ProjectWorkspace({
     router.refresh();
   }, [router]);
 
+  const finalizeBuildComplete = useCallback(
+    async (planId: string | null, homePhaseOnly?: boolean) => {
+      if (homePhaseOnly === true) {
+        handleHomeReady();
+        return;
+      }
+      if (homePhaseOnly === false) {
+        handleBuildSuccess();
+        return;
+      }
+      if (!planId) {
+        handleBuildSuccess();
+        return;
+      }
+      const state = await getBuildState(planId);
+      if (state.ok && state.data.counts.skipped > 0) {
+        handleHomeReady();
+      } else {
+        handleBuildSuccess();
+      }
+    },
+    [handleBuildSuccess, handleHomeReady],
+  );
+
   const handleBuildError = useCallback((message: string) => {
     setBusy(false);
     setIsGenerating(false);
@@ -206,7 +267,7 @@ export function ProjectWorkspace({
 
   useEffect(() => {
     if (project.status === "ready" && isGenerating) {
-      handleBuildSuccess();
+      void finalizeBuildComplete(activePlanId);
     } else if (project.status === "error" && isGenerating) {
       setIsGenerating(false);
       setBusy(false);
@@ -214,7 +275,7 @@ export function ProjectWorkspace({
       setProjectStatus("error");
       setPreviewKey((k) => k + 1);
     }
-  }, [handleBuildSuccess, isGenerating, project.status]);
+  }, [activePlanId, finalizeBuildComplete, isGenerating, project.status]);
 
   useEffect(() => {
     setPublishReady(canPublish);
@@ -246,7 +307,7 @@ export function ProjectWorkspace({
         result.data;
 
       if (remoteProjectStatus === "ready") {
-        handleBuildSuccess();
+        await finalizeBuildComplete(activePlanId);
         return;
       }
 
@@ -265,7 +326,7 @@ export function ProjectWorkspace({
         counts.queued === 0 &&
         counts.running === 0 &&
         counts.retrying === 0 &&
-        counts.done + counts.failed === counts.total;
+        counts.done + counts.failed + counts.skipped === counts.total;
 
       if (!tasksFinished && planStatus !== "built") return;
 
@@ -286,6 +347,8 @@ export function ProjectWorkspace({
       if (tick.done) {
         if (tick.failed) {
           handleBuildError(tick.message);
+        } else if (tick.homePhaseOnly) {
+          handleHomeReady();
         } else {
           handleBuildSuccess();
         }
@@ -305,6 +368,8 @@ export function ProjectWorkspace({
     developerMode,
     handleBuildError,
     handleBuildSuccess,
+    handleHomeReady,
+    finalizeBuildComplete,
     isGenerating,
   ]);
 
@@ -442,6 +507,26 @@ export function ProjectWorkspace({
         return;
       }
 
+      if (result.intent === "continue_full_build") {
+        setBusy(false);
+        setActivePlanId(result.planId);
+        setProjectStatus("generating");
+        setBuildFreshStart(false);
+        setBuildToken((t) => t + 1);
+        setBuildEnabled(true);
+        setIsGenerating(true);
+        setChatLog((prev) =>
+          appendBuildingBubble([
+            ...stripBuildingMessages(prev),
+            {
+              kind: "ai",
+              text: "Perfeito — vou criar login e painel agora. Acompanhe no preview.",
+            },
+          ]),
+        );
+        return;
+      }
+
       // create → plano para OK
       setBusy(false);
       setIsGenerating(false);
@@ -521,6 +606,7 @@ export function ProjectWorkspace({
           setChatLog((prev) => appendBuildingBubble(prev));
         }}
         onPreviewUpdate={() => setPreviewKey((k) => k + 1)}
+        onHomeReady={handleHomeReady}
         onSuccess={handleBuildSuccess}
         onError={handleBuildError}
       />

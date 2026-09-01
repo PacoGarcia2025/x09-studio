@@ -5,8 +5,13 @@ import {
   recoverStaleBuilderTasks,
   tickBuilderQueue,
 } from "@/lib/pipeline/queue.server";
-import { critiqueGeneratedApp } from "@/lib/pipeline/quality-critic.server";
+import { isHomePageTaskPath } from "@/lib/pipeline/build-phases";
+import {
+  critiqueGeneratedApp,
+  critiqueHomePreview,
+} from "@/lib/pipeline/quality-critic.server";
 import { createClient } from "@/lib/supabase/server";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 async function assertPlanOwner(planId: string) {
   const supabase = await createClient();
@@ -71,9 +76,22 @@ export type BuildState = {
     retrying: number;
     done: number;
     failed: number;
+    skipped: number;
     total: number;
   };
 };
+
+async function countSkippedTasks(
+  supabase: SupabaseClient,
+  planId: string,
+): Promise<number> {
+  const { count } = await supabase
+    .from("plan_tasks")
+    .select("*", { count: "exact", head: true })
+    .eq("plan_id", planId)
+    .eq("status", "skipped");
+  return count ?? 0;
+}
 
 export async function getBuildState(
   planId: string,
@@ -113,6 +131,7 @@ export async function getBuildState(
         retrying: list.filter((t) => t.status === "retrying").length,
         done: list.filter((t) => t.status === "done").length,
         failed: list.filter((t) => t.status === "failed").length,
+        skipped: list.filter((t) => t.status === "skipped").length,
         total: list.length,
       },
     },
@@ -165,16 +184,23 @@ export async function startBuildAction(
     return { ok: false, error: gate.error ?? "Erro" };
   }
 
-  // Reinicia a fila completa deste plano
-  await gate.supabase
+  const { data: tasks } = await gate.supabase
     .from("plan_tasks")
-    .update({
-      status: "queued",
-      error_message: null,
-      started_at: null,
-      finished_at: null,
-    })
+    .select("id, path")
     .eq("plan_id", planId);
+
+  for (const task of tasks ?? []) {
+    const isHome = isHomePageTaskPath(task.path);
+    await gate.supabase
+      .from("plan_tasks")
+      .update({
+        status: isHome ? "queued" : "skipped",
+        error_message: null,
+        started_at: null,
+        finished_at: null,
+      })
+      .eq("id", task.id);
+  }
 
   await gate.supabase.from("plan_task_logs").delete().eq("plan_id", planId);
 
@@ -190,6 +216,50 @@ export async function startBuildAction(
 
   revalidatePath(`/projects/${gate.project.id}`);
   return { ok: true };
+}
+
+/** Desbloqueia tasks da fase 2 (login, app, dashboard…) após home pronta. */
+export async function continueFullBuildAction(
+  planId: string,
+): Promise<
+  { ok: true; unskipped: number } | { ok: false; error: string }
+> {
+  const gate = await assertPlanOwner(planId);
+  if (gate.error || !gate.supabase || !gate.plan || !gate.project) {
+    return { ok: false, error: gate.error ?? "Erro" };
+  }
+
+  const skippedCount = await countSkippedTasks(gate.supabase, planId);
+  if (skippedCount === 0) {
+    return {
+      ok: false,
+      error: "Não há etapas pendentes — o app já está completo.",
+    };
+  }
+
+  await gate.supabase
+    .from("plan_tasks")
+    .update({
+      status: "queued",
+      error_message: null,
+      started_at: null,
+      finished_at: null,
+    })
+    .eq("plan_id", planId)
+    .eq("status", "skipped");
+
+  await gate.supabase
+    .from("plans")
+    .update({ status: "building", error_message: null })
+    .eq("id", planId);
+
+  await gate.supabase
+    .from("projects")
+    .update({ status: "generating" })
+    .eq("id", gate.project.id);
+
+  revalidatePath(`/projects/${gate.project.id}`);
+  return { ok: true, unskipped: skippedCount };
 }
 
 export async function requeueBuildTaskAction(
@@ -246,6 +316,8 @@ export async function tickBuildAction(planId: string): Promise<
       message: string;
       currentTaskKey: string | null;
       counts: BuildState["counts"];
+      /** true quando só a Home foi gerada e há tasks skipped na fila. */
+      homePhaseOnly?: boolean;
     }
   | { ok: false; error: string }
 > {
@@ -275,10 +347,15 @@ export async function tickBuildAction(planId: string): Promise<
       const briefPrompt =
         gate.project.brief_prompt?.trim() || planRow?.prompt?.trim() || "";
 
-      const quality = await critiqueGeneratedApp(
-        gate.project.id,
-        briefPrompt || undefined,
-      );
+      const skippedCount = await countSkippedTasks(gate.supabase, planId);
+      const homePhaseOnly = skippedCount > 0;
+
+      const quality = homePhaseOnly
+        ? await critiqueHomePreview(gate.project.id, briefPrompt || undefined)
+        : await critiqueGeneratedApp(
+            gate.project.id,
+            briefPrompt || undefined,
+          );
       if (!quality.ok) {
         const detail = quality.issues
           .filter((i) => i.severity === "error")
@@ -297,6 +374,7 @@ export async function tickBuildAction(planId: string): Promise<
           message: `Qualidade insuficiente (score ${quality.score}/100): ${detail || "gere de novo pelo chat"}`,
           currentTaskKey: null,
           counts: tick.counts,
+          homePhaseOnly,
         };
       }
 
@@ -305,6 +383,17 @@ export async function tickBuildAction(planId: string): Promise<
         .update({ status: "ready" })
         .eq("id", gate.project.id);
       revalidatePath(`/projects/${gate.project.id}`);
+
+      return {
+        ok: true,
+        done: tick.done,
+        failed: tick.failed,
+        processed: tick.processed,
+        message: tick.message,
+        currentTaskKey: tick.currentTaskKey,
+        counts: tick.counts,
+        homePhaseOnly,
+      };
     }
     if (tick.failed) {
       await gate.supabase
@@ -322,6 +411,7 @@ export async function tickBuildAction(planId: string): Promise<
       message: tick.message,
       currentTaskKey: tick.currentTaskKey,
       counts: tick.counts,
+      homePhaseOnly: false,
     };
   } catch (err) {
     return {

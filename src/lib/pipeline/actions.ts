@@ -211,6 +211,13 @@ export type ChatTurnResult =
     }
   | {
       ok: true;
+      intent: "continue_full_build";
+      planId: string;
+      pendingTasks: number;
+      model: string;
+    }
+  | {
+      ok: true;
       intent: "edit";
       summary: string;
       paths: string[];
@@ -253,6 +260,31 @@ export async function chatProjectAction(
     const { classifyChatIntent } = await import(
       "@/lib/pipeline/chat-intent.server"
     );
+
+    const { matchesContinueFullBuild } = await import(
+      "@/lib/pipeline/build-phases"
+    );
+    if (matchesContinueFullBuild(trimmed) && latest) {
+      const { getBuildState, continueFullBuildAction } = await import(
+        "@/lib/pipeline/builder.actions"
+      );
+      const state = await getBuildState(latest.id);
+      if (state.ok && state.data.counts.skipped > 0) {
+        const cont = await continueFullBuildAction(latest.id);
+        if (!cont.ok) {
+          return { ok: false, error: cont.error };
+        }
+        revalidatePath(`/projects/${projectId}`);
+        return {
+          ok: true,
+          intent: "continue_full_build",
+          planId: latest.id,
+          pendingTasks: cont.unskipped,
+          model: "x09-studio",
+        };
+      }
+    }
+
     const intent = await classifyChatIntent(provider, {
       message: trimmed,
       hasExistingApp,
@@ -362,14 +394,22 @@ export async function chatProjectAction(
       );
       await repairProjectSourceIssues(projectId);
 
-      const { critiqueGeneratedApp } = await import(
+      const { critiqueGeneratedApp, critiqueHomePreview } = await import(
         "@/lib/pipeline/quality-critic.server"
       );
       const brief =
         (gate.project as { brief_prompt?: string | null }).brief_prompt ??
         latest?.prompt ??
         "";
-      const quality = await critiqueGeneratedApp(projectId, brief || undefined);
+
+      const { getBuildState } = await import("@/lib/pipeline/builder.actions");
+      const buildState = latest ? await getBuildState(latest.id) : null;
+      const homeOnly =
+        buildState?.ok && buildState.data.counts.skipped > 0;
+
+      const quality = homeOnly
+        ? await critiqueHomePreview(projectId, brief || undefined)
+        : await critiqueGeneratedApp(projectId, brief || undefined);
       const nextStatus = quality.ok ? "ready" : "error";
 
       await gate.supabase
