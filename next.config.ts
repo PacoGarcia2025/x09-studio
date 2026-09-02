@@ -2,6 +2,7 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  transpilePackages: ["@google/model-viewer"],
   outputFileTracingIncludes: {
     "/**/*": ["./templates/**/*"],
   },
@@ -13,6 +14,9 @@ const nextConfig: NextConfig = {
     proxyClientMaxBodySize: "25mb",
     middlewareClientMaxBodySize: "25mb",
   } as NextConfig["experimental"],
+  async redirects() {
+    return [{ source: "/3d", destination: "/assets", permanent: false }];
+  },
 };
 
 export default nextConfig;

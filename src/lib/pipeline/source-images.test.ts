@@ -28,5 +28,6 @@ describe("source-images", () => {
     expect(fixBrokenImagesInSource(input)).toBe(input);
     expect(isBrokenImageSrc("/src/main.tsx")).toBe(false);
     expect(isBrokenImageSrc("/assets/index-abc.js")).toBe(false);
+    expect(isBrokenImageSrc("/library/logo-abc-marca.png")).toBe(false);
   });
 });

@@ -16,8 +16,8 @@ export const x09LandingPagesSkill: StudioSkill = {
 LANDING PREMIUM (conversão + cinema):
 - export function HomePage({ onNavigateToLogin?: () => void })
 - Header sticky: logo/nome real, 3 âncoras. CTA Entrar SOMENTE se onNavigateToLogin existir (app com painel) — landing simples NÃO tem login.
-- Hero: headline emocional + subtítulo + 2 CTAs + fundo imersivo + PNG/recorte transparente sobreposto (produto/pessoa do nicho).
-- Seção serviços: 3–6 cards com foto Unsplash do tema + ícone lucide, copy específica do negócio.
+- Hero: headline emocional + subtítulo + 2 CTAs + fundo imersivo + PNG/recorte transparente. Se o contexto listar /library/, use esses ficheiros no logo e no hero.
+- Seção serviços: 3–6 cards com foto da galeria (/library/) ou, só se não houver, foto do tema + ícone lucide, copy específica do negócio.
 - Seção prova social: números, logos fictícios do setor OU depoimentos com nomes plausíveis do nicho.
 - Seção processo ou diferenciais com layout assimétrico (não grid 3 colunas clone).
 - CTA final full-width com gradiente da marca.

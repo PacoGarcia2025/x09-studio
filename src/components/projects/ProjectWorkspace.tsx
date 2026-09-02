@@ -24,6 +24,7 @@ import {
   BuildProgressBubble,
   humanizeBuildError,
 } from "@/components/projects/BuildProgressBubble";
+import { CreditBalanceChip } from "@/components/billing/CreditBalanceChip";
 
 type MainTab = "preview" | "code" | "layers" | "pipeline";
 
@@ -66,6 +67,7 @@ type Props = {
   needsBuildApproval?: boolean;
   canPublish?: boolean;
   publishBlockReason?: string;
+  creditBalance?: number;
 };
 
 function plainPlanBlurb(plan: StudioPlan): string {
@@ -93,6 +95,7 @@ export function ProjectWorkspace({
   needsBuildApproval = false,
   canPublish = true,
   publishBlockReason,
+  creditBalance = 0,
 }: Props) {
   const router = useRouter();
   const [mainTab, setMainTab] = useState<MainTab>("preview");
@@ -144,6 +147,7 @@ export function ProjectWorkspace({
   );
   const [developerMode, setDeveloperMode] = useState(false);
   const [previewKey, setPreviewKey] = useState(0);
+  const [mobilePane, setMobilePane] = useState<"chat" | "stage">("chat");
   const [publishPanelOpen, setPublishPanelOpen] = useState(false);
   const [publishedUrl, setPublishedUrl] = useState<string | null>(
     project.published_url
@@ -169,6 +173,7 @@ export function ProjectWorkspace({
     setPublishBlockMsg(undefined);
     setPreviewKey((k) => k + 1);
     setMainTab("preview");
+    setMobilePane("stage");
     const authPanel = needsAuthPanel(briefText);
     const msg = homeReadyChatMessage(briefText, authPanel);
     setChatLog((prev) => {
@@ -198,6 +203,8 @@ export function ProjectWorkspace({
     setPublishBlockMsg(undefined);
     setPreviewKey((k) => k + 1);
     setVerifyToken((t) => t + 1);
+    setMainTab("preview");
+    setMobilePane("stage");
     setChatLog((prev) => {
       const cleaned = stripBuildingMessages(prev);
       if (
@@ -560,7 +567,7 @@ export function ProjectWorkspace({
   }
 
   return (
-    <div className="fixed inset-0 z-40 flex flex-col bg-[#03040a] text-zinc-100">
+    <div className="fixed inset-0 z-40 flex flex-col bg-[#03040a] text-zinc-100 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
       <AutoPlanBootstrap
         projectId={project.id}
         prompt={initialPrompt || ""}
@@ -611,25 +618,25 @@ export function ProjectWorkspace({
         onError={handleBuildError}
       />
 
-      <header className="relative z-50 flex h-12 shrink-0 items-center gap-2 border-b border-white/8 bg-black/40 px-3 backdrop-blur-xl">
+      <header className="relative z-50 flex shrink-0 items-center gap-2 border-b border-white/8 bg-black/40 px-2 py-2 backdrop-blur-xl sm:h-12 sm:px-3">
         <Link
           href="/projects"
-          className="grid h-8 w-8 place-items-center rounded-lg text-zinc-400 transition hover:bg-white/[0.06] hover:text-zinc-100"
+          className="grid h-10 w-10 shrink-0 place-items-center rounded-lg text-zinc-400 transition hover:bg-white/[0.06] hover:text-zinc-100"
           title="Voltar"
         >
           ←
         </Link>
-        <span className="grid h-7 w-7 place-items-center rounded-lg bg-violet-500/20 text-[9px] font-bold text-violet-100 ring-1 ring-violet-400/30">
+        <span className="hidden h-7 w-7 shrink-0 place-items-center rounded-lg bg-violet-500/20 text-[9px] font-bold text-violet-100 ring-1 ring-violet-400/30 sm:grid">
           X09
         </span>
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-semibold text-white">
             {project.name}
           </p>
           <p className="truncate text-[11px] text-zinc-500">{statusLabel}</p>
         </div>
 
-        <div className="mx-auto hidden h-9 items-center gap-0.5 rounded-full border border-white/8 bg-white/[0.04] p-1 sm:flex">
+        <div className="mx-auto hidden h-9 items-center gap-0.5 rounded-full border border-white/8 bg-white/[0.04] p-1 md:flex">
           {tabs.map(([id, label]) => (
             <button
               key={id}
@@ -646,10 +653,11 @@ export function ProjectWorkspace({
           ))}
         </div>
 
-        <div className="ml-auto flex items-center gap-1.5">
+        <div className="ml-auto flex shrink-0 items-center gap-1.5">
+          <CreditBalanceChip balance={creditBalance} compact />
           <Link
             href={`/projects/${project.id}/settings`}
-            className="rounded-lg px-2 py-1.5 text-xs text-zinc-400 hover:bg-white/[0.06] hover:text-zinc-100"
+            className="hidden rounded-lg px-2 py-1.5 text-xs text-zinc-400 hover:bg-white/[0.06] hover:text-zinc-100 md:inline"
             title="Configurações da empresa"
           >
             Configurações
@@ -657,7 +665,7 @@ export function ProjectWorkspace({
           <button
             type="button"
             onClick={() => setPreviewKey((k) => k + 1)}
-            className="rounded-lg px-2 py-1.5 text-xs text-zinc-400 hover:bg-white/[0.06] hover:text-zinc-100"
+            className="hidden rounded-lg px-2 py-1.5 text-xs text-zinc-400 hover:bg-white/[0.06] hover:text-zinc-100 md:inline"
           >
             Atualizar preview
           </button>
@@ -670,7 +678,7 @@ export function ProjectWorkspace({
                 return next;
               });
             }}
-            className={`rounded-full px-3 py-1.5 text-xs font-medium ${
+            className={`hidden rounded-full px-3 py-1.5 text-xs font-medium md:inline ${
               developerMode
                 ? "bg-orange-500/20 text-orange-200 ring-1 ring-orange-400/30"
                 : "bg-white/[0.06] text-zinc-400"
@@ -684,7 +692,7 @@ export function ProjectWorkspace({
               type="button"
               data-publish-trigger
               onClick={openPublishPanel}
-              className="x09-button-primary px-3 py-1.5 text-xs"
+              className="x09-button-primary px-3 py-2 text-xs"
               title={publishedUrl ?? "Publicar site"}
             >
               {publishButtonLabel}
@@ -704,8 +712,40 @@ export function ProjectWorkspace({
         </div>
       </header>
 
-      <div className="flex min-h-0 flex-1 overflow-hidden">
-        <aside className="flex w-full max-w-[380px] shrink-0 flex-col border-r border-white/8 bg-black/35 backdrop-blur-xl md:w-[32%]">
+      <div className="flex shrink-0 gap-1 border-b border-white/8 bg-black/30 p-2 md:hidden">
+        <button
+          type="button"
+          onClick={() => setMobilePane("chat")}
+          className={`min-h-10 flex-1 rounded-full text-sm font-medium ${
+            mobilePane === "chat"
+              ? "bg-violet-500/25 text-white ring-1 ring-violet-400/30"
+              : "text-zinc-400"
+          }`}
+        >
+          Chat
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            setMobilePane("stage");
+            setMainTab("preview");
+          }}
+          className={`min-h-10 flex-1 rounded-full text-sm font-medium ${
+            mobilePane === "stage"
+              ? "bg-violet-500/25 text-white ring-1 ring-violet-400/30"
+              : "text-zinc-400"
+          }`}
+        >
+          Preview
+        </button>
+      </div>
+
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden md:flex-row">
+        <aside
+          className={`${
+            mobilePane === "chat" ? "flex" : "hidden"
+          } min-h-0 w-full shrink-0 flex-col border-white/8 bg-black/35 backdrop-blur-xl md:flex md:w-[32%] md:max-w-[380px] md:border-r`}
+        >
           <div className="border-b border-white/8 px-4 py-3">
             <p className="text-sm font-semibold text-white">Chat X09</p>
             <p className="mt-0.5 text-xs text-zinc-500">
@@ -810,7 +850,35 @@ export function ProjectWorkspace({
           </div>
         </aside>
 
-        <section className="relative h-full min-h-0 min-w-0 flex-1 overflow-hidden bg-[#08060f]">
+        <section
+          className={`${
+            mobilePane === "stage" ? "flex" : "hidden"
+          } relative min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-[#08060f] md:flex`}
+        >
+          <div className="flex shrink-0 gap-1 overflow-x-auto border-b border-white/8 p-2 md:hidden">
+            {tabs.map(([id, label]) => (
+              <button
+                key={id}
+                type="button"
+                onClick={() => setMainTab(id)}
+                className={`min-h-9 shrink-0 rounded-full px-3 text-xs font-medium ${
+                  mainTab === id
+                    ? "bg-violet-500/25 text-white ring-1 ring-violet-400/30"
+                    : "text-zinc-500"
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+            <button
+              type="button"
+              onClick={() => setPreviewKey((k) => k + 1)}
+              className="min-h-9 shrink-0 rounded-full px-3 text-xs text-zinc-400"
+            >
+              Atualizar
+            </button>
+          </div>
+          <div className="relative min-h-0 flex-1">
           {mainTab === "preview" ? (
             <ProjectLivePreview
               projectId={project.id}
@@ -874,6 +942,7 @@ export function ProjectWorkspace({
               />
             </div>
           ) : null}
+          </div>
         </section>
       </div>
     </div>

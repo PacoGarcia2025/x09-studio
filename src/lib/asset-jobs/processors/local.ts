@@ -1,7 +1,7 @@
 import { createExecutionContext } from "@/lib/capability-router/context";
 import { capabilityFromJob } from "@/lib/capability-router/from-job";
 import { getExecutionPolicies } from "@/lib/capability-router/policies";
-import { resolveCapability } from "@/lib/capability-router/resolve";
+import { listCapabilityCandidates } from "@/lib/capability-router/resolve";
 import type {
   AssetProcessor,
   AssetProcessorResult,
@@ -9,6 +9,7 @@ import type {
 
 /**
  * Processor local: roteia pela capability. Não conhece motores.
+ * Se um provider devolver skipped, tenta o próximo candidato.
  */
 export function createLocalAssetProcessor(): AssetProcessor {
   return {
@@ -23,11 +24,11 @@ export function createLocalAssetProcessor(): AssetProcessor {
       }
 
       const policies = getExecutionPolicies();
-      const resolved = resolveCapability(capability, policies);
-      if (!resolved.ok) {
+      const candidates = listCapabilityCandidates(capability, policies);
+      if (candidates.length === 0) {
         return {
           status: "skipped",
-          message: resolved.reason,
+          message: `Nenhum provider habilitado para ${capability}`,
           meta: { capability },
         };
       }
@@ -40,14 +41,40 @@ export function createLocalAssetProcessor(): AssetProcessor {
         processorTarget: "local",
       });
 
-      const result = await resolved.provider.execute(ctx);
+      let lastSkip: AssetProcessorResult | null = null;
+      for (const provider of candidates) {
+        const result = await provider.execute(ctx);
+        if (result.status === "skipped") {
+          lastSkip = {
+            ...result,
+            meta: {
+              ...result.meta,
+              capability,
+              providerId: provider.manifest.id,
+            },
+          };
+          continue;
+        }
+        if (result.status === "failed") {
+          console.error(
+            `[asset-job] ${job.id} ${capability} → ${provider.manifest.id}: ${result.message}`,
+          );
+        }
+        return {
+          ...result,
+          meta: {
+            ...result.meta,
+            capability,
+            providerId: provider.manifest.id,
+          },
+        };
+      }
+
       return {
-        ...result,
-        meta: {
-          ...result.meta,
-          capability,
-          providerId: resolved.provider.manifest.id,
-        },
+        status: "skipped",
+        message:
+          lastSkip?.message ?? `Nenhum provider aceitou ${capability}`,
+        meta: { capability, ...(lastSkip?.meta ?? {}) },
       };
     },
   };

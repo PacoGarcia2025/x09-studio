@@ -28,5 +28,6 @@ export function createExecutionContext(input: {
     storage: input.storage,
     policies,
     processorTarget: input.processorTarget ?? "local",
+    params: input.job.meta ?? {},
   };
 }

@@ -17,7 +17,7 @@ export default async function SignupPage({ searchParams }: SignupPageProps) {
   return (
     <AuthShell
       title="Criar conta"
-      subtitle="Entre no ambiente premium do Studio e acompanhe agentes de IA construindo software em tempo real."
+      subtitle="Cada conta nova recebe créditos para um site e um objeto 3D comercial. Depois, compre pacotes quando precisar."
       footer={
         <>
           Já tem conta?{" "}
@@ -27,6 +27,15 @@ export default async function SignupPage({ searchParams }: SignupPageProps) {
           >
             Entrar
           </Link>
+          <span className="mt-3 block text-[11px] text-zinc-600">
+            <Link href="/legal/termos" className="hover:text-zinc-400">
+              Termos
+            </Link>
+            {" · "}
+            <Link href="/legal/privacidade" className="hover:text-zinc-400">
+              Privacidade
+            </Link>
+          </span>
         </>
       }
     >

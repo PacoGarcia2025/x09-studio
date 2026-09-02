@@ -95,6 +95,7 @@ export function formatBuilderContext(input: {
   projectName: string;
   briefPrompt?: string | null;
   taskInstruction?: string;
+  libraryCatalog?: string | null;
 }): string {
   const parts = [`Nome do projeto: ${input.projectName}`];
 
@@ -103,6 +104,11 @@ export function formatBuilderContext(input: {
     parts.push(
       `Brief completo do cliente (OBRIGATÓRIO — use nome, cores, contatos, cidade, WhatsApp, e-mail EXATOS; ${REGULATORY_BODY_HINT}):\n${brief.slice(0, 2800)}`,
     );
+  }
+
+  const library = input.libraryCatalog?.trim();
+  if (library) {
+    parts.push(library);
   }
 
   if (input.taskInstruction?.trim()) {

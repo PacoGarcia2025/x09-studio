@@ -24,6 +24,7 @@
 # misc
 .DS_Store
 *.pem
+.runpod-ssh/
 
 # debug
 npm-debug.log*
@@ -39,6 +40,9 @@ yarn-error.log*
 
 # TRELLIS vendor (clone via services/trellis-worker/setup.sh)
 services/trellis-worker/vendor/
+
+# clone local do sidecar GPU (não versionar)
+.tmp/
 
 # vercel
 .vercel

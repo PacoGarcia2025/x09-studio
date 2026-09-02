@@ -258,14 +258,25 @@ def infer(input_path: str, output_path: str) -> None:
             fail(EXIT_ARGS, f"Imagem muito pequena para TRELLIS ({width}x{height}, mín. 32px).")
         log(f"imagem {width}x{height}")
 
-        outputs = pipeline.run(image, seed=1)
+        outputs = pipeline.run(
+            image,
+            seed=int(os.environ.get("STUDIO_TRELLIS_SEED", "1")),
+            sparse_structure_sampler_params={
+                "steps": int(os.environ.get("STUDIO_TRELLIS_SS_STEPS", "25")),
+                "cfg_strength": float(os.environ.get("STUDIO_TRELLIS_SS_CFG", "7.5")),
+            },
+            slat_sampler_params={
+                "steps": int(os.environ.get("STUDIO_TRELLIS_SLAT_STEPS", "25")),
+                "cfg_strength": float(os.environ.get("STUDIO_TRELLIS_SLAT_CFG", "3.0")),
+            },
+        )
         mark("run")
 
         glb = postprocessing_utils.to_glb(
             outputs["gaussian"][0],
             outputs["mesh"][0],
-            simplify=float(os.environ.get("STUDIO_TRELLIS_SIMPLIFY", "0.95")),
-            texture_size=int(os.environ.get("STUDIO_TRELLIS_TEXTURE", "1024")),
+            simplify=float(os.environ.get("STUDIO_TRELLIS_SIMPLIFY", "0.90")),
+            texture_size=int(os.environ.get("STUDIO_TRELLIS_TEXTURE", "2048")),
         )
         os.makedirs(os.path.dirname(os.path.abspath(output_path)) or ".", exist_ok=True)
         glb.export(output_path)

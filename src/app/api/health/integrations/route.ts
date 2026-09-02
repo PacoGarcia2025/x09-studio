@@ -1,3 +1,5 @@
+import { readMercadoPagoAccessToken } from "@/lib/billing/mp-env";
+
 export const dynamic = "force-dynamic";
 
 /** Health check sem custo — só verifica presença de envs (não chama APIs externas). */
@@ -10,7 +12,7 @@ export async function GET() {
     githubApp: Boolean(
       process.env.GITHUB_APP_ID && process.env.GITHUB_APP_PRIVATE_KEY,
     ),
-    mercadoPago: Boolean(process.env.MP_ACCESS_TOKEN),
+    mercadoPago: Boolean(readMercadoPagoAccessToken()),
     vercel: Boolean(process.env.VERCEL_TOKEN),
     llm: Boolean(
       process.env.OPENROUTER_API_KEY ||

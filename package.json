@@ -11,11 +11,15 @@
     "test": "vitest run",
     "asset-worker": "npx tsx services/asset-worker/main.ts",
     "generate:lucide-icons": "node scripts/generate-lucide-icons.mjs",
-    "validate:supabase": "node scripts/validate-supabase.mjs"
+    "validate:supabase": "node scripts/validate-supabase.mjs",
+    "billing:probe": "node scripts/billing-rpcs.mjs",
+    "billing:apply": "node scripts/billing-rpcs.mjs --apply",
+    "trellis:bootstrap": "node scripts/bootstrap-trellis-volume.mjs"
   },
   "dependencies": {
     "@codesandbox/sandpack-react": "^2.20.0",
     "@google/generative-ai": "^0.24.1",
+    "@google/model-viewer": "^4.3.1",
     "@supabase/ssr": "^0.12.3",
     "@supabase/supabase-js": "^2.110.5",
     "jose": "^6.2.3",

@@ -1,10 +1,12 @@
 import { AppShell } from "@/components/AppShell";
+import { isCurrentUserStudioOperator } from "@/lib/auth/studio-operator.server";
 import {
   aiRouterAssignments,
   ecosystemConnectors,
   publishingSteps,
   type EcosystemConnector,
 } from "@/lib/ecosystem/catalog";
+import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
@@ -12,11 +14,14 @@ const categories = Array.from(
   new Set(ecosystemConnectors.map((connector) => connector.category)),
 );
 
-export default function EcosystemPage() {
+export default async function EcosystemPage() {
+  if (!(await isCurrentUserStudioOperator())) {
+    redirect("/projects");
+  }
   return (
     <AppShell activeHref="/ecosystem">
-      <div className="space-y-8 px-5 py-8 md:px-8">
-        <section className="x09-card overflow-hidden rounded-[2rem] p-8">
+      <div className="space-y-6 px-4 py-5 sm:space-y-8 sm:px-5 sm:py-8 md:px-8">
+        <section className="x09-card overflow-hidden rounded-[1.5rem] p-5 sm:rounded-[2rem] sm:p-8">
           <div className="flex flex-col gap-8 xl:flex-row xl:items-end xl:justify-between">
             <div className="max-w-3xl space-y-4">
               <p className="text-xs uppercase tracking-[0.28em] text-violet-300">

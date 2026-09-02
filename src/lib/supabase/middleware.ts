@@ -42,7 +42,9 @@ export async function updateSession(request: NextRequest) {
   const isProtected =
     path.startsWith("/projects") ||
     path.startsWith("/billing") ||
-    path.startsWith("/assets");
+    path.startsWith("/assets") ||
+    path.startsWith("/ai") ||
+    path.startsWith("/ecosystem");
 
   if (!user && isProtected) {
     const url = request.nextUrl.clone();

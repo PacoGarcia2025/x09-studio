@@ -63,6 +63,7 @@ async function requestEditPatch(
   input: {
     projectName: string;
     briefPrompt?: string | null;
+    libraryCatalog?: string | null;
     message: string;
     fileBlocks: string[];
     syntaxRetryNote?: string;
@@ -92,6 +93,7 @@ ${editRules}`,
           formatBuilderContext({
             projectName: input.projectName,
             briefPrompt: input.briefPrompt,
+            libraryCatalog: input.libraryCatalog,
             taskInstruction: `Pedido de edição: ${input.message}`,
           }),
           input.syntaxRetryNote,
@@ -123,6 +125,7 @@ export async function applyChatEditPatch(
     projectId: string;
     projectName: string;
     briefPrompt?: string | null;
+    libraryCatalog?: string | null;
     message: string;
   },
 ): Promise<{ summary: string; paths: string[]; model: string }> {
@@ -160,6 +163,7 @@ export async function applyChatEditPatch(
     const result = await requestEditPatch(provider, {
       projectName: input.projectName,
       briefPrompt: input.briefPrompt,
+      libraryCatalog: input.libraryCatalog,
       message: input.message,
       fileBlocks,
       syntaxRetryNote,

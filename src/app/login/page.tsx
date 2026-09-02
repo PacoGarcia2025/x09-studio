@@ -27,6 +27,15 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
           >
             Criar conta
           </Link>
+          <span className="mt-3 block text-[11px] text-zinc-600">
+            <Link href="/legal/termos" className="hover:text-zinc-400">
+              Termos
+            </Link>
+            {" · "}
+            <Link href="/legal/privacidade" className="hover:text-zinc-400">
+              Privacidade
+            </Link>
+          </span>
         </>
       }
     >

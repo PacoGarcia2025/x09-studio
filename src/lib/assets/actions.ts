@@ -22,13 +22,51 @@ import {
   writeAssetFile,
 } from "@/lib/assets/storage.server";
 import type { AssetActionResult, AssetRow, AssetWithJobs } from "@/lib/assets/types";
+import {
+  creditCostForMeshJob,
+  isCommercialMeshTier,
+  parseMeshTier,
+  type MeshTier,
+} from "@/lib/assets/mesh-tiers";
+import {
+  AssetJobCreditError,
+  debitAssetJobCredits,
+  refundReservedAssetJobCredits,
+} from "@/lib/billing/asset-job-credits";
+import type { CapabilityId } from "@/lib/capability-router/capabilities";
 import { getExecutionPolicies } from "@/lib/capability-router/policies";
+import { isCommercialMeshConfigured } from "@/lib/capability-router/providers/meshy-env";
+import { clampLogoThickness } from "@/lib/capability-router/providers/logo-plate-thickness";
 import { resolveCapability } from "@/lib/capability-router/resolve";
 
 const ASSET_SELECT =
   "id, workspace_id, project_id, created_by, kind, source, status, original_name, storage_path, mime_type, byte_size, meta, created_at, updated_at";
 
 const JOB_SELECT = ASSET_JOB_SELECT;
+
+function sanitizeGenerationPrompt(
+  raw: string,
+): string | { ok: false; error: string } {
+  const prompt = raw.trim();
+  if (prompt.length < 3) {
+    return { ok: false, error: "Descreva o pedido (mínimo 3 caracteres)." };
+  }
+  if (prompt.length > 800) {
+    return { ok: false, error: "Prompt demasiado longo (máximo 800 caracteres)." };
+  }
+  return prompt;
+}
+
+function slugFromPrompt(prompt: string): string {
+  const slug = prompt
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 40);
+  return slug || "texto";
+}
 
 export async function listLibraryAssets(): Promise<
   | { ok: true; assets: AssetWithJobs[]; schemaReady: true }
@@ -213,31 +251,172 @@ async function uploadAssetActionInner(
 }
 
 /**
- * Enfileira mesh.generate. Não conhece o provider — só a capability.
- * O Router escolhe o provider no tick (hoje o stub; depois um motor real).
+ * Enfileira mesh.generate. Não conhece o motor — só capability + meshTier.
  */
 export async function enqueueMeshGenerateAction(
   sourceAssetId?: string,
+  meshTier: MeshTier = "gpu",
 ): Promise<AssetActionResult> {
+  const tier = parseMeshTier(meshTier) ?? "gpu";
+  const commercial = isCommercialMeshTier(tier);
+  return enqueueMeshJob({
+    capability: "mesh.generate",
+    sourceAssetId,
+    nameSuffix:
+      tier === "flagship" ? "qualidade" : commercial ? "comercial" : "objeto",
+    requireImageIfGpu: !commercial,
+    requireImage: commercial,
+    extraMeta: { meshTier: tier },
+    commercial,
+  });
+}
+
+export async function enqueueTextTo3dAction(
+  prompt: string,
+  meshTier: MeshTier = "game",
+): Promise<AssetActionResult> {
+  const cleaned = sanitizeGenerationPrompt(prompt);
+  if (typeof cleaned !== "string") return cleaned;
+  const tier = parseMeshTier(meshTier);
+  if (tier !== "game" && tier !== "flagship") {
+    return { ok: false, error: "Escolha qualidade comercial ou alta qualidade." };
+  }
+  return enqueueMeshJob({
+    capability: "mesh.generate",
+    nameSuffix: tier === "flagship" ? "texto-hq" : "texto",
+    requireImageIfGpu: false,
+    extraMeta: { meshTier: tier, prompt: cleaned, sourceMode: "text" },
+    commercial: true,
+    fallbackName: slugFromPrompt(cleaned),
+  });
+}
+
+export async function enqueueRetextureAction(
+  sourceAssetId: string,
+  prompt: string,
+): Promise<AssetActionResult> {
+  const cleaned = sanitizeGenerationPrompt(prompt);
+  if (typeof cleaned !== "string") return cleaned;
+  return enqueueMeshJob({
+    capability: "texture.generate",
+    sourceAssetId,
+    sourceKind: "mesh",
+    nameSuffix: "retextura",
+    requireImageIfGpu: false,
+    extraMeta: { prompt: cleaned, sourceMode: "retexture" },
+    commercial: true,
+  });
+}
+
+export async function enqueueLogoPlateAction(
+  sourceAssetId?: string,
+  thickness?: number,
+): Promise<AssetActionResult> {
+  return enqueueMeshJob({
+    capability: "mesh.logo",
+    sourceAssetId,
+    nameSuffix: "logo",
+    requireImageIfGpu: false,
+    requireImage: true,
+    extraMeta: { thickness: clampLogoThickness(thickness) },
+  });
+}
+
+async function enqueueMeshJob(input: {
+  capability: CapabilityId;
+  sourceAssetId?: string;
+  nameSuffix: string;
+  requireImageIfGpu: boolean;
+  requireImage?: boolean;
+  extraMeta?: Record<string, unknown>;
+  commercial?: boolean;
+  sourceKind?: "image" | "mesh";
+  fallbackName?: string;
+}): Promise<AssetActionResult> {
+  try {
+    return await enqueueMeshJobInner(input);
+  } catch (err) {
+    return {
+      ok: false,
+      error:
+        err instanceof Error ? err.message : "Falha ao enfileirar o job.",
+    };
+  }
+}
+
+async function enqueueMeshJobInner(input: {
+  capability: CapabilityId;
+  sourceAssetId?: string;
+  nameSuffix: string;
+  requireImageIfGpu: boolean;
+  requireImage?: boolean;
+  extraMeta?: Record<string, unknown>;
+  commercial?: boolean;
+  sourceKind?: "image" | "mesh";
+  fallbackName?: string;
+}): Promise<AssetActionResult> {
   const gate = await assertWorkspaceOwner();
   if (gate.error || !gate.user || !gate.workspaceId) {
     return { ok: false, error: gate.error ?? "Erro ao validar workspace" };
   }
 
-  const resolved = resolveCapability("mesh.generate", getExecutionPolicies());
-  if (!resolved.ok) {
-    return { ok: false, error: resolved.reason };
+  const policies = getExecutionPolicies();
+  if (input.commercial) {
+    if (!policies.generationEnabled) {
+      return { ok: false, error: `Geração desligada para ${input.capability}` };
+    }
+    if (!policies.paidApisAllowed) {
+      return {
+        ok: false,
+        error: "APIs pagas desligadas (STUDIO_ASSET_PAID_APIS).",
+      };
+    }
+    if (!policies.internetAllowed) {
+      return {
+        ok: false,
+        error: "Internet desligada para geração comercial.",
+      };
+    }
+    if (!isCommercialMeshConfigured()) {
+      return {
+        ok: false,
+        error: "Geração comercial não configurada.",
+      };
+    }
+  } else {
+    const resolved = resolveCapability(input.capability, policies);
+    if (!resolved.ok) {
+      return { ok: false, error: resolved.reason };
+    }
+  }
+
+  const resolved = resolveCapability(input.capability, policies);
+  const needsImage =
+    input.requireImage ||
+    (input.requireImageIfGpu &&
+      resolved.ok &&
+      resolved.provider.manifest.requiresGpu);
+  if (needsImage && !input.sourceAssetId) {
+    return {
+      ok: false,
+      error:
+        input.capability === "mesh.logo"
+          ? "Logo precisa de uma imagem. Use «Gerar logo» no arquivo da biblioteca."
+          : "Gerar objeto 3D precisa de uma imagem. Use o botão no arquivo da biblioteca.",
+    };
   }
 
   let projectId: string | null = null;
   let inputPath: string | null = null;
-  let sourceName = "exemplo";
+  let sourceName = input.fallbackName ?? "exemplo";
+  const sourceAssetId = input.sourceAssetId;
+  const expectedKind = input.sourceKind ?? "image";
 
   if (sourceAssetId) {
     const { data: source, error } = await gate.supabase
       .from("assets")
       .select(
-        "id, workspace_id, project_id, kind, original_name, storage_path, status",
+        "id, workspace_id, project_id, kind, original_name, storage_path, status, byte_size",
       )
       .eq("id", sourceAssetId)
       .maybeSingle();
@@ -254,12 +433,33 @@ export async function enqueueMeshGenerateAction(
     if (source.status === "archived") {
       return { ok: false, error: "Asset de origem arquivado" };
     }
-    if (source.kind !== "image") {
-      return { ok: false, error: "mesh.generate a partir de um asset espera uma imagem." };
+    if (source.kind !== expectedKind) {
+      return {
+        ok: false,
+        error:
+          expectedKind === "mesh"
+            ? "Retextura espera um mesh da biblioteca."
+            : `${input.capability} a partir de um asset espera uma imagem.`,
+      };
+    }
+    if (expectedKind === "mesh" && !(source.byte_size > 0)) {
+      return {
+        ok: false,
+        error: "Mesh de origem ainda sem arquivo. Processe o job e tente de novo.",
+      };
     }
     projectId = source.project_id;
     inputPath = source.storage_path;
-    sourceName = source.original_name.replace(/\.[^.]+$/, "") || "exemplo";
+    sourceName = source.original_name.replace(/\.[^.]+$/, "") || sourceName;
+    if (needsImage && !inputPath) {
+      return {
+        ok: false,
+        error: "Imagem de origem sem arquivo no storage. Espere o ingest terminar.",
+      };
+    }
+    if (expectedKind === "mesh" && !inputPath) {
+      return { ok: false, error: "Mesh de origem sem arquivo no storage." };
+    }
   }
 
   const assetId = randomUUID();
@@ -269,7 +469,7 @@ export async function enqueueMeshGenerateAction(
     assetId,
     "glb",
   );
-  const originalName = `${sourceName}-exemplo.glb`;
+  const originalName = `${sourceName}-${input.nameSuffix}.glb`;
 
   const { error: insertError } = await gate.supabase.from("assets").insert({
     id: assetId,
@@ -285,8 +485,9 @@ export async function enqueueMeshGenerateAction(
     byte_size: 0,
     meta: {
       extension: "glb",
-      capability: "mesh.generate",
+      capability: input.capability,
       source_asset_id: sourceAssetId ?? null,
+      ...input.extraMeta,
     },
   });
 
@@ -295,6 +496,32 @@ export async function enqueueMeshGenerateAction(
       return { ok: false, error: SCHEMA_PENDING_MESSAGE };
     }
     return { ok: false, error: insertError.message };
+  }
+
+  const creditCost = creditCostForMeshJob({
+    capability: input.capability,
+    meshTier: input.extraMeta?.meshTier,
+    requiresGpu:
+      resolved.ok && resolved.provider.manifest.requiresGpu && !input.commercial,
+  });
+
+  try {
+    await debitAssetJobCredits({
+      userId: gate.user.id,
+      amount: creditCost,
+      assetId,
+      meta: {
+        capability: input.capability,
+        meshTier: input.extraMeta?.meshTier ?? null,
+      },
+    });
+  } catch (err) {
+    await gate.supabase.from("assets").delete().eq("id", assetId);
+    const message =
+      err instanceof AssetJobCreditError
+        ? err.message
+        : "Falha ao debitar créditos.";
+    return { ok: false, error: message };
   }
 
   const { data: job, error: jobError } = await gate.supabase
@@ -311,16 +538,26 @@ export async function enqueueMeshGenerateAction(
       input_path: inputPath,
       output_path: storagePath,
       meta: {
-        trigger: "mesh.generate",
-        capability: "mesh.generate",
+        trigger: input.capability,
+        capability: input.capability,
         source_asset_id: sourceAssetId ?? null,
+        ...input.extraMeta,
       },
-      credits_reserved: 0,
+      credits_reserved: creditCost,
     })
     .select("id")
     .single();
 
   if (jobError) {
+    try {
+      await refundReservedAssetJobCredits({
+        created_by: gate.user.id,
+        asset_id: assetId,
+        credits_reserved: creditCost,
+      });
+    } catch {
+      /* o asset vai ser apagado; o reembolso é idempotente no retry */
+    }
     await gate.supabase.from("assets").delete().eq("id", assetId);
     if (isMissingRelationError(jobError)) {
       return { ok: false, error: SCHEMA_PENDING_MESSAGE };
@@ -342,7 +579,7 @@ export async function cancelAssetJobAction(
 
   const { data: job, error } = await gate.supabase
     .from("asset_jobs")
-    .select("id, workspace_id, status")
+    .select("id, workspace_id, status, created_by, asset_id, credits_reserved")
     .eq("id", jobId)
     .maybeSingle();
 
@@ -372,6 +609,19 @@ export async function cancelAssetJobAction(
     .eq("id", jobId);
 
   if (updateError) return { ok: false, error: updateError.message };
+
+  try {
+    await refundReservedAssetJobCredits({
+      created_by: job.created_by,
+      asset_id: job.asset_id,
+      credits_reserved: job.credits_reserved ?? 0,
+    });
+  } catch (err) {
+    console.error(
+      "[asset-job] reembolso no cancelamento falhou:",
+      err instanceof Error ? err.message : err,
+    );
+  }
 
   revalidatePath("/assets");
   return { ok: true };

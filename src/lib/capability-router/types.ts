@@ -17,6 +17,8 @@ export type ProviderManifest = {
   status: ProviderStatus;
   requiresGpu: boolean;
   requiresInternet: boolean;
+  /** API externa cobrada. O Router só inclui o provider se paidApisAllowed. */
+  requiresPaidApi?: boolean;
   enabled: boolean;
   experimental?: boolean;
   supportsBatch?: boolean;
@@ -47,6 +49,8 @@ export type ExecutionContext = {
   storage: AssetStorageDriver;
   policies: ExecutionPolicies;
   processorTarget: "local" | "gpu-worker";
+  /** Cópia de `asset_jobs.meta` — parâmetros do pedido, sem o resto do Studio. */
+  params: Record<string, unknown>;
 };
 
 export type ProviderResult = {

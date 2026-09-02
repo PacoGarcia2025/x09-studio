@@ -180,6 +180,7 @@ export async function generateTaskPayload(
     projectName: string;
     briefPrompt?: string | null;
     existingFileContent?: string | null;
+    libraryCatalog?: string | null;
   },
 ): Promise<
   | { kind: "file"; content: string }
@@ -191,6 +192,7 @@ export async function generateTaskPayload(
   const base = formatBuilderContext({
     projectName: context.projectName,
     briefPrompt: context.briefPrompt,
+    libraryCatalog: context.libraryCatalog,
     taskInstruction: [
       `Task: ${task.title}`,
       `Tipo: ${task.type}`,

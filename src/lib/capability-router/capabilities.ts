@@ -5,6 +5,7 @@
 export const CAPABILITIES = [
   "asset.ingest",
   "mesh.generate",
+  "mesh.logo",
   "mesh.optimize",
   "mesh.convert",
   "image.generate",

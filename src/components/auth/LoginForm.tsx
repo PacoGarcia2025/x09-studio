@@ -1,8 +1,10 @@
 "use client";
 
 import { sanitizeNextPath } from "@/lib/auth/paths";
+import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
+import type { Provider } from "@supabase/supabase-js";
 
 export function LoginForm({
   mode,
@@ -20,6 +22,7 @@ export function LoginForm({
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  const [oauthPending, setOauthPending] = useState<Provider | null>(null);
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -72,6 +75,37 @@ export function LoginForm({
       setPending(false);
     }
   }
+
+  async function onOauth(provider: "google" | "facebook") {
+    setError(null);
+    setInfo(null);
+    setOauthPending(provider);
+    try {
+      const supabase = createClient();
+      const redirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent(safeNext)}`;
+      const { error: oauthError } = await supabase.auth.signInWithOAuth({
+        provider,
+        options: { redirectTo },
+      });
+      if (oauthError) {
+        throw oauthError;
+      }
+    } catch (err) {
+      const raw = err instanceof Error ? err.message : "Falha no login social";
+      if (/unsupported provider|not enabled|disabled/i.test(raw)) {
+        setError(
+          provider === "google"
+            ? "Login com Google ainda não está ligado neste ambiente."
+            : "Login com Facebook ainda não está ligado neste ambiente.",
+        );
+      } else {
+        setError(raw);
+      }
+      setOauthPending(null);
+    }
+  }
+
+  const busy = pending || oauthPending !== null;
 
   return (
     <form onSubmit={onSubmit} className="w-full max-w-sm space-y-4">
@@ -132,7 +166,7 @@ export function LoginForm({
 
       <button
         type="submit"
-        disabled={pending}
+        disabled={busy}
         className="x09-button w-full rounded-2xl px-4 py-3 text-sm font-semibold text-white disabled:opacity-60"
       >
         {pending
@@ -141,6 +175,37 @@ export function LoginForm({
             ? "Criar conta"
             : "Entrar"}
       </button>
+
+      <div className="flex items-center gap-3 pt-1">
+        <span className="h-px flex-1 bg-white/10" />
+        <span className="text-[11px] uppercase tracking-[0.16em] text-zinc-500">
+          ou
+        </span>
+        <span className="h-px flex-1 bg-white/10" />
+      </div>
+
+      <div className="grid grid-cols-1 gap-2">
+        <button
+          type="button"
+          disabled={busy}
+          onClick={() => void onOauth("google")}
+          className="x09-button-secondary w-full rounded-2xl px-4 py-2.5 text-sm disabled:opacity-60"
+        >
+          {oauthPending === "google" ? "A redirecionar…" : "Continuar com Google"}
+        </button>
+        {process.env.NEXT_PUBLIC_AUTH_FACEBOOK === "1" ? (
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => void onOauth("facebook")}
+            className="x09-button-secondary w-full rounded-2xl px-4 py-2.5 text-sm disabled:opacity-60"
+          >
+            {oauthPending === "facebook"
+              ? "A redirecionar…"
+              : "Continuar com Facebook"}
+          </button>
+        ) : null}
+      </div>
     </form>
   );
 }

@@ -1,6 +1,12 @@
 import Link from "next/link";
 import { AppShell } from "@/components/AppShell";
 import { startPlanCheckout } from "@/lib/billing/checkout.actions";
+import {
+  BUILD_CREDIT_COST,
+  SIGNUP_BONUS_CREDITS,
+  TEXT_TO_3D_CREDIT_COST,
+  studioSupportEmail,
+} from "@/lib/billing/product";
 import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -38,9 +44,10 @@ const PLANS = [
 export default async function BillingPage({
   searchParams,
 }: {
-  searchParams?: Promise<{ status?: string }>;
+  searchParams?: Promise<{ status?: string; error?: string }>;
 }) {
   const params = searchParams ? await searchParams : {};
+  const supportEmail = studioSupportEmail();
   const supabase = await createClient();
   const {
     data: { user },
@@ -68,7 +75,7 @@ export default async function BillingPage({
       avatarLabel={firstName.charAt(0).toUpperCase()}
       activeHref="/billing"
     >
-      <div className="mx-auto max-w-5xl px-5 py-10 md:px-8">
+      <div className="mx-auto max-w-5xl px-4 py-6 sm:px-5 sm:py-10 md:px-8">
         <div className="mb-8">
           <Link
             href="/projects"
@@ -83,7 +90,9 @@ export default async function BillingPage({
             Planos e créditos
           </h1>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-400">
-            Cada Build consome 1 crédito. Escolha um pacote e pague com Mercado
+            Cada site consome {BUILD_CREDIT_COST} crédito de Build. Texto → 3D
+            comercial usa {TEXT_TO_3D_CREDIT_COST} créditos. Conta nova recebe{" "}
+            {SIGNUP_BONUS_CREDITS} créditos de boas-vindas. Pague com Mercado
             Pago. Seu saldo atual:{" "}
             <span className="font-semibold text-violet-200">
               {balance} créditos
@@ -95,9 +104,15 @@ export default async function BillingPage({
               Pagamento retornado. Se aprovado, os créditos entram em instantes.
             </p>
           ) : null}
+          {params.error === "mp" || params.error === "checkout" ? (
+            <p className="mt-3 rounded-xl border border-rose-400/25 bg-rose-500/10 px-3 py-2 text-sm text-rose-100">
+              Não foi possível iniciar o pagamento. Confira se o Mercado Pago
+              está ligado neste ambiente ou escreva para {supportEmail}.
+            </p>
+          ) : null}
         </div>
 
-        <div className="grid gap-5 md:grid-cols-2">
+        <div id="planos" className="grid scroll-mt-24 gap-5 md:grid-cols-2">
           {PLANS.map((plan) => (
             <article
               key={plan.code}
@@ -150,6 +165,29 @@ export default async function BillingPage({
             </article>
           ))}
         </div>
+
+        <aside className="mt-10 rounded-[28px] border border-white/10 bg-white/[0.03] p-6 text-sm leading-6 text-zinc-400">
+          <h2 className="text-base font-semibold text-white">
+            Suporte e reembolso
+          </h2>
+          <p className="mt-2">
+            Dúvidas de fatura, falha no pagamento ou créditos que não
+            aparecerem:{" "}
+            <a
+              href={`mailto:${supportEmail}`}
+              className="text-violet-200 underline-offset-4 hover:underline"
+            >
+              {supportEmail}
+            </a>
+            . Resposta em horário comercial (Brasília).
+          </p>
+          <p className="mt-2">
+            Créditos não usados podem ser reembolsados até 7 dias após a
+            compra, se nenhuma geração tiver sido debitada nesse pacote. Depois
+            do consumo, o valor correspondente não volta. Job que falha na
+            geração devolve os créditos automaticamente.
+          </p>
+        </aside>
       </div>
     </AppShell>
   );

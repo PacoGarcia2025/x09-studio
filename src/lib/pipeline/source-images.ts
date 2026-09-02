@@ -21,6 +21,7 @@ export function isBrokenImageSrc(src: string): boolean {
   if (/^data:/i.test(s)) return false;
   if (NON_IMAGE_SRC.test(s)) return false;
   if (/^\/assets\//i.test(s)) return false;
+  if (/^\/library\//i.test(s)) return false;
   if (/^\/src\//i.test(s)) return false;
   if (/^https?:\/\//i.test(s)) {
     if (/placeholder|example\.com|via\.placeholder|picsum\.photos\/seed\/\d/i.test(s)) {

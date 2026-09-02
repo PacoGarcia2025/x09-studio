@@ -17,7 +17,10 @@ export {
 
 export { createExecutionContext } from "@/lib/capability-router/context";
 export { getExecutionPolicies } from "@/lib/capability-router/policies";
-export { resolveCapability } from "@/lib/capability-router/resolve";
+export {
+  resolveCapability,
+  listCapabilityCandidates,
+} from "@/lib/capability-router/resolve";
 export {
   registerCapabilityProvider,
   listCapabilityProviders,

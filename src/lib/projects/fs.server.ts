@@ -125,6 +125,25 @@ export async function writeProjectFile(
   await fs.writeFile(absolute, content, "utf8");
 }
 
+const MAX_LIBRARY_BYTES = 25 * 1024 * 1024;
+
+export async function writeProjectBytes(
+  projectId: string,
+  relativePath: string,
+  bytes: Uint8Array,
+): Promise<void> {
+  if (bytes.byteLength > MAX_LIBRARY_BYTES) {
+    throw new Error("Arquivo da galeria excede 25 MB");
+  }
+  const absolute = resolveInsideProject(projectId, relativePath);
+  const st = await fs.stat(absolute).catch(() => null);
+  if (st && !st.isFile()) {
+    throw new Error("Caminho não é um arquivo");
+  }
+  await fs.mkdir(path.dirname(absolute), { recursive: true });
+  await fs.writeFile(absolute, bytes);
+}
+
 export async function deleteProjectFile(
   projectId: string,
   relativePath: string,

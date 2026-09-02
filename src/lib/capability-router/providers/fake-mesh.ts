@@ -1,3 +1,4 @@
+import { isCommercialMeshTier } from "@/lib/assets/mesh-tiers";
 import {
   buildFakeMeshGlb,
 } from "@/lib/capability-router/providers/fake-mesh-glb";
@@ -27,6 +28,12 @@ export function createFakeMeshProvider(): CapabilityProvider {
         return {
           status: "skipped",
           message: `Fake mesh não cobre ${ctx.capability}`,
+        };
+      }
+      if (isCommercialMeshTier(ctx.params.meshTier)) {
+        return {
+          status: "skipped",
+          message: "Job comercial — outro provider",
         };
       }
       if (!ctx.outputPath) {

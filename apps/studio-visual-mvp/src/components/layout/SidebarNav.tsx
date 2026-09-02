@@ -5,9 +5,7 @@ import {
   LayoutGrid,
   MessageSquare,
   PanelLeftClose,
-  Puzzle,
   Search,
-  Sparkles,
   Star,
   UserRound,
   Zap,
@@ -43,8 +41,6 @@ const PRIMARY_NAV: Array<{
 }> = [
   { id: "dashboard", label: "Painel", icon: LayoutGrid },
   { id: "search", label: "Procurar", icon: Search, hint: "Ctrl K" },
-  { id: "resources", label: "Recursos", icon: Sparkles },
-  { id: "connectors", label: "Conectores", icon: Puzzle },
 ];
 
 const PROJECT_NAV: Array<{

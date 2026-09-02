@@ -94,12 +94,13 @@ export const ecosystemConnectors: EcosystemConnector[] = [
     category: "Inteligência Artificial",
     status: "planned",
     description:
-      "Worker isolado para gerar assets (GLB, imagem, áudio, textura) via providers substituíveis. Sem API paga.",
+      "Worker isolado para gerar assets (GLB, imagem, áudio, textura) via providers substituíveis.",
     envVars: [
       "STUDIO_ASSET_STORAGE",
       "STUDIO_ASSET_PROCESSOR",
       "STUDIO_ASSET_WORKER_SECRET",
       "STUDIO_AI_ENGINE_GENERATION_ENABLED",
+      "STUDIO_ASSET_PAID_APIS",
     ],
     automation: ["Fila de jobs", "Providers", "Assets"],
   },

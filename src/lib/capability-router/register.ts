@@ -1,6 +1,8 @@
 import type { CapabilityProvider } from "@/lib/capability-router/types";
 import { createFakeMeshProvider } from "@/lib/capability-router/providers/fake-mesh";
 import { createLocalCapabilityProvider } from "@/lib/capability-router/providers/local";
+import { createLogoPlateProvider } from "@/lib/capability-router/providers/logo-plate";
+import { createMeshyProvider } from "@/lib/capability-router/providers/meshy";
 import { createTrellisProvider } from "@/lib/capability-router/providers/trellis";
 
 const providers: CapabilityProvider[] = [];
@@ -12,6 +14,8 @@ function seed() {
   seeded = true;
   registerCapabilityProvider(createLocalCapabilityProvider());
   registerCapabilityProvider(createFakeMeshProvider());
+  registerCapabilityProvider(createLogoPlateProvider());
+  registerCapabilityProvider(createMeshyProvider());
   registerCapabilityProvider(createTrellisProvider());
 }
 

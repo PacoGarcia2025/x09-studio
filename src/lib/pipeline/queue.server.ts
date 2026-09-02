@@ -3,6 +3,10 @@ import { getLlmProvider } from "@/lib/llm/provider";
 import { applyBuilderTask } from "@/lib/pipeline/builder.server";
 import type { PlanTaskType } from "@/lib/pipeline/plan-schema";
 import { ensureProjectScaffold } from "@/lib/projects/scaffold.server";
+import {
+  formatLibraryCatalogPrompt,
+  syncWorkspaceLibraryIntoProject,
+} from "@/lib/assets/project-library";
 
 const RETRY_DELAYS_MS = [2_000, 4_000, 8_000, 16_000, 30_000];
 /** Task running/retrying além disso = servidor caiu ou timeout — volta para queued. */
@@ -183,7 +187,7 @@ export async function tickBuilderQueue(
     supabase.from("plans").select("prompt").eq("id", input.planId).maybeSingle(),
     supabase
       .from("projects")
-      .select("brief_prompt, company_facts")
+      .select("brief_prompt, company_facts, workspace_id")
       .eq("id", input.projectId)
       .maybeSingle(),
   ]);
@@ -302,6 +306,19 @@ export async function tickBuilderQueue(
 
   try {
     await ensureProjectScaffold(input.projectId, { briefPrompt });
+    let libraryCatalog: string | null = null;
+    if (projectRow?.workspace_id) {
+      try {
+        const items = await syncWorkspaceLibraryIntoProject({
+          projectId: input.projectId,
+          workspaceId: projectRow.workspace_id,
+          supabase,
+        });
+        libraryCatalog = formatLibraryCatalogPrompt(items) || null;
+      } catch {
+        libraryCatalog = null;
+      }
+    }
     const provider = getLlmProvider();
     let result: Awaited<ReturnType<typeof applyBuilderTask>> | null = null;
     let lastError: unknown = null;
@@ -323,7 +340,7 @@ export async function tickBuilderQueue(
             instruction: next.instruction,
             path: next.path,
           },
-          { briefPrompt },
+          { briefPrompt, libraryCatalog },
         );
         break;
       } catch (err) {

@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { ProjectWorkspace } from "@/components/projects/ProjectWorkspace";
 import { getLatestPlan } from "@/lib/pipeline/actions";
 import { getProjectPublishReadiness } from "@/lib/projects/publish-readiness.server";
+import { getWalletBalance } from "@/lib/billing/credits.server";
 import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -80,6 +81,7 @@ export default async function ProjectDetailPage({ params, searchParams }: Props)
   );
 
   const publishReadiness = await getProjectPublishReadiness(project.id);
+  const creditBalance = await getWalletBalance(user.id);
 
   return (
     <ProjectWorkspace
@@ -93,6 +95,7 @@ export default async function ProjectDetailPage({ params, searchParams }: Props)
       needsBuildApproval={needsBuildApproval}
       canPublish={publishReadiness.ready}
       publishBlockReason={publishReadiness.reason}
+      creditBalance={creditBalance}
     />
   );
 }

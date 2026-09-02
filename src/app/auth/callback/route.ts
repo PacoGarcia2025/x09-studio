@@ -12,18 +12,9 @@ export async function GET(request: Request) {
     const supabase = await createClient();
     const { error } = await supabase.auth.exchangeCodeForSession(code);
     if (!error) {
-      // Prefer Visual MVP origin when configured
-      const mvp =
-        process.env.NEXT_PUBLIC_VISUAL_MVP_URL?.trim() ||
-        process.env.VISUAL_MVP_URL?.trim();
-      if (mvp) {
-        return NextResponse.redirect(new URL("/", mvp));
-      }
       return NextResponse.redirect(new URL(next, origin));
     }
   }
 
-  return NextResponse.redirect(
-    new URL("/?auth_error=callback", origin),
-  );
+  return NextResponse.redirect(new URL("/?auth_error=callback", origin));
 }

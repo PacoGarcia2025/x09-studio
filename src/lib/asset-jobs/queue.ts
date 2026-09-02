@@ -7,6 +7,7 @@ import {
 } from "@/lib/asset-jobs/types";
 import { getAssetStorage } from "@/lib/storage/registry";
 import { isMissingRelationError } from "@/lib/assets/schema";
+import { refundReservedAssetJobCredits } from "@/lib/billing/asset-job-credits";
 
 export type AssetQueueTick =
   | {
@@ -151,6 +152,41 @@ export async function tickAssetJobQueue(
         return { ok: false, error: updateError.message };
       }
       return { ok: false, error: updateError.message };
+    }
+
+    if (result.status === "done" && job.asset_id) {
+      const outputPath = result.outputPath ?? job.output_path;
+      const fromMeta = result.meta?.byteSize;
+      let byteSize =
+        typeof fromMeta === "number" && fromMeta > 0 ? fromMeta : 0;
+      if (!byteSize && outputPath) {
+        try {
+          const bytes = await getAssetStorage().readFile(outputPath);
+          byteSize = bytes.byteLength;
+        } catch {
+          byteSize = 0;
+        }
+      }
+      if (byteSize > 0) {
+        await supabase
+          .from("assets")
+          .update({ byte_size: byteSize, status: "ready" })
+          .eq("id", job.asset_id);
+      }
+    }
+
+    if (
+      (result.status === "failed" || result.status === "skipped") &&
+      job.credits_reserved > 0
+    ) {
+      try {
+        await refundReservedAssetJobCredits(job);
+      } catch (err) {
+        console.error(
+          `[asset-job] ${job.id} falhou o reembolso de créditos:`,
+          err instanceof Error ? err.message : err,
+        );
+      }
     }
 
     return {

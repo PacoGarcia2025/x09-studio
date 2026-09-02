@@ -14,6 +14,7 @@ export async function GET() {
     enabled: p.manifest.enabled,
     requiresGpu: p.manifest.requiresGpu,
     requiresInternet: p.manifest.requiresInternet,
+    requiresPaidApi: Boolean(p.manifest.requiresPaidApi),
     capabilities: p.manifest.capabilities,
     priority: p.manifest.priority,
   }));

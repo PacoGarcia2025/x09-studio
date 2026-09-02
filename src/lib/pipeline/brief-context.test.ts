@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   briefMissingFromContent,
   extractBriefTokens,
+  formatBuilderContext,
   usesDefaultPaletteDespiteBrief,
 } from "@/lib/pipeline/brief-context";
 
@@ -28,5 +29,13 @@ describe("brief-context", () => {
       '<div className="p-8"><h1>Imobiliária Premium</h1></div>',
     );
     expect(issues.length).toBeGreaterThan(0);
+  });
+
+  it("inclui a galeria no contexto do builder", () => {
+    const ctx = formatBuilderContext({
+      projectName: "SGO",
+      libraryCatalog: "Galeria do cliente: /library/logo-1.png",
+    });
+    expect(ctx).toContain("/library/logo-1.png");
   });
 });

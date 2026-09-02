@@ -26,6 +26,7 @@ Regras obrigatórias:
   - src/lib/supabase.ts
   - src/index.css
 - FASE 1 (primeira construção): dedique-se EXCLUSIVAMENTE à HomePage perfeita — cinematográfica, premium showcase, imagens reais do tema, cards com fotos, hero com PNG transparente ou composição premium. SEM botão Entrar/Cadastrar na home se for landing simples.
+- Se o pedido incluir GALERIA DO CLIENTE (/library/...), use esses ficheiros (logo, fotos, GLB). Não invente URLs. Não planeje gerar assets novos.
 - FASE 2 (após OK do usuário): Login + App + Dashboard — SOMENTE quando o brief pedir painel admin, área logada, SaaS ou CRM.
 - App COMPLETO (fase 2+):
   - Task App.tsx — navegação Home + Login (+ Dashboard se SaaS), SEM AppShell, SEM "Meu App".
@@ -78,6 +79,7 @@ export async function runPlanner(
     prompt: string;
     projectName?: string;
     projectSlug?: string;
+    libraryCatalog?: string | null;
   },
 ): Promise<PlannerResult> {
   const prompt = input.prompt.trim();
@@ -94,6 +96,7 @@ export async function runPlanner(
 
   const userContent = [
     contextLines || null,
+    input.libraryCatalog?.trim() || null,
     "Pedido do usuário:",
     prompt,
   ]

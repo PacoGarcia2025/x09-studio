@@ -66,6 +66,9 @@ function memoryStorage(files: Map<string, Uint8Array>): AssetStorageDriver {
 
 describe("TRELLIS Provider (integração sem Core)", () => {
   beforeEach(() => {
+    delete process.env.STUDIO_RUNPOD_API_KEY;
+    delete process.env.STUDIO_RUNPOD_POD_ID;
+    delete process.env.RUNPOD_API_KEY;
     resetCapabilityProvidersForTests([
       createLocalCapabilityProvider(),
       createFakeMeshProvider(),
@@ -116,6 +119,20 @@ describe("TRELLIS Provider (integração sem Core)", () => {
     }
   });
 
+  it("cede jobs comerciais a outro provider", async () => {
+    const ctx = createExecutionContext({
+      job: {
+        ...job(),
+        meta: { capability: "mesh.generate", meshTier: "flagship" },
+      },
+      capability: "mesh.generate",
+      storage: memoryStorage(new Map()),
+      policies: policiesGpu,
+    });
+    const result = await createTrellisProvider().execute(ctx);
+    expect(result.status).toBe("skipped");
+  });
+
   it("aceita HUGGINGFACE_TOKEN / HUGGINGFACE_API_KEY / HF_TOKEN", () => {
     expect(
       huggingfaceTokenFromEnv({ HUGGINGFACE_TOKEN: "tok-a" } as NodeJS.ProcessEnv),
@@ -158,6 +175,95 @@ describe("TRELLIS Provider (integração sem Core)", () => {
       expect(result.meta?.byteSize).toBe(sample.byteLength);
       expect(result.meta?.vramPeakMb).toBe(8192);
       expect(result.meta?.elapsedMs).toBeGreaterThanOrEqual(1200);
+    } finally {
+      if (previous === undefined) {
+        delete process.env.STUDIO_TRELLIS_PYTHON;
+      } else {
+        process.env.STUDIO_TRELLIS_PYTHON = previous;
+      }
+    }
+  });
+
+  it("sobe a GPU no pedido e desliga no finally mesmo se a inferência falhar", async () => {
+    const previous = process.env.STUDIO_TRELLIS_PYTHON;
+    process.env.STUDIO_TRELLIS_PYTHON = "python";
+    const events: string[] = [];
+    try {
+      const files = new Map<string, Uint8Array>([
+        ["w1/image/src/source.png", new Uint8Array(64).fill(7)],
+      ]);
+      const provider = createTrellisProvider({
+        gpu: {
+          configured: () => true,
+          acquire: async () => {
+            events.push("start");
+            return { podId: "pod1", host: "10.0.0.1", port: 22, username: "root" };
+          },
+          release: async () => {
+            events.push("stop");
+          },
+        },
+        remoteRun: async () => ({
+          ok: false,
+          message: "inferência falhou de propósito",
+        }),
+      });
+      const result = await provider.execute(
+        createExecutionContext({
+          job: job(),
+          capability: "mesh.generate",
+          storage: memoryStorage(files),
+          policies: policiesGpu,
+        }),
+      );
+      expect(result.status).toBe("failed");
+      expect(events).toEqual(["start", "stop"]);
+    } finally {
+      if (previous === undefined) {
+        delete process.env.STUDIO_TRELLIS_PYTHON;
+      } else {
+        process.env.STUDIO_TRELLIS_PYTHON = previous;
+      }
+    }
+  });
+
+  it("com GPU sob demanda usa remoteRun e desliga depois do GLB", async () => {
+    const previous = process.env.STUDIO_TRELLIS_PYTHON;
+    process.env.STUDIO_TRELLIS_PYTHON = "python";
+    const events: string[] = [];
+    try {
+      const files = new Map<string, Uint8Array>([
+        ["w1/image/src/source.png", new Uint8Array(64).fill(7)],
+      ]);
+      const sample = buildFakeMeshGlb();
+      const provider = createTrellisProvider({
+        gpu: {
+          configured: () => true,
+          acquire: async () => {
+            events.push("start");
+            return { podId: "pod1", host: "10.0.0.1", port: 22, username: "root" };
+          },
+          release: async () => {
+            events.push("stop");
+          },
+        },
+        remoteRun: async ({ outputFile }) => {
+          events.push("infer");
+          await fs.writeFile(outputFile, sample);
+          return { ok: true, metrics: { elapsedMs: 50 } };
+        },
+      });
+      const result = await provider.execute(
+        createExecutionContext({
+          job: job(),
+          capability: "mesh.generate",
+          storage: memoryStorage(files),
+          policies: policiesGpu,
+        }),
+      );
+      expect(result.status).toBe("done");
+      expect(events).toEqual(["start", "infer", "stop"]);
+      expect(isGlbMagic(files.get("w1/mesh/a1/source.glb")!)).toBe(true);
     } finally {
       if (previous === undefined) {
         delete process.env.STUDIO_TRELLIS_PYTHON;

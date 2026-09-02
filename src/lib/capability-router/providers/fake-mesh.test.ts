@@ -113,6 +113,21 @@ describe("FakeMeshProvider (Fase 5)", () => {
     expect(isGlbMagic(written!)).toBe(true);
   });
 
+  it("não gera o cubo de exemplo para jobs comerciais", async () => {
+    const files = new Map<string, Uint8Array>();
+    const ctx = createExecutionContext({
+      job: meshJob({
+        meta: { capability: "mesh.generate", meshTier: "game" },
+      }),
+      capability: "mesh.generate",
+      storage: memoryStorage(files),
+      policies: policiesOn,
+    });
+    const result = await createFakeMeshProvider().execute(ctx);
+    expect(result.status).toBe("skipped");
+    expect(files.size).toBe(0);
+  });
+
   it("o processor local despacha mesh.generate sem conhecer o stub", async () => {
     const previous = process.env.STUDIO_AI_ENGINE_GENERATION_ENABLED;
     process.env.STUDIO_AI_ENGINE_GENERATION_ENABLED = "true";

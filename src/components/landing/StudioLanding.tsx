@@ -41,11 +41,11 @@ type Props = {
 
 export function StudioLanding({ authError }: Props) {
   return (
-    <main className="x09-landing relative min-h-screen overflow-hidden text-zinc-100">
+    <main className="x09-landing relative min-h-dvh overflow-x-hidden text-zinc-100">
       <StudioAtmosphere />
 
-      <div className="relative mx-auto flex min-h-screen max-w-7xl flex-col px-5 py-5 md:px-8">
-        <header className="flex items-center justify-between gap-4">
+      <div className="relative mx-auto flex min-h-dvh max-w-7xl flex-col px-4 py-4 sm:px-5 sm:py-5 md:px-8">
+        <header className="flex flex-wrap items-center justify-between gap-3">
           <Link href="/" className="flex items-center gap-3">
             <span className="grid h-10 w-10 place-items-center rounded-2xl bg-violet-500/20 text-sm font-bold text-violet-200 ring-1 ring-violet-400/25">
               X09
@@ -62,13 +62,13 @@ export function StudioLanding({ authError }: Props) {
           <div className="flex items-center gap-2">
             <Link
               href={authLink("/login")}
-              className="x09-button-secondary hidden px-4 py-2 text-sm sm:inline-flex"
+              className="x09-button-secondary px-3 py-2 text-sm sm:px-4"
             >
               Entrar
             </Link>
             <Link
               href={authLink("/signup")}
-              className="x09-button-primary px-4 py-2 text-sm"
+              className="x09-button-primary px-3 py-2 text-sm sm:px-4"
             >
               Criar conta
             </Link>

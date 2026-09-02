@@ -2,7 +2,7 @@
 # Linkar com: supabase link --project-ref <ref>
 # Migrations reais começam no Sprint 1.
 
-project_id = "ytpjpcgoudjjmfeauvzk"
+project_id = "bbzncbecptqqgahpfizw"
 
 [api]
 enabled = true

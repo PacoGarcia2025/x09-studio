@@ -2,7 +2,7 @@ import "server-only";
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { PublicError } from "@/lib/http/errors";
-import { mercadoPago } from "@/lib/mercado-pago";
+import { mercadoPago, mercadoPagoWebhookSecret } from "@/lib/mercado-pago";
 import {
   isApprovedPayment,
   resolveCreditPurchaseIdentity,
@@ -75,7 +75,7 @@ export function verifyMercadoPagoSignature(input: {
   xRequestId: string | null;
   dataId: string | null;
 }): boolean {
-  const secret = process.env.MP_WEBHOOK_SECRET?.trim();
+  const secret = mercadoPagoWebhookSecret();
   if (!secret) {
     // Em dev sem secret: aceita só se explicitamente liberado
     return process.env.MP_WEBHOOK_SKIP_VERIFY === "1";

@@ -4,8 +4,13 @@ import { revalidatePath } from "next/cache";
 import { formatLlmUserError } from "@/lib/llm/resilient";
 import { getLlmProvider } from "@/lib/llm/provider";
 import { runPlanner } from "@/lib/pipeline/planner.server";
+import {
+  formatLibraryCatalogPrompt,
+  syncWorkspaceLibraryIntoProject,
+} from "@/lib/assets/project-library";
 import type { StudioPlan } from "@/lib/pipeline/plan-schema";
 import { createClient } from "@/lib/supabase/server";
+import { ensureProjectScaffold } from "@/lib/projects/scaffold.server";
 
 export type GeneratePlanResult =
   | {
@@ -65,10 +70,23 @@ export async function generatePlanAction(
 
   try {
     const provider = getLlmProvider("resilient-fast");
+    let libraryCatalog: string | null = null;
+    try {
+      await ensureProjectScaffold(projectId, { briefPrompt: trimmed });
+      const items = await syncWorkspaceLibraryIntoProject({
+        projectId,
+        workspaceId: gate.project.workspace_id,
+        supabase: gate.supabase,
+      });
+      libraryCatalog = formatLibraryCatalogPrompt(items) || null;
+    } catch {
+      libraryCatalog = null;
+    }
     const result = await runPlanner(provider, {
       prompt: trimmed,
       projectName: gate.project.name,
       projectSlug: gate.project.slug,
+      libraryCatalog,
     });
 
     const { data: planRow, error: planError } = await gate.supabase
@@ -386,6 +404,18 @@ export async function chatProjectAction(
         briefPrompt:
           (gate.project as { brief_prompt?: string | null }).brief_prompt ??
           latest?.prompt,
+        libraryCatalog: await (async () => {
+          try {
+            const items = await syncWorkspaceLibraryIntoProject({
+              projectId,
+              workspaceId: gate.project.workspace_id,
+              supabase: gate.supabase,
+            });
+            return formatLibraryCatalogPrompt(items) || null;
+          } catch {
+            return null;
+          }
+        })(),
         message: trimmed,
       });
 

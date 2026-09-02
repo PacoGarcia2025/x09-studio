@@ -2,6 +2,7 @@ import { describe, expect, it, beforeEach } from "vitest";
 import {
   CAPABILITIES,
   resolveCapability,
+  listCapabilityCandidates,
   registerCapabilityProvider,
   listCapabilityProviders,
 } from "@/lib/capability-router";
@@ -45,7 +46,9 @@ describe("Capability Router", () => {
 
   it("expõe o vocabulário sem nomes de motores", () => {
     expect(CAPABILITIES).toContain("mesh.generate");
-    expect(CAPABILITIES.join(" ")).not.toMatch(/trellis|hunyuan|triposr|flux/i);
+    expect(CAPABILITIES).toContain("mesh.logo");
+    expect(CAPABILITIES).toContain("texture.generate");
+    expect(CAPABILITIES.join(" ")).not.toMatch(/trellis|hunyuan|triposr|flux|meshy/i);
   });
 
   it("resolve asset.ingest para o provider local", () => {
@@ -144,6 +147,39 @@ describe("Capability Router", () => {
     expect("supabase" in ctx).toBe(false);
     const result = await provider.execute(ctx);
     expect(result.status).toBe("done");
+  });
+
+  it("ignora provider de API paga quando paidApisAllowed=false", () => {
+    registerCapabilityProvider({
+      manifest: {
+        id: "test-paid-mesh",
+        name: "Paid",
+        version: "0",
+        capabilities: ["mesh.generate"],
+        priority: 90,
+        status: "ready",
+        requiresGpu: false,
+        requiresInternet: true,
+        requiresPaidApi: true,
+        enabled: true,
+      },
+      async execute() {
+        return { status: "failed", message: "não deve executar" };
+      },
+    });
+    expect(
+      listCapabilityCandidates("mesh.generate", {
+        ...policies,
+        generationEnabled: true,
+        paidApisAllowed: false,
+      }),
+    ).toHaveLength(0);
+    const on = listCapabilityCandidates("mesh.generate", {
+      ...policies,
+      generationEnabled: true,
+      paidApisAllowed: true,
+    });
+    expect(on[0]?.manifest.id).toBe("test-paid-mesh");
   });
 
   it("novos providers entram só com register()", () => {

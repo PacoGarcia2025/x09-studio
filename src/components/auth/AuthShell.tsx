@@ -12,7 +12,7 @@ type AuthShellProps = {
 /** Login / signup — cosmos da landing, robô grande sem sobrepor o card. */
 export function AuthShell({ title, subtitle, children, footer }: AuthShellProps) {
   return (
-    <main className="x09-landing relative min-h-screen overflow-hidden p-4 text-zinc-100 sm:p-6">
+    <main className="x09-landing relative min-h-dvh overflow-x-hidden overflow-y-auto p-4 text-zinc-100 sm:p-6">
       <StudioAtmosphere />
 
       <Link

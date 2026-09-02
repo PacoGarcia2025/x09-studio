@@ -1,7 +1,15 @@
 import fs from "node:fs/promises";
 import path from "node:path";
+import { isCommercialMeshTier } from "@/lib/assets/mesh-tiers";
 import type { CapabilityProvider } from "@/lib/capability-router/types";
 import type { ExecutionContext, ProviderResult } from "@/lib/capability-router/types";
+import {
+  acquireRunpodGpu,
+  isRunpodOnDemandConfigured,
+  releaseRunpodGpu,
+  type RunpodSshTarget,
+} from "@/lib/capability-router/providers/runpod-pod";
+import { runTrellisOnRunpod } from "@/lib/capability-router/providers/trellis-remote";
 import {
   inputExtension,
   isGlbMagic,
@@ -15,7 +23,7 @@ import {
 } from "@/lib/capability-router/providers/trellis-run";
 
 export function isTrellisSidecarConfigured(): boolean {
-  return Boolean(resolveTrellisPython());
+  return Boolean(resolveTrellisPython()) || isRunpodOnDemandConfigured();
 }
 
 export type TrellisRunFn = (input: {
@@ -27,20 +35,46 @@ export type TrellisRunFn = (input: {
   timeoutMs: number;
 }) => Promise<TrellisSidecarResult>;
 
+export type TrellisGpuLease = {
+  configured: () => boolean;
+  acquire: () => Promise<RunpodSshTarget>;
+  release: () => Promise<void>;
+};
+
+export type TrellisRemoteRunFn = (input: {
+  session: RunpodSshTarget;
+  script: string;
+  inputFile: string;
+  outputFile: string;
+  trellisRoot: string | null;
+  timeoutMs: number;
+}) => Promise<TrellisSidecarResult>;
+
+const defaultGpu: TrellisGpuLease = {
+  configured: () => isRunpodOnDemandConfigured(),
+  acquire: () => acquireRunpodGpu(),
+  release: () => releaseRunpodGpu(),
+};
+
 /**
  * Provider TRELLIS (image → GLB). Adapta-se ao Core: só ExecutionContext + storage.
  * fake-mesh permanece fallback quando GPU está desligada.
+ * Com STUDIO_RUNPOD_POD_ID + API key, sobe o pod no pedido e faz STOP no finally.
  */
 export function createTrellisProvider(options?: {
   run?: TrellisRunFn;
+  gpu?: TrellisGpuLease;
+  remoteRun?: TrellisRemoteRunFn;
 }): CapabilityProvider {
   const run = options?.run ?? runTrellisSidecar;
+  const gpu = options?.gpu ?? defaultGpu;
+  const remoteRun = options?.remoteRun ?? runTrellisOnRunpod;
 
   return {
     manifest: {
       id: "trellis",
       name: "TRELLIS",
-      version: "0.3.0",
+      version: "0.4.0",
       capabilities: ["mesh.generate"],
       priority: 80,
       status: "ready",
@@ -51,7 +85,7 @@ export function createTrellisProvider(options?: {
       supportedOutputKinds: ["mesh"],
     },
     async execute(ctx) {
-      return executeTrellis(ctx, run);
+      return executeTrellis(ctx, run, gpu, remoteRun);
     },
   };
 }
@@ -59,11 +93,19 @@ export function createTrellisProvider(options?: {
 async function executeTrellis(
   ctx: ExecutionContext,
   run: TrellisRunFn,
+  gpu: TrellisGpuLease,
+  remoteRun: TrellisRemoteRunFn,
 ): Promise<ProviderResult> {
   if (ctx.capability !== "mesh.generate") {
     return {
       status: "skipped",
       message: `TRELLIS não cobre ${ctx.capability}`,
+    };
+  }
+  if (isCommercialMeshTier(ctx.params.meshTier)) {
+    return {
+      status: "skipped",
+      message: "Job comercial — outro provider",
     };
   }
   if (!ctx.policies.gpuAvailable) {
@@ -85,12 +127,13 @@ async function executeTrellis(
     };
   }
 
-  const python = resolveTrellisPython();
+  const onDemand = gpu.configured();
+  const python = resolveTrellisPython() ?? (onDemand ? "python" : null);
   if (!python) {
     return {
       status: "failed",
       message:
-        "Sidecar TRELLIS não configurado (STUDIO_TRELLIS_PYTHON). O Core não foi alterado.",
+        "Sidecar TRELLIS não configurado (STUDIO_TRELLIS_PYTHON) nem GPU RunPod sob demanda.",
     };
   }
 
@@ -128,13 +171,18 @@ async function executeTrellis(
       const outputFile = path.join(dir, "output.glb");
       await fs.writeFile(inputFile, imageBytes);
 
-      const result = await run({
+      const result = await runSidecar({
         python,
         script,
         inputFile,
         outputFile,
-        trellisRoot: resolveTrellisRoot(),
+        trellisRoot: onDemand
+          ? resolveTrellisRoot() || "/workspace/TRELLIS"
+          : resolveTrellisRoot(),
         timeoutMs: trellisTimeoutMs(),
+        gpu,
+        remoteRun,
+        localRun: run,
       });
       if (!result.ok) {
         throw Object.assign(new Error(result.message), {
@@ -185,3 +233,34 @@ async function executeTrellis(
     };
   }
 }
+
+async function runSidecar(input: {
+  python: string;
+  script: string;
+  inputFile: string;
+  outputFile: string;
+  trellisRoot: string | null;
+  timeoutMs: number;
+  gpu: TrellisGpuLease;
+  remoteRun: TrellisRemoteRunFn;
+  localRun: TrellisRunFn;
+}): Promise<TrellisSidecarResult> {
+  if (!input.gpu.configured()) {
+    return input.localRun(input);
+  }
+  const session = await input.gpu.acquire();
+  try {
+    return await input.remoteRun({
+      session,
+      script: input.script,
+      inputFile: input.inputFile,
+      outputFile: input.outputFile,
+      trellisRoot: input.trellisRoot,
+      timeoutMs: input.timeoutMs,
+    });
+  } finally {
+    await input.gpu.release();
+  }
+}
+
+

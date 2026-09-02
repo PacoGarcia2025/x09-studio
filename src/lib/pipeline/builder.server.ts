@@ -156,7 +156,7 @@ export async function applyBuilderTask(
   projectId: string,
   projectName: string,
   task: BuilderTaskInput,
-  options?: { briefPrompt?: string | null },
+  options?: { briefPrompt?: string | null; libraryCatalog?: string | null },
 ): Promise<BuilderApplyResult> {
   await ensureProjectScaffold(projectId, { briefPrompt: options?.briefPrompt });
 
@@ -171,6 +171,7 @@ export async function applyBuilderTask(
     projectName,
     briefPrompt: options?.briefPrompt,
     existingFileContent: existing,
+    libraryCatalog: options?.libraryCatalog,
   });
 
   switch (payload.kind) {

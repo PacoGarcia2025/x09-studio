@@ -5,6 +5,10 @@ import {
   Preference,
   PreApproval,
 } from "mercadopago";
+import {
+  readMercadoPagoAccessToken,
+  readMercadoPagoWebhookSecret,
+} from "@/lib/billing/mp-env";
 import { PublicError } from "@/lib/http/errors";
 
 let cachedToken: string | null = null;
@@ -16,8 +20,16 @@ let cachedClients:
     }
   | undefined;
 
+export function mercadoPagoAccessToken(): string | null {
+  return readMercadoPagoAccessToken();
+}
+
+export function mercadoPagoWebhookSecret(): string | null {
+  return readMercadoPagoWebhookSecret();
+}
+
 function accessToken(): string {
-  const token = process.env.MP_ACCESS_TOKEN?.trim();
+  const token = mercadoPagoAccessToken();
   if (!token) {
     throw new PublicError("Mercado Pago não configurado.", 503);
   }
@@ -26,7 +38,7 @@ function accessToken(): string {
 
 /**
  * SDK clients are initialized lazily so builds/tests do not require a live key.
- * MP_ACCESS_TOKEN remains server-only in the Next.js BFF.
+ * Token remains server-only in the Next.js BFF.
  */
 export function mercadoPago() {
   const token = accessToken();
