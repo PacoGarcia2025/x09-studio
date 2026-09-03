@@ -32,6 +32,12 @@ describe("project library catalog", () => {
       }),
     ).toBe("logo");
     expect(
+      classifyLibraryRole({
+        kind: "other",
+        original_name: "nave.glb",
+      }),
+    ).toBe("mesh");
+    expect(
       classifyLibraryRole({ kind: "audio", original_name: "loop.mp3" }),
     ).toBeNull();
   });
@@ -66,9 +72,9 @@ describe("project library catalog", () => {
         status: "ready",
       },
     ]);
-    expect(picked).toHaveLength(2);
+    expect(picked).toHaveLength(3);
     expect(picked[0]?.publicPath).toMatch(/^\/library\/logo-aaaaaaaa-logo-x09\.png$/);
-    expect(picked[1]?.role).toBe("mesh");
+    expect(picked.some((item) => item.role === "mesh" && item.originalName === "hero-objeto.glb")).toBe(true);
   });
 
   it("formata o prompt sem nomes de motores", () => {
@@ -83,6 +89,7 @@ describe("project library catalog", () => {
     ]);
     expect(text).toContain("/library/logo-1-logo.png");
     expect(text).not.toMatch(/meshy|runpod/i);
+    expect(text).toMatch(/NÃO importe @google\/model-viewer/i);
     expect(fileSlug("Carro Vermelho.glb")).toBe("carro-vermelho");
   });
 

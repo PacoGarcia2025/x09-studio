@@ -7,11 +7,12 @@ import {
   isApprovedPayment,
   resolveCreditPurchaseIdentity,
 } from "@/lib/billing/mercadopago-payment";
+import type { CreditPackageCode } from "@/lib/billing/product";
 
 export async function createCreditCheckout(input: {
   userId: string;
   email?: string;
-  planCode: "basic" | "pro";
+  planCode: CreditPackageCode;
   backUrl: string;
 }): Promise<{ initPoint: string; checkoutId: string }> {
   const admin = createAdminClient();

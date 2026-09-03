@@ -1,4 +1,5 @@
 import type { LlmProvider } from "@/lib/llm/types";
+import { isDeterministicVisualMessage } from "@/lib/pipeline/visual-tweaks";
 
 export type ChatIntent = "create" | "edit" | "ask" | "resume_build";
 
@@ -56,6 +57,10 @@ export async function classifyChatIntent(
     return "resume_build";
   }
 
+  if (isDeterministicVisualMessage(message)) {
+    return "edit";
+  }
+
   // Heurística rápida (sem LLM) para casos óbvios
   if (
     /^(o que|qual|como|por que|porque|explique|me diga|quantos)\b/i.test(
@@ -71,7 +76,7 @@ export async function classifyChatIntent(
     /(mude|altera|troque|adicione|remova|ajuste|corrija|melhore|deixe|torne|atualize|refatore)\b/i.test(
       message,
     ) ||
-    /(cor|botão|botao|título|titulo|fonte|seção|secao|login|hero|footer|header|imagem|imagens|foto|fotos|logo|centraliz|layout|quebrada)/i.test(
+    /(cor|botão|botao|título|titulo|fonte|seção|secao|login|hero|footer|header|imagem|imagens|foto|fotos|logo|centraliz|layout|quebrada|glb|gltf)/i.test(
       message,
     )
   ) {

@@ -36,7 +36,9 @@ export function classifyLibraryRole(asset: {
     /-logo(\.|$)/i.test(asset.original_name) ||
     /\blogo\b|marca|brand/i.test(name);
 
-  if (asset.kind === "mesh") return isLogoName ? "logo" : "mesh";
+  if (asset.kind === "mesh" || /\.(glb|gltf)$/i.test(asset.original_name)) {
+    return isLogoName ? "logo" : "mesh";
+  }
   if (
     asset.kind === "image" ||
     asset.kind === "thumbnail" ||
@@ -135,7 +137,7 @@ export function pickLibraryAssets(rows: LibraryAssetRow[]): LibraryBuildItem[] {
   const picked: LibraryBuildItem[] = [];
 
   for (const row of rows) {
-    if (row.status === "archived" || !(row.byte_size > 0) || !row.storage_path) {
+    if (row.status === "archived" || !row.storage_path) {
       continue;
     }
     const role = classifyLibraryRole(row);
@@ -173,6 +175,6 @@ ${lines.join("\n")}
 Regras:
 - Logo: <img src="/library/..." alt="marca" /> no header.
 - Fotos: prefira estes ficheiros a imagens de stock.
-- Mesh GLB: <model-viewer src="/library/....glb" camera-controls auto-rotate style={{width:'100%',height:'24rem'}}></model-viewer> se o pedido for 3D, jogo ou produto.
+- Mesh GLB: src="/library/....glb". NÃO importe @google/model-viewer nem three — o preview já carrega o viewer por CDN. Use a tag <model-viewer src="/library/....glb" camera-controls auto-rotate style={{width:'100%',height:'100vh'}}></model-viewer> SEM import npm.
 - Paths começam por /library/ — o Vite serve public/ na raiz.`;
 }

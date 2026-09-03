@@ -53,7 +53,7 @@ export function UpgradeModal({
                 Seus créditos acabaram
               </h2>
               <p className="mt-2 text-sm leading-relaxed text-zinc-400">
-                Cada Build custa 1 crédito. Escolha um pacote e continue do
+                Cada site custa 3 créditos. Escolha um pacote e continue do
                 ponto em que parou.
               </p>
             </div>
@@ -76,8 +76,8 @@ export function UpgradeModal({
               className="rounded-2xl border border-violet-400/30 bg-violet-600/15 p-4 text-left transition hover:border-violet-300/50 hover:bg-violet-600/20 disabled:opacity-60"
             >
               <Zap className="h-4 w-4 text-violet-300" />
-              <p className="mt-3 font-semibold text-white">100 créditos</p>
-              <p className="mt-1 text-xs text-zinc-400">Pacote Básico</p>
+              <p className="mt-3 font-semibold text-white">36 créditos</p>
+              <p className="mt-1 text-xs text-zinc-400">Pacote Start · R$ 49</p>
             </button>
             <button
               type="button"
@@ -86,8 +86,8 @@ export function UpgradeModal({
               className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-left transition hover:border-violet-400/35 hover:bg-white/[0.06] disabled:opacity-60"
             >
               <Sparkles className="h-4 w-4 text-fuchsia-300" />
-              <p className="mt-3 font-semibold text-white">500 créditos</p>
-              <p className="mt-1 text-xs text-zinc-400">Pacote Pro</p>
+              <p className="mt-3 font-semibold text-white">180 créditos</p>
+              <p className="mt-1 text-xs text-zinc-400">Pacote Pro · R$ 189</p>
             </button>
           </div>
 

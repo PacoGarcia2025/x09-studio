@@ -25,7 +25,6 @@ export async function syncWorkspaceLibraryIntoProject(input: {
     .select("id, kind, original_name, storage_path, byte_size, meta, status")
     .eq("workspace_id", input.workspaceId)
     .neq("status", "archived")
-    .gt("byte_size", 0)
     .order("created_at", { ascending: false })
     .limit(40);
 

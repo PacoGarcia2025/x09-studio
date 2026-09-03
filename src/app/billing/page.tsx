@@ -3,43 +3,15 @@ import { AppShell } from "@/components/AppShell";
 import { startPlanCheckout } from "@/lib/billing/checkout.actions";
 import {
   BUILD_CREDIT_COST,
+  CREDIT_PACKAGES,
   SIGNUP_BONUS_CREDITS,
   TEXT_TO_3D_CREDIT_COST,
+  formatPackagePriceLabel,
   studioSupportEmail,
 } from "@/lib/billing/product";
 import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
-
-const PLANS = [
-  {
-    code: "basic" as const,
-    name: "Básico",
-    credits: 100,
-    priceLabel: "R$ 49",
-    blurb: "Ideal para validar ideias e landing pages.",
-    features: [
-      "100 créditos de Build",
-      "Projetos ilimitados",
-      "Preview e histórico",
-      "Pagamento via Mercado Pago",
-    ],
-  },
-  {
-    code: "pro" as const,
-    name: "Pro",
-    credits: 500,
-    priceLabel: "R$ 149",
-    blurb: "Para quem constrói e publica com frequência.",
-    features: [
-      "500 créditos de Build",
-      "Prioridade na fila de IA",
-      "GitHub + deploy",
-      "Suporte prioritário",
-    ],
-    highlighted: true,
-  },
-];
 
 export default async function BillingPage({
   searchParams,
@@ -90,7 +62,7 @@ export default async function BillingPage({
             Planos e créditos
           </h1>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-400">
-            Cada site consome {BUILD_CREDIT_COST} crédito de Build. Texto → 3D
+            Cada site consome {BUILD_CREDIT_COST} créditos de Build. Texto → 3D
             comercial usa {TEXT_TO_3D_CREDIT_COST} créditos. Conta nova recebe{" "}
             {SIGNUP_BONUS_CREDITS} créditos de boas-vindas. Pague com Mercado
             Pago. Seu saldo atual:{" "}
@@ -112,8 +84,8 @@ export default async function BillingPage({
           ) : null}
         </div>
 
-        <div id="planos" className="grid scroll-mt-24 gap-5 md:grid-cols-2">
-          {PLANS.map((plan) => (
+        <div id="planos" className="grid scroll-mt-24 gap-5 md:grid-cols-2 xl:grid-cols-4">
+          {CREDIT_PACKAGES.map((plan) => (
             <article
               key={plan.code}
               className={`x09-card rounded-[28px] p-6 ${
@@ -130,7 +102,7 @@ export default async function BillingPage({
               <h2 className="text-xl font-semibold text-white">{plan.name}</h2>
               <p className="mt-1 text-sm text-zinc-400">{plan.blurb}</p>
               <p className="mt-5 text-4xl font-bold tracking-tight text-white">
-                {plan.priceLabel}
+                {formatPackagePriceLabel(plan.amountCents)}
                 <span className="text-base font-medium text-zinc-500">
                   {" "}
                   / pacote
@@ -159,7 +131,7 @@ export default async function BillingPage({
                       : "x09-button-secondary w-full px-4 py-3 text-sm"
                   }
                 >
-                  Assinar {plan.name}
+                  Comprar {plan.name}
                 </button>
               </form>
             </article>

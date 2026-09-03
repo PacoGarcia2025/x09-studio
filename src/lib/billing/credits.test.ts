@@ -6,11 +6,11 @@ import {
 } from "@/lib/billing/credits";
 
 describe("credit billing modes", () => {
-  it("charges one credit for code-producing builds", () => {
+  it("charges three credits for code-producing builds", () => {
     expect(resolveBillableMode({ mode: "premium" })).toBe("generation");
     expect(resolveBillableMode({ mode: "fast" })).toBe("generation");
     expect(creditCostFor("generation")).toBe(CREDIT_COSTS.generation);
-    expect(CREDIT_COSTS.generation).toBe(1);
+    expect(CREDIT_COSTS.generation).toBe(3);
   });
 
   it("charges one credit for edits that generate code", () => {
@@ -32,6 +32,6 @@ describe("credit billing modes", () => {
     expect(resolveBillableMode({ mode: "premium", phase: "auto" })).toBe(
       "generation",
     );
-    expect(creditCostFor("generation")).toBe(1);
+    expect(creditCostFor("generation")).toBe(3);
   });
 });

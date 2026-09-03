@@ -132,4 +132,5 @@ export const EDIT_PATCH_RULES = `- Altere SÓ o necessário para atender o pedid
 - Mantenha exports (HomePage, LoginPage) e props de navegação se existirem.
 - Textos em português do Brasil — use dados REAIS do brief (nome, cores, contatos).
 - CRÍTICO: TSX válido — feche TODAS as tags JSX, strings e chaves. Nunca trunque no final.
-- Paleta: respeite cores pedidas no brief/pedido (não reverta para violeta genérico).`;
+- Paleta: respeite cores pedidas no brief/pedido (não reverta para violeta genérico).
+- NÃO importe @google/model-viewer, three nem outros pacotes npm. O preview já carrega model-viewer por CDN. GLB usa <model-viewer src="/library/....glb"> sem import.`;

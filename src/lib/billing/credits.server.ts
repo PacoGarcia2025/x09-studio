@@ -2,6 +2,7 @@ import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { PublicError } from "@/lib/http/errors";
 import {
+  CREDIT_COSTS,
   creditCostFor,
   resolveBillableMode,
   type BillableMode,
@@ -127,6 +128,9 @@ export async function getBillingSnapshot(userId: string) {
     },
     subscription: subscription.data ?? null,
     plans: plans.data ?? [],
-    costs: { generation: 1, edit: 1 },
+    costs: {
+      generation: CREDIT_COSTS.generation,
+      edit: CREDIT_COSTS.edit,
+    },
   };
 }

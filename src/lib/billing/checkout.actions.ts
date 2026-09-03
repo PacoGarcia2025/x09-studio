@@ -3,12 +3,12 @@
 import { redirect } from "next/navigation";
 import { createCreditCheckout } from "@/lib/billing/mercadopago.server";
 import { PublicError } from "@/lib/http/errors";
+import { isCreditPackageCode } from "@/lib/billing/product";
 import { createClient } from "@/lib/supabase/server";
 
 export async function startPlanCheckout(formData: FormData) {
   const planCodeRaw = String(formData.get("planCode") ?? "");
-  const planCode =
-    planCodeRaw === "pro" || planCodeRaw === "basic" ? planCodeRaw : null;
+  const planCode = isCreditPackageCode(planCodeRaw) ? planCodeRaw : null;
 
   if (!planCode) {
     redirect("/billing");

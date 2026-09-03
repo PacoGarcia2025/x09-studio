@@ -19,6 +19,7 @@ import {
   repairInvalidLucideImportsInSource,
   type InvalidLucideImport,
 } from "@/lib/projects/lucide-validate";
+import { stripForbiddenPreviewImports } from "@/lib/projects/preview-map";
 import { SANDPACK_ALLOWED_PACKAGES } from "@/lib/projects/sandpack-setup";
 
 export type { UndeclaredJsxIdentifier, InvalidLucideImport };
@@ -208,7 +209,7 @@ export async function findInvalidLucideImports(
 
 function repairSourceFileContent(content: string): string {
   return repairKnownRuntimeImportsInSource(
-    repairInvalidLucideImportsInSource(content),
+    repairInvalidLucideImportsInSource(stripForbiddenPreviewImports(content)),
   );
 }
 

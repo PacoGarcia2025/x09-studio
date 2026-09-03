@@ -1,13 +1,14 @@
 import { z } from "zod";
 import { AuthError, assertRateLimit, requireUserFromRequest } from "@/lib/agent/auth";
 import { createCreditCheckout } from "@/lib/billing/mercadopago.server";
+import { CREDIT_PACKAGE_CODES } from "@/lib/billing/product";
 import { corsHeaders, corsPreflight } from "@/lib/http/cors";
 import { jsonError } from "@/lib/http/errors";
 
 export const dynamic = "force-dynamic";
 
 const BodySchema = z.object({
-  planCode: z.enum(["basic", "pro"]),
+  planCode: z.enum(CREDIT_PACKAGE_CODES),
   backUrl: z.string().url().optional(),
 });
 

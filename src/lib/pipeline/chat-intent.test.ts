@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { isResumeBuildMessage } from "@/lib/pipeline/chat-intent.server";
+import { isDeterministicVisualMessage } from "@/lib/pipeline/visual-tweaks";
 
 describe("isResumeBuildMessage", () => {
   it("detecta continue de onde parou (inglês e português)", () => {
@@ -23,5 +24,16 @@ describe("isResumeBuildMessage", () => {
     expect(isResumeBuildMessage("a frase na hero esta muito centralizado")).toBe(
       false,
     );
+  });
+
+  it("trata pedido de GLB no hero como edição visual", () => {
+    expect(
+      isDeterministicVisualMessage("vc não consegue colocar o GLB na hero?"),
+    ).toBe(true);
+    expect(
+      isDeterministicVisualMessage(
+        "analise novamente e veja que tenho um arquivo GLB",
+      ),
+    ).toBe(true);
   });
 });

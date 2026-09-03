@@ -85,7 +85,8 @@ Responda APENAS JSON:
 }
 
 Regras:
-${editRules}`,
+${editRules}
+- NÃO importe @google/model-viewer nem three. GLB usa <model-viewer src="/library/....glb"> sem import npm (o preview já carrega o viewer por CDN).`,
       },
       {
         role: "user",

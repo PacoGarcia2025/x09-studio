@@ -5,7 +5,7 @@
 export const MESH_TIERS = ["gpu", "game", "flagship"] as const;
 export type MeshTier = (typeof MESH_TIERS)[number];
 
-/** Créditos X09 por job (pacote Básico R$ 0,49) — margem anti-prejuízo. */
+/** Créditos X09 por job — calibrados no piso Studio (~R$ 0,95/crédito). */
 export const MESH_CREDIT_COST = {
   logo: 1,
   gpu: 6,

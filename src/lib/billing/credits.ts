@@ -1,7 +1,7 @@
 import type { ResolvedMode } from "@/lib/agent/schemas";
 
 export const CREDIT_COSTS = {
-  generation: 1,
+  generation: 3,
   edit: 1,
 } as const;
 
@@ -9,7 +9,7 @@ export type BillableMode = "edit" | "generation" | "skip";
 
 /**
  * Maps agent mode/phase to billing category.
- * A code-producing Build costs one credit.
+ * A code-producing Build costs three credits (covers Gemini Flash + retries).
  * Plan-only and repair phases do not consume credits.
  */
 export function resolveBillableMode(input: {

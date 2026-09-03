@@ -40,7 +40,7 @@ export function BillingSettings({
     void refresh();
   }, []);
 
-  async function handleCheckout(planCode: "basic" | "pro") {
+  async function handleCheckout(planCode: string) {
     setBusy(true);
     setMessage(null);
     try {
@@ -103,7 +103,11 @@ export function BillingSettings({
               : plan
                 ? plan === "pro"
                   ? "Pro"
-                  : "Básico"
+                  : plan === "studio"
+                    ? "Studio"
+                    : plan === "plus"
+                      ? "Plus"
+                      : "Start"
                 : "Gratuito"}
           </p>
           <p className="text-xs text-secondary">
@@ -124,21 +128,35 @@ export function BillingSettings({
           : [
               {
                 code: "basic",
-                name: "Básico",
-                monthly_credits: 100,
+                name: "Start",
+                monthly_credits: 36,
                 amount_cents: 4900,
+                currency: "BRL",
+              },
+              {
+                code: "plus",
+                name: "Plus",
+                monthly_credits: 90,
+                amount_cents: 9900,
                 currency: "BRL",
               },
               {
                 code: "pro",
                 name: "Pro",
-                monthly_credits: 500,
-                amount_cents: 14900,
+                monthly_credits: 180,
+                amount_cents: 18900,
+                currency: "BRL",
+              },
+              {
+                code: "studio",
+                name: "Studio",
+                monthly_credits: 450,
+                amount_cents: 42900,
                 currency: "BRL",
               },
             ]
         ).map((p) => {
-          const code = p.code as "basic" | "pro";
+          const code = p.code;
           return (
             <div
               key={p.code}

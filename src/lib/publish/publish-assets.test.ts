@@ -23,8 +23,11 @@ describe("injectPublishHeadAssets", () => {
     ).toBe(1);
   });
 
-  it("inclui todos os assets do Sandpack", () => {
-    expect(PUBLISH_HEAD_ASSETS.length).toBeGreaterThanOrEqual(4);
+  it("injeta model-viewer mesmo quando o Tailwind já está no html", () => {
+    const html = `<!doctype html><html><head><script src="https://cdn.tailwindcss.com"></script></head><body></body></html>`;
+    const out = injectPublishHeadAssets(html);
+    expect(out).toContain("model-viewer");
+    expect((out.match(/cdn\.tailwindcss\.com/g) ?? []).length).toBe(1);
   });
 });
 

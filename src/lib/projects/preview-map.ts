@@ -11,9 +11,20 @@ const SKIP_FILES = new Set([
   "README.md",
 ]);
 
+/**
+ * Pacotes que o Sandpack não resolve (ex.: @google/model-viewer).
+ * O viewer 3D entra por CDN no index.html — a tag <model-viewer> continua.
+ */
+export function stripForbiddenPreviewImports(code: string): string {
+  return code.replace(
+    /^[ \t]*import(?:\s+type)?(?:\s+[\w${}*,\s]+from)?\s*['"]@google\/model-viewer(?:\/[^'"]*)?['"]\s*;?[ \t]*(?:\r?\n|$)/gm,
+    "",
+  );
+}
+
 /** Sandpack usa template react-ts (CRA), não Vite — import.meta quebra o parse. */
 export function sanitizeCodeForSandpack(code: string): string {
-  return code
+  return stripForbiddenPreviewImports(code)
     .replace(/^\s*import\s+['"]tailwindcss(?:\/[^'"]*)?['"]\s*;?\s*$/gm, "")
     .replace(
       /^\s*import\s+['"]\.\/(?:index|styles|globals|app)\.css['"]\s*;?\s*$/gm,

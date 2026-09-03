@@ -25,6 +25,7 @@ const INDEX_HTML = `<!DOCTYPE html>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Preview</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/4.0.0/model-viewer.min.js"></script>
     <style>
       html, body { margin: 0; padding: 0; min-height: 100%; height: 100%; }
       #root { min-height: 100%; }

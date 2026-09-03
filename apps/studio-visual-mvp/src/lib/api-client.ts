@@ -90,7 +90,7 @@ export async function fetchBillingMe(): Promise<BillingSnapshot> {
   return apiFetch("/api/billing/me");
 }
 
-export async function startCheckout(planCode: "basic" | "pro") {
+export async function startCheckout(planCode: string) {
   return apiFetch<{ initPoint: string; checkoutId: string }>(
     "/api/billing/checkout",
     {
