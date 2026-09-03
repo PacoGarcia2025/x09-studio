@@ -2,7 +2,7 @@ import type { AssetJobOperation, AssetJobRow } from "@/lib/asset-jobs/types";
 import type { AssetStorageDriver } from "@/lib/storage/types";
 
 export type AssetProcessorResult = {
-  status: "done" | "skipped" | "failed";
+  status: "done" | "skipped" | "failed" | "waiting";
   outputPath?: string | null;
   message: string;
   meta?: Record<string, unknown>;

@@ -5,6 +5,7 @@ import {
   ASSET_JOB_SELECT,
   type AssetJobRow,
 } from "@/lib/asset-jobs/types";
+import { isCommercialMeshTier } from "@/lib/assets/mesh-tiers";
 import { getAssetStorage } from "@/lib/storage/registry";
 import { isMissingRelationError } from "@/lib/assets/schema";
 import { refundReservedAssetJobCredits } from "@/lib/billing/asset-job-credits";
@@ -33,7 +34,7 @@ export async function recoverStaleAssetJobs(
 ): Promise<number> {
   let query = supabase
     .from("asset_jobs")
-    .select("id, started_at, status")
+    .select("id, started_at, status, meta")
     .in("status", ["running", "retrying"]);
 
   if (workspaceId) query = query.eq("workspace_id", workspaceId);
@@ -45,7 +46,15 @@ export async function recoverStaleAssetJobs(
   const now = Date.now();
   const stale = jobs.filter((job) => {
     if (!job.started_at) return true;
-    return now - new Date(job.started_at).getTime() > getAssetJobStaleMs();
+    const age = now - new Date(job.started_at).getTime();
+    const meta =
+      job.meta && typeof job.meta === "object"
+        ? (job.meta as Record<string, unknown>)
+        : {};
+    const limit = isCommercialMeshTier(meta.meshTier)
+      ? 90_000
+      : getAssetJobStaleMs();
+    return age > limit;
   });
   if (stale.length === 0) return 0;
 
@@ -133,6 +142,30 @@ export async function tickAssetJobQueue(
       job,
       storage: getAssetStorage(),
     });
+
+    if (result.status === "waiting") {
+      const { error: waitError } = await supabase
+        .from("asset_jobs")
+        .update({
+          status: "queued",
+          started_at: null,
+          finished_at: null,
+          error_message: null,
+          meta: mergeMeta(job.meta, result.meta),
+        })
+        .eq("id", job.id);
+      if (waitError) {
+        return { ok: false, error: waitError.message };
+      }
+      return {
+        ok: true,
+        processed: true,
+        done: false,
+        jobId: job.id,
+        status: "waiting",
+        message: result.message,
+      };
+    }
 
     const finished = new Date().toISOString();
     const { error: updateError } = await supabase

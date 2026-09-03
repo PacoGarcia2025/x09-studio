@@ -10,11 +10,12 @@ import {
   createMeshyImageTo3dTask,
   createMeshyTask,
   downloadMeshyGlb,
+  getMeshyTask,
+  IMAGE_TO_3D_URL,
   meshyCreateBodyForTier,
   meshyRetextureBody,
   meshyTextPreviewBody,
   meshyTextRefineBody,
-  pollMeshyTask,
   RETEXTURE_URL,
   TEXT_TO_3D_URL,
   toGlbDataUri,
@@ -39,7 +40,7 @@ export function createMeshyProvider(options?: {
   apiKey?: string | null;
   timeoutMs?: number;
 }): CapabilityProvider {
-  const timeoutMs = options?.timeoutMs ?? 720_000;
+  const timeoutMs = options?.timeoutMs ?? 1_200_000;
   return {
     manifest: {
       id: "commercial-mesh",
@@ -145,6 +146,75 @@ async function executeMeshy(
   return executeImageTo3d(ctx, opts);
 }
 
+function stringParam(
+  params: Record<string, unknown>,
+  key: string,
+): string | null {
+  const value = params[key];
+  return typeof value === "string" && value.trim() ? value.trim() : null;
+}
+
+function numberParam(
+  params: Record<string, unknown>,
+  key: string,
+): number | null {
+  const value = params[key];
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string" && value.trim()) {
+    const parsed = Number(value);
+    if (Number.isFinite(parsed)) return parsed;
+  }
+  return null;
+}
+
+function deadlineMs(ctx: ExecutionContext, timeoutMs: number): number {
+  return numberParam(ctx.params, "commercialDeadlineMs") ?? Date.now() + timeoutMs;
+}
+
+function waitingResult(
+  ctx: ExecutionContext,
+  opts: MeshyOpts,
+  extra: Record<string, unknown>,
+  progress?: number,
+): ProviderResult {
+  const pct =
+    typeof progress === "number" && progress > 0
+      ? ` (${Math.round(progress)}%)`
+      : "";
+  return {
+    status: "waiting",
+    message: `A gerar o objeto 3D${pct}. Pode levar alguns minutos.`,
+    meta: {
+      commercialDeadlineMs: deadlineMs(ctx, opts.timeoutMs),
+      ...extra,
+    },
+  };
+}
+
+async function inspectMeshyTask(input: {
+  apiKey: string;
+  taskId: string;
+  pollUrl: string;
+  http?: MeshyHttp;
+}): Promise<
+  | { status: "waiting"; task: MeshyTask }
+  | { status: "succeeded"; task: MeshyTask }
+  | { error: string }
+> {
+  const task = await getMeshyTask({
+    apiKey: input.apiKey,
+    url: input.pollUrl,
+    http: input.http,
+  });
+  if ("error" in task) return task;
+  if (task.status === "SUCCEEDED") return { status: "succeeded", task };
+  if (task.status === "FAILED" || task.status === "CANCELED") {
+    const msg = task.task_error?.message?.trim() || "Geração comercial falhou";
+    return { error: msg.slice(0, 400) };
+  }
+  return { status: "waiting", task };
+}
+
 async function executeImageTo3d(
   ctx: ExecutionContext,
   opts: MeshyOpts,
@@ -155,42 +225,64 @@ async function executeImageTo3d(
   if (tier !== "game" && tier !== "flagship") {
     return { status: "skipped", message: "Tier comercial inválido" };
   }
-  if (!ctx.inputPath) {
-    return {
-      status: "failed",
-      message: "Geração comercial a partir de imagem exige input_path",
-    };
-  }
-  const exists = await ctx.storage.exists(ctx.inputPath);
-  if (!exists) {
-    return { status: "failed", message: "Arquivo de entrada ausente no storage" };
-  }
-  const imageBytes = await ctx.storage.readFile(ctx.inputPath);
-  const mime = imageMime(imageBytes);
-  if (!mime) {
-    return { status: "failed", message: "Geração comercial exige PNG ou JPEG" };
+  if (Date.now() > deadlineMs(ctx, opts.timeoutMs)) {
+    return { status: "failed", message: "Tempo esgotado à espera da geração comercial" };
   }
 
-  const created = await createMeshyImageTo3dTask({
+  let taskId = stringParam(ctx.params, "commercialTaskId");
+  if (!taskId) {
+    if (!ctx.inputPath) {
+      return {
+        status: "failed",
+        message: "Geração comercial a partir de imagem exige input_path",
+      };
+    }
+    const exists = await ctx.storage.exists(ctx.inputPath);
+    if (!exists) {
+      return { status: "failed", message: "Arquivo de entrada ausente no storage" };
+    }
+    const imageBytes = await ctx.storage.readFile(ctx.inputPath);
+    const mime = imageMime(imageBytes);
+    if (!mime) {
+      return { status: "failed", message: "Geração comercial exige PNG ou JPEG" };
+    }
+
+    const created = await createMeshyImageTo3dTask({
+      apiKey: opts.apiKey!,
+      body: meshyCreateBodyForTier(tier, toImageDataUri(imageBytes, mime)),
+      http: opts.http,
+    });
+    if ("error" in created) {
+      return { status: "failed", message: created.error };
+    }
+    taskId = created.id;
+  }
+
+  const inspected = await inspectMeshyTask({
     apiKey: opts.apiKey!,
-    body: meshyCreateBodyForTier(tier, toImageDataUri(imageBytes, mime)),
+    taskId,
+    pollUrl: `${IMAGE_TO_3D_URL}/${taskId}`,
     http: opts.http,
   });
-  if ("error" in created) {
-    return { status: "failed", message: created.error };
+  if ("error" in inspected) {
+    return { status: "failed", message: inspected.error };
   }
-  const task = await pollMeshyTask({
-    apiKey: opts.apiKey!,
-    taskId: created.id,
-    timeoutMs: opts.timeoutMs,
-    http: opts.http,
-  });
-  if ("error" in task) {
-    return { status: "failed", message: task.error };
+  if (inspected.status === "waiting") {
+    return waitingResult(
+      ctx,
+      opts,
+      {
+        commercialTaskId: taskId,
+        commercialPhase: "image",
+        meshTier: tier,
+        sourceMode: "image",
+      },
+      inspected.task.progress,
+    );
   }
-  return writeSucceededGlb(ctx, opts, task, {
+  return writeSucceededGlb(ctx, opts, inspected.task, {
     meshTier: tier,
-    commercialTaskId: created.id,
+    commercialTaskId: taskId,
     sourceMode: "image",
   });
 }
@@ -206,50 +298,96 @@ async function executeTextTo3d(
   if (tier !== "game" && tier !== "flagship") {
     return { status: "skipped", message: "Tier comercial inválido" };
   }
-
-  const preview = await createMeshyTask({
-    apiKey: opts.apiKey!,
-    url: TEXT_TO_3D_URL,
-    body: meshyTextPreviewBody(tier, prompt),
-    http: opts.http,
-  });
-  if ("error" in preview) {
-    return { status: "failed", message: preview.error };
-  }
-  const previewTask = await pollMeshyTask({
-    apiKey: opts.apiKey!,
-    taskId: preview.id,
-    pollUrl: `${TEXT_TO_3D_URL}/${preview.id}`,
-    timeoutMs: opts.timeoutMs,
-    http: opts.http,
-  });
-  if ("error" in previewTask) {
-    return { status: "failed", message: previewTask.error };
+  if (Date.now() > deadlineMs(ctx, opts.timeoutMs)) {
+    return { status: "failed", message: "Tempo esgotado à espera da geração comercial" };
   }
 
-  const refine = await createMeshyTask({
+  const phase = stringParam(ctx.params, "commercialPhase");
+  let previewId = stringParam(ctx.params, "previewTaskId");
+  let taskId = stringParam(ctx.params, "commercialTaskId");
+
+  if (phase !== "refine") {
+    if (!previewId) {
+      const preview = await createMeshyTask({
+        apiKey: opts.apiKey!,
+        url: TEXT_TO_3D_URL,
+        body: meshyTextPreviewBody(tier, prompt),
+        http: opts.http,
+      });
+      if ("error" in preview) {
+        return { status: "failed", message: preview.error };
+      }
+      previewId = preview.id;
+      taskId = preview.id;
+    }
+
+    const previewInspected = await inspectMeshyTask({
+      apiKey: opts.apiKey!,
+      taskId: previewId,
+      pollUrl: `${TEXT_TO_3D_URL}/${previewId}`,
+      http: opts.http,
+    });
+    if ("error" in previewInspected) {
+      return { status: "failed", message: previewInspected.error };
+    }
+    if (previewInspected.status === "waiting") {
+      return waitingResult(
+        ctx,
+        opts,
+        {
+          commercialTaskId: previewId,
+          previewTaskId: previewId,
+          commercialPhase: "preview",
+          meshTier: tier,
+          sourceMode: "text",
+        },
+        previewInspected.task.progress,
+      );
+    }
+
+    const refine = await createMeshyTask({
+      apiKey: opts.apiKey!,
+      url: TEXT_TO_3D_URL,
+      body: meshyTextRefineBody(previewId, tier),
+      http: opts.http,
+    });
+    if ("error" in refine) {
+      return { status: "failed", message: refine.error };
+    }
+    taskId = refine.id;
+  }
+
+  if (!taskId) {
+    return { status: "failed", message: "Tarefa comercial sem id" };
+  }
+
+  const refineInspected = await inspectMeshyTask({
     apiKey: opts.apiKey!,
-    url: TEXT_TO_3D_URL,
-    body: meshyTextRefineBody(preview.id, tier),
+    taskId,
+    pollUrl: `${TEXT_TO_3D_URL}/${taskId}`,
     http: opts.http,
   });
-  if ("error" in refine) {
-    return { status: "failed", message: refine.error };
+  if ("error" in refineInspected) {
+    return { status: "failed", message: refineInspected.error };
   }
-  const refineTask = await pollMeshyTask({
-    apiKey: opts.apiKey!,
-    taskId: refine.id,
-    pollUrl: `${TEXT_TO_3D_URL}/${refine.id}`,
-    timeoutMs: opts.timeoutMs,
-    http: opts.http,
-  });
-  if ("error" in refineTask) {
-    return { status: "failed", message: refineTask.error };
+  if (refineInspected.status === "waiting") {
+    return waitingResult(
+      ctx,
+      opts,
+      {
+        commercialTaskId: taskId,
+        previewTaskId: previewId,
+        commercialPhase: "refine",
+        meshTier: tier,
+        sourceMode: "text",
+      },
+      refineInspected.task.progress,
+    );
   }
-  return writeSucceededGlb(ctx, opts, refineTask, {
+  return writeSucceededGlb(ctx, opts, refineInspected.task, {
     meshTier: tier,
-    commercialTaskId: refine.id,
-    previewTaskId: preview.id,
+    commercialTaskId: taskId,
+    previewTaskId: previewId,
     sourceMode: "text",
   });
 }
@@ -265,39 +403,59 @@ async function executeRetexture(
   if (!prompt) {
     return { status: "failed", message: "Retextura exige um prompt de estilo" };
   }
-  if (!ctx.inputPath) {
-    return { status: "failed", message: "Retextura exige um GLB de origem" };
-  }
-  const exists = await ctx.storage.exists(ctx.inputPath);
-  if (!exists) {
-    return { status: "failed", message: "Arquivo de origem ausente no storage" };
-  }
-  const glbBytes = await ctx.storage.readFile(ctx.inputPath);
-  if (!isGlbMagic(glbBytes)) {
-    return { status: "failed", message: "Origem da retextura não é um GLB" };
+  if (Date.now() > deadlineMs(ctx, opts.timeoutMs)) {
+    return { status: "failed", message: "Tempo esgotado à espera da geração comercial" };
   }
 
-  const created = await createMeshyTask({
+  let taskId = stringParam(ctx.params, "commercialTaskId");
+  if (!taskId) {
+    if (!ctx.inputPath) {
+      return { status: "failed", message: "Retextura exige um GLB de origem" };
+    }
+    const exists = await ctx.storage.exists(ctx.inputPath);
+    if (!exists) {
+      return { status: "failed", message: "Arquivo de origem ausente no storage" };
+    }
+    const glbBytes = await ctx.storage.readFile(ctx.inputPath);
+    if (!isGlbMagic(glbBytes)) {
+      return { status: "failed", message: "Origem da retextura não é um GLB" };
+    }
+
+    const created = await createMeshyTask({
+      apiKey: opts.apiKey!,
+      url: RETEXTURE_URL,
+      body: meshyRetextureBody(toGlbDataUri(glbBytes), prompt),
+      http: opts.http,
+    });
+    if ("error" in created) {
+      return { status: "failed", message: created.error };
+    }
+    taskId = created.id;
+  }
+
+  const inspected = await inspectMeshyTask({
     apiKey: opts.apiKey!,
-    url: RETEXTURE_URL,
-    body: meshyRetextureBody(toGlbDataUri(glbBytes), prompt),
+    taskId,
+    pollUrl: `${RETEXTURE_URL}/${taskId}`,
     http: opts.http,
   });
-  if ("error" in created) {
-    return { status: "failed", message: created.error };
+  if ("error" in inspected) {
+    return { status: "failed", message: inspected.error };
   }
-  const task = await pollMeshyTask({
-    apiKey: opts.apiKey!,
-    taskId: created.id,
-    pollUrl: `${RETEXTURE_URL}/${created.id}`,
-    timeoutMs: opts.timeoutMs,
-    http: opts.http,
-  });
-  if ("error" in task) {
-    return { status: "failed", message: task.error };
+  if (inspected.status === "waiting") {
+    return waitingResult(
+      ctx,
+      opts,
+      {
+        commercialTaskId: taskId,
+        commercialPhase: "retexture",
+        sourceMode: "retexture",
+      },
+      inspected.task.progress,
+    );
   }
-  return writeSucceededGlb(ctx, opts, task, {
-    commercialTaskId: created.id,
+  return writeSucceededGlb(ctx, opts, inspected.task, {
+    commercialTaskId: taskId,
     sourceMode: "retexture",
   });
 }

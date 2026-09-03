@@ -26,7 +26,7 @@ export function useAssetObjectUrl(assetId: string | null) {
         if (!response.ok) {
           throw new Error(
             response.status === 404
-              ? "Arquivo ausente no disco"
+              ? "O objeto 3D ainda não chegou ao servidor"
               : "Não foi possível abrir o arquivo",
           );
         }

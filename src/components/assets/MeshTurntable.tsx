@@ -113,7 +113,7 @@ export function MeshTurntable({
   if (fromApi.error && !src) {
     return (
       <p className="grid h-full place-items-center p-6 text-sm text-zinc-400">
-        {fromApi.error}. O arquivo pode não estar neste servidor.
+        {fromApi.error}. Se acabou de gerar, espere um pouco e tente de novo.
       </p>
     );
   }

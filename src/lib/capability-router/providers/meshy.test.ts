@@ -165,6 +165,42 @@ describe("commercial mesh provider", () => {
     expect(isGlbMagic(files.get("w1/mesh/a1/source.glb")!)).toBe(true);
   });
 
+  it("devolve waiting quando a API ainda está a gerar", async () => {
+    const http: MeshyHttp = async (input, init) => {
+      const url = String(input);
+      if (init?.method === "POST") {
+        return new Response(JSON.stringify({ result: "task-1" }), { status: 200 });
+      }
+      if (url.endsWith("/image-to-3d/task-1")) {
+        return new Response(
+          JSON.stringify({
+            id: "task-1",
+            status: "IN_PROGRESS",
+            progress: 40,
+          }),
+          { status: 200 },
+        );
+      }
+      return new Response("nope", { status: 404 });
+    };
+    const files = new Map<string, Uint8Array>([
+      ["w1/image/src/source.png", PNG_1X1],
+    ]);
+    const ctx = createExecutionContext({
+      job: job(),
+      capability: "mesh.generate",
+      storage: memoryStorage(files),
+      policies: policiesPaid,
+    });
+    const result = await createMeshyProvider({
+      http,
+      apiKey: "k",
+      timeoutMs: 5_000,
+    }).execute(ctx);
+    expect(result.status).toBe("waiting");
+    expect(result.meta?.commercialTaskId).toBe("task-1");
+  });
+
   it("texto → 3D faz preview e refine", async () => {
     const glb = buildFakeMeshGlb();
     const http: MeshyHttp = async (input, init) => {

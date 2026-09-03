@@ -54,7 +54,8 @@ export type ExecutionContext = {
 };
 
 export type ProviderResult = {
-  status: "done" | "skipped" | "failed";
+  /** waiting = a API externa ainda trabalha; a fila reenfileira o job. */
+  status: "done" | "skipped" | "failed" | "waiting";
   outputPath?: string | null;
   message: string;
   meta?: Record<string, unknown>;

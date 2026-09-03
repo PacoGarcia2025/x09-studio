@@ -11,24 +11,60 @@ import {
   enqueueTextTo3dAction,
   uploadAssetAction,
 } from "@/lib/assets/actions";
-import { tickAssetQueueAction } from "@/lib/asset-jobs/actions";
 import { MESH_CREDIT_COST } from "@/lib/assets/mesh-tiers";
 import { sanitizeUserFacingCopy } from "@/lib/assets/user-facing";
 
 const BTN =
   "rounded-2xl px-4 py-2.5 text-sm font-medium text-violet-100 ring-1 ring-violet-400/30 hover:bg-violet-500/15 disabled:opacity-50";
 
-async function drainQueue() {
-  for (let i = 0; i < 80; i += 1) {
-    const tick = await tickAssetQueueAction();
-    if (!tick.ok) return tick.error;
-    if (tick.status === "failed" || tick.status === "skipped") {
-      return tick.message || "A geração não concluiu.";
+type TickPayload = {
+  ok?: boolean;
+  error?: string;
+  processed?: boolean;
+  done?: boolean;
+  status?: string | null;
+  message?: string;
+  watch?: {
+    status: string;
+    error_message: string | null;
+  } | null;
+};
+
+async function drainQueue(
+  jobId: string | undefined,
+  onProgress?: (message: string) => void,
+) {
+  for (let i = 0; i < 360; i += 1) {
+    const response = await fetch("/api/assets/queue/tick", {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(jobId ? { jobId } : {}),
+    });
+    const text = await response.text();
+    let tick: TickPayload;
+    try {
+      tick = JSON.parse(text) as TickPayload;
+    } catch {
+      return "O servidor cortou a geração. Tente de novo — o objeto pode aparecer na Biblioteca.";
     }
-    if (tick.done) return null;
-    if (!tick.processed) {
-      await new Promise((resolve) => setTimeout(resolve, 2000));
+    if (!response.ok || tick.ok === false) {
+      return tick.error || "Não foi possível avançar a geração.";
     }
+
+    const status = tick.watch?.status ?? tick.status;
+    const message =
+      tick.watch?.error_message ||
+      tick.message ||
+      "A gerar o objeto 3D…";
+    if (status === "failed" || status === "skipped" || status === "cancelled") {
+      return message;
+    }
+    if (jobId ? status === "done" : tick.done) {
+      return null;
+    }
+    onProgress?.(sanitizeUserFacingCopy(message));
+    await new Promise((resolve) => setTimeout(resolve, 2500));
   }
   return "Ainda a gerar. Abra a Biblioteca daqui a pouco — o arquivo entra sozinho.";
 }
@@ -79,15 +115,17 @@ export function GenerateStudio({
           setMessage(result.error);
           return;
         }
-        if (result.assetId) {
-          setMeshId(result.assetId);
-          setMeshName("objeto-3d.glb");
-        }
-        const drainError = await drainQueue();
+        const drainError = await drainQueue(result.jobId, (progress) => {
+          setMessage(progress);
+        });
         if (drainError) {
           setOk(false);
           setMessage(drainError);
           return;
+        }
+        if (result.assetId) {
+          setMeshId(result.assetId);
+          setMeshName("objeto-3d.glb");
         }
         setOk(true);
         setMessage("Pronto. Também foi enviado para a Biblioteca.");
@@ -116,7 +154,6 @@ export function GenerateStudio({
       setImageName(file.name);
       setMeshId(null);
       setMeshName(null);
-      await drainQueue();
       setOk(true);
       setMessage("Imagem pronta. Escolha como gerar o 3D.");
       router.refresh();
@@ -275,7 +312,7 @@ export function GenerateStudio({
           ) : null}
         </div>
 
-        {!imageId && !meshId ? (
+        {!imageId && !meshId && !busy ? (
           <p className="m-auto max-w-sm text-center text-sm leading-6 text-zinc-500">
             Envie uma foto ou descreva o objeto. O resultado aparece aqui —
             visualizar, baixar ou apagar. A Biblioteca guarda o histórico.
@@ -335,6 +372,10 @@ export function GenerateStudio({
                     Excluir
                   </button>
                 </div>
+              </div>
+            ) : busy ? (
+              <div className="grid min-h-[16rem] place-items-center rounded-2xl bg-black/40 px-4 text-center text-sm leading-6 text-zinc-400 ring-1 ring-white/10">
+                A gerar o objeto 3D. Pode levar alguns minutos.
               </div>
             ) : null}
           </div>
