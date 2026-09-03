@@ -14,7 +14,7 @@ export function ProjectHeroCard({ projectId, title }: ProjectHeroCardProps) {
         src={`/api/projects/${projectId}/card-preview`}
         loading="lazy"
         sandbox=""
-        className="pointer-events-none absolute left-0 top-0 h-[250%] w-[250%] origin-top-left scale-[0.4] border-0 bg-white"
+        className="pointer-events-none absolute left-0 top-0 h-[250%] w-[250%] origin-top-left scale-[0.4] border-0"
       />
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/[0.04] to-transparent" />
     </div>
