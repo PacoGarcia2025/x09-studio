@@ -1,9 +1,13 @@
 import { describe, expect, it } from "vitest";
 import {
   classifyLibraryRole,
+  collectLibrarySrcs,
   fileSlug,
   formatLibraryCatalogPrompt,
+  matchLibraryRequestPath,
+  parseLibraryPublicFilename,
   pickLibraryAssets,
+  sanitizeLibraryFilename,
 } from "@/lib/assets/project-library-catalog";
 
 describe("project library catalog", () => {
@@ -80,5 +84,32 @@ describe("project library catalog", () => {
     expect(text).toContain("/library/logo-1-logo.png");
     expect(text).not.toMatch(/meshy|runpod/i);
     expect(fileSlug("Carro Vermelho.glb")).toBe("carro-vermelho");
+  });
+
+  it("parseia filename publicado e recolhe srcs", () => {
+    expect(
+      parseLibraryPublicFilename(
+        "image-4b6d0f6e-c555f096-ffbd-455b-be5a-36c8f5e5f24c.png",
+      ),
+    ).toEqual({ role: "image", shortId: "4b6d0f6e" });
+    expect(sanitizeLibraryFilename("../secret.png")).toBe("secret.png");
+    expect(sanitizeLibraryFilename("a/b.png")).toBe("b.png");
+    expect(sanitizeLibraryFilename("noext")).toBeNull();
+    expect(
+      collectLibrarySrcs(
+        `src:"/library/image-4b6d0f6e-c555f096-ffbd-455b-be5a-36c8f5e5f24c.png"`,
+      ),
+    ).toEqual(["image-4b6d0f6e-c555f096-ffbd-455b-be5a-36c8f5e5f24c.png"]);
+    expect(
+      matchLibraryRequestPath(
+        "/sites/eu-consiga-divulgar-site/library/image-4b6d0f6e-foto.png",
+      ),
+    ).toEqual({
+      slug: "eu-consiga-divulgar-site",
+      filename: "image-4b6d0f6e-foto.png",
+    });
+    expect(
+      matchLibraryRequestPath("/library/image-6bf7fa59-hero.png"),
+    ).toEqual({ slug: null, filename: "image-6bf7fa59-hero.png" });
   });
 });

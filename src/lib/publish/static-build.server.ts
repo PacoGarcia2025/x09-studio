@@ -158,6 +158,16 @@ export async function buildStaticSiteForPublish(input: {
     await fs.rm(outDir, { recursive: true, force: true });
     await copyDir(distDir, outDir);
 
+    const librarySrc = path.join(projectDir, "public", "library");
+    const libraryDest = path.join(outDir, "library");
+    const libraryStat = await fs.stat(librarySrc).catch(() => null);
+    if (libraryStat?.isDirectory()) {
+      await copyDir(librarySrc, libraryDest);
+      log.push("Galeria public/library copiada para o site estático");
+    } else {
+      log.push("Aviso: public/library ausente — imagens /library/ podem quebrar");
+    }
+
     const indexPath = path.join(outDir, "index.html");
     const indexStat = await fs.stat(indexPath).catch(() => null);
     if (!indexStat?.isFile() || indexStat.size < 128) {

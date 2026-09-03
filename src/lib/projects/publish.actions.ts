@@ -13,6 +13,7 @@ import {
 import { getProjectPublishReadiness } from "@/lib/projects/publish-readiness.server";
 import { prepareProjectForPublish } from "@/lib/publish/prepare.server";
 import { buildStaticSiteForPublish } from "@/lib/publish/static-build.server";
+import { syncWorkspaceLibraryIntoProject } from "@/lib/assets/project-library";
 
 function publicSiteUrl(slug: string): string {
   return buildProjectSubdomainUrl(slug);
@@ -79,6 +80,21 @@ export async function publishProjectAction(
   const url = isSubdomainPublishReady()
     ? publicSiteUrl(gate.project.slug)
     : resolvePublicShareUrl(gate.project.slug, gate.project.published_url);
+
+  try {
+    const copied = await syncWorkspaceLibraryIntoProject({
+      projectId,
+      workspaceId: gate.project.workspace_id,
+      supabase: gate.supabase,
+    });
+    if (copied.length > 0) {
+      console.info(
+        `[publish] galeria copiada: ${copied.map((item) => item.publicPath).join(", ")}`,
+      );
+    }
+  } catch (libErr) {
+    console.warn("[publish] sync galeria failed", libErr);
+  }
 
   try {
     await prepareProjectForPublish({

@@ -17,4 +17,11 @@ describe("isResumeBuildMessage", () => {
     expect(isResumeBuildMessage("mude a cor do hero")).toBe(false);
     expect(isResumeBuildMessage("adicione uma seção de depoimentos")).toBe(false);
   });
+
+  it("não trata pedido de imagens como retomar build", () => {
+    expect(isResumeBuildMessage("as imagens não estão aparecendo")).toBe(false);
+    expect(isResumeBuildMessage("a frase na hero esta muito centralizado")).toBe(
+      false,
+    );
+  });
 });

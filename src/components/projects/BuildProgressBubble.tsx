@@ -39,7 +39,7 @@ export function humanizeBuildError(raw: string): string {
   if (!text) return "Não consegui terminar agora. Tente novamente pelo chat.";
 
   if (/Qualidade insuficiente/i.test(text)) {
-    return "Quase pronto — faltam alguns detalhes para liberar o preview. Peça no chat: «continuar a geração» ou descreva o que quer ajustar.";
+    return "Quase pronto — o preview ainda precisa de um ajuste. Descreva no chat o que quer mudar (textos, imagens ou layout).";
   }
 
   if (/demorou|timeout|Retry/i.test(text)) {

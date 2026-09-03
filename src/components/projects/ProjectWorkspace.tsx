@@ -304,7 +304,7 @@ export function ProjectWorkspace({
   }, [activePlanId, developerMode, projectStatus]);
 
   useEffect(() => {
-    if (!activePlanId || !isGenerating || developerMode) return;
+    if (!activePlanId || !isGenerating || !buildEnabled || developerMode) return;
 
     const poll = async () => {
       const result = await getBuildState(activePlanId);
@@ -372,6 +372,7 @@ export function ProjectWorkspace({
     return () => window.clearInterval(id);
   }, [
     activePlanId,
+    buildEnabled,
     developerMode,
     handleBuildError,
     handleBuildSuccess,
@@ -450,7 +451,6 @@ export function ProjectWorkspace({
       if (busy || planning) return;
       setBusy(true);
       setPlanning(true);
-      setIsGenerating(true);
       setChatLog((prev) => [
         ...prev,
         { kind: "user", text: value },

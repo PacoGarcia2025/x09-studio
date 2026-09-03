@@ -1,8 +1,30 @@
 import { type NextRequest, NextResponse } from "next/server";
+import { matchLibraryRequestPath } from "@/lib/assets/project-library-catalog";
 import { extractPublishSlugFromHost } from "@/lib/projects/publish-url";
 import { updateSession } from "@/lib/supabase/middleware";
 
+function rewritePublishedLibrary(request: NextRequest): NextResponse | null {
+  const matched = matchLibraryRequestPath(request.nextUrl.pathname);
+  if (!matched) return null;
+
+  const headerSlug = request.headers.get("x-publish-slug")?.trim().toLowerCase();
+  const slug =
+    matched.slug ??
+    (headerSlug && /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(headerSlug)
+      ? headerSlug
+      : null) ??
+    extractPublishSlugFromHost(request.headers.get("host") ?? "");
+  if (!slug) return null;
+
+  const url = request.nextUrl.clone();
+  url.pathname = `/api/public/library/${slug}/${matched.filename}`;
+  return NextResponse.rewrite(url);
+}
+
 export async function middleware(request: NextRequest) {
+  const libraryRewrite = rewritePublishedLibrary(request);
+  if (libraryRewrite) return libraryRewrite;
+
   const pathname = request.nextUrl.pathname;
 
   // APIs (ex.: /api/leads/visit) não devem ser reescritas para /sites/{slug}.
@@ -36,6 +58,6 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|api/health|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|api/health).*)",
   ],
 };

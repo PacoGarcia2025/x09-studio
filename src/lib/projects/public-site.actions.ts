@@ -5,7 +5,7 @@ import {
   readProjectFile,
   type FileTreeNode,
 } from "@/lib/projects/fs.server";
-import { toSandpackVirtualPath, parseDotEnv, patchSupabaseEnvInCode, prepareSandpackFileContent } from "@/lib/projects/preview-map";
+import { toSandpackVirtualPath, parseDotEnv, patchSupabaseEnvInCode, prepareSandpackFileContent, rewriteLibrarySrcsForPreview } from "@/lib/projects/preview-map";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 function flattenFiles(nodes: FileTreeNode[], out: string[] = []): string[] {
@@ -88,12 +88,16 @@ export async function getPublishedSiteFiles(slug: string): Promise<
       }
     }
 
+    const libraryBase = `${(process.env.NEXT_PUBLIC_APP_URL ?? "https://studio.x09.com.br").replace(/\/$/, "")}/api/public/library/${project.slug}`;
     const prepared: Record<string, string> = {};
     for (const [path, code] of Object.entries(files)) {
       if (path === "/lib/supabase.ts" || path === "/lib/supabase.tsx") {
         prepared[path] = patchSupabaseEnvInCode(code, env);
       } else {
-        prepared[path] = prepareSandpackFileContent(path, code);
+        prepared[path] = rewriteLibrarySrcsForPreview(
+          prepareSandpackFileContent(path, code),
+          libraryBase,
+        );
       }
     }
 

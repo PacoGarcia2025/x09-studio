@@ -35,6 +35,7 @@ export async function syncWorkspaceLibraryIntoProject(input: {
   const picked = pickLibraryAssets(rows);
   const byId = new Map(rows.map((row) => [row.id, row]));
 
+  const written: LibraryBuildItem[] = [];
   for (const item of picked) {
     const row = byId.get(item.id);
     if (!row) continue;
@@ -45,10 +46,15 @@ export async function syncWorkspaceLibraryIntoProject(input: {
         `public${item.publicPath}`,
         bytes,
       );
-    } catch {
-      /* ficheiro em falta no disco — ignora este item */
+      written.push(item);
+    } catch (err) {
+      console.warn(
+        "[library] falhou copiar",
+        item.publicPath,
+        err instanceof Error ? err.message : err,
+      );
     }
   }
 
-  return picked;
+  return written;
 }

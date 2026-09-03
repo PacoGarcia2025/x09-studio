@@ -395,6 +395,45 @@ export async function chatProjectAction(
     }
 
     if (intent === "edit" && hasExistingApp) {
+      const keepStatus =
+        gate.project.status === "published" ? "published" : "ready";
+
+      const { isDeterministicVisualMessage } = await import(
+        "@/lib/pipeline/visual-tweaks"
+      );
+      if (isDeterministicVisualMessage(trimmed)) {
+        const { applyDeterministicVisualFixes } = await import(
+          "@/lib/pipeline/visual-tweaks.server"
+        );
+        const visual = await applyDeterministicVisualFixes({
+          projectId,
+          workspaceId: gate.project.workspace_id,
+          supabase: gate.supabase,
+          message: trimmed,
+          briefPrompt:
+            (gate.project as { brief_prompt?: string | null }).brief_prompt ??
+            latest?.prompt,
+        });
+        const wantsMoreThanVisual =
+          /(adicione|nova se[cç][aã]o|mude a cor|troque o texto|depoimento|preço|preco|login|dashboard)/i.test(
+            trimmed,
+          );
+        if (visual.applied && !wantsMoreThanVisual) {
+          await gate.supabase
+            .from("projects")
+            .update({ status: keepStatus })
+            .eq("id", projectId);
+          revalidatePath(`/projects/${projectId}`);
+          return {
+            ok: true,
+            intent: "edit",
+            summary: visual.summary,
+            paths: visual.paths,
+            model: "x09-studio",
+          };
+        }
+      }
+
       const { applyChatEditPatch } = await import(
         "@/lib/pipeline/edit-patch.server"
       );
@@ -424,41 +463,12 @@ export async function chatProjectAction(
       );
       await repairProjectSourceIssues(projectId);
 
-      const { critiqueGeneratedApp, critiqueHomePreview } = await import(
-        "@/lib/pipeline/quality-critic.server"
-      );
-      const brief =
-        (gate.project as { brief_prompt?: string | null }).brief_prompt ??
-        latest?.prompt ??
-        "";
-
-      const { getBuildState } = await import("@/lib/pipeline/builder.actions");
-      const buildState = latest ? await getBuildState(latest.id) : null;
-      const homeOnly =
-        buildState?.ok && buildState.data.counts.skipped > 0;
-
-      const quality = homeOnly
-        ? await critiqueHomePreview(projectId, brief || undefined)
-        : await critiqueGeneratedApp(projectId, brief || undefined);
-      const nextStatus = quality.ok ? "ready" : "error";
-
       await gate.supabase
         .from("projects")
-        .update({ status: nextStatus })
+        .update({ status: keepStatus })
         .eq("id", projectId);
 
       revalidatePath(`/projects/${projectId}`);
-      if (!quality.ok) {
-        const detail = quality.issues
-          .filter((i) => i.severity === "error")
-          .slice(0, 2)
-          .map((i) => i.message)
-          .join("; ");
-        return {
-          ok: false,
-          error: `Edição incompleta: ${detail || "imports ou páginas faltando"}`,
-        };
-      }
       return {
         ok: true,
         intent: "edit",

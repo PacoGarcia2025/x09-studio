@@ -85,27 +85,36 @@ export function ProjectLivePreview({
   const [loading, setLoading] = useState(true);
   const [loadAttempt, setLoadAttempt] = useState(0);
   const hasLoadedOnceRef = useRef(false);
+  const isBuildingRef = useRef(isBuilding);
+  isBuildingRef.current = isBuilding;
 
   useEffect(() => {
     let cancelled = false;
     const firstLoad = !hasLoadedOnceRef.current;
-    if (firstLoad) setLoading(true);
-    if (firstLoad) setError(null);
+    if (firstLoad) {
+      setLoading(true);
+      setError(null);
+    }
 
     const timeout = window.setTimeout(() => {
       if (cancelled) return;
-      setError(
-        "O preview demorou demais. Clique em «Atualizar preview» ou aguarde a geração terminar.",
-      );
       setLoading(false);
-    }, 45_000);
+      if (hasLoadedOnceRef.current) return;
+      setError(
+        "O preview demorou demais. Clique em «Tentar de novo» ou aguarde a geração terminar.",
+      );
+    }, firstLoad ? 90_000 : 60_000);
 
     void (async () => {
       try {
         const result = await getProjectPreviewFiles(projectId);
         if (cancelled) return;
         if (!result.ok) {
-          if (result.generating && isBuilding) {
+          if (result.generating && isBuildingRef.current) {
+            setLoading(false);
+            return;
+          }
+          if (hasLoadedOnceRef.current) {
             setLoading(false);
             return;
           }
@@ -120,10 +129,11 @@ export function ProjectLivePreview({
         hasLoadedOnceRef.current = true;
       } catch (err) {
         if (cancelled) return;
+        setLoading(false);
+        if (hasLoadedOnceRef.current) return;
         setError(
           err instanceof Error ? err.message : "Falha ao carregar preview",
         );
-        setLoading(false);
       } finally {
         window.clearTimeout(timeout);
       }
@@ -133,7 +143,7 @@ export function ProjectLivePreview({
       cancelled = true;
       window.clearTimeout(timeout);
     };
-  }, [projectId, refreshKey, loadAttempt, isBuilding]);
+  }, [projectId, refreshKey, loadAttempt]);
 
   const sandpackFiles = useMemo(
     () => (files ? toSandpackFiles(files) : null),
@@ -188,7 +198,7 @@ export function ProjectLivePreview({
   return (
     <div className="absolute inset-0 overflow-hidden bg-white">
       <SandpackProvider
-        key={`${projectId}-${refreshKey}`}
+        key={projectId}
         template="react-ts"
         theme="light"
         files={sandpackFiles}

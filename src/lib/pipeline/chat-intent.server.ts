@@ -71,7 +71,7 @@ export async function classifyChatIntent(
     /(mude|altera|troque|adicione|remova|ajuste|corrija|melhore|deixe|torne|atualize|refatore)\b/i.test(
       message,
     ) ||
-    /(cor|botão|botao|título|titulo|fonte|seção|secao|login|hero|footer|header)/i.test(
+    /(cor|botão|botao|título|titulo|fonte|seção|secao|login|hero|footer|header|imagem|imagens|foto|fotos|logo|centraliz|layout|quebrada)/i.test(
       message,
     )
   ) {

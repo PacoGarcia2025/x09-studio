@@ -68,6 +68,64 @@ function extOf(name: string, storagePath: string): string {
   return fromPath.slice(0, 5);
 }
 
+const LIBRARY_FILE_RE =
+  /^(logo|image|mesh)-([0-9a-f]{8})-([a-z0-9][a-z0-9._-]{0,160})$/i;
+
+export function sanitizeLibraryFilename(raw: string): string | null {
+  const name = raw.replace(/\\/g, "/").split("/").pop()?.trim() ?? "";
+  if (!name || name.includes("..") || name.length > 180) return null;
+  if (!/^[a-zA-Z0-9._-]+$/.test(name)) return null;
+  if (!/\.[a-z0-9]{2,5}$/i.test(name)) return null;
+  return name;
+}
+
+export function parseLibraryPublicFilename(filename: string): {
+  role: LibraryBuildRole;
+  shortId: string;
+} | null {
+  const safe = sanitizeLibraryFilename(filename);
+  if (!safe) return null;
+  const match = LIBRARY_FILE_RE.exec(safe);
+  if (!match) return null;
+  return {
+    role: match[1]!.toLowerCase() as LibraryBuildRole,
+    shortId: match[2]!.toLowerCase(),
+  };
+}
+
+export function collectLibrarySrcs(code: string): string[] {
+  const found = new Set<string>();
+  const re = /["'`](\/library\/[A-Za-z0-9._-]+)["'`]/g;
+  let match: RegExpExecArray | null;
+  while ((match = re.exec(code)) !== null) {
+    const name = sanitizeLibraryFilename(match[1]!.slice("/library/".length));
+    if (name) found.add(name);
+  }
+  return [...found];
+}
+
+/** /sites/{slug}/library/{file} ou /library/{file} */
+export function matchLibraryRequestPath(pathname: string): {
+  slug: string | null;
+  filename: string;
+} | null {
+  const fromSites = pathname.match(
+    /^\/sites\/([a-z0-9]+(?:-[a-z0-9]+)*)\/library\/([^/]+)$/i,
+  );
+  if (fromSites) {
+    const filename = sanitizeLibraryFilename(fromSites[2] ?? "");
+    if (!filename) return null;
+    return { slug: fromSites[1]!.toLowerCase(), filename };
+  }
+  const fromRoot = pathname.match(/^\/library\/([^/]+)$/i);
+  if (fromRoot) {
+    const filename = sanitizeLibraryFilename(fromRoot[1] ?? "");
+    if (!filename) return null;
+    return { slug: null, filename };
+  }
+  return null;
+}
+
 export function pickLibraryAssets(rows: LibraryAssetRow[]): LibraryBuildItem[] {
   const counts: Record<LibraryBuildRole, number> = {
     logo: 0,

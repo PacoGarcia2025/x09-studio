@@ -1,9 +1,11 @@
 import "server-only";
 
+import fs from "node:fs/promises";
 import {
   fileExists,
   listProjectTree,
   readProjectFile,
+  resolveInsideProject,
   writeProjectFile,
   type FileTreeNode,
 } from "@/lib/projects/fs.server";
@@ -16,6 +18,10 @@ import {
   optimizeUnsplashUrlsInSource,
 } from "@/lib/publish/seo-meta";
 import { fixBrokenImagesInSource } from "@/lib/pipeline/source-images";
+import {
+  rewriteMissingLibrarySrcs,
+  stockImagesForBrief,
+} from "@/lib/pipeline/visual-tweaks";
 import { syncPublishedSeoPages } from "@/lib/publish/seo-pages.server";
 import { isImobiliaria360 } from "@/lib/skills/detect";
 import {
@@ -114,6 +120,19 @@ export async function prepareProjectForPublish(input: {
     }
   }
 
+  const libraryNames = new Set<string>();
+  try {
+    const names = await fs.readdir(
+      resolveInsideProject(input.projectId, "public/library"),
+    );
+    for (const name of names) {
+      if (!name.startsWith(".")) libraryNames.add(name);
+    }
+  } catch {
+    // sem galeria no disco
+  }
+  const stock = stockImagesForBrief(input.briefPrompt);
+
   const tree = await listProjectTree(input.projectId);
   const paths = flattenFiles(tree).filter((p) => TEXT_OPTIMIZE_EXT.test(p));
   let optimized = 0;
@@ -122,6 +141,9 @@ export async function prepareProjectForPublish(input: {
       const raw = await readProjectFile(input.projectId, rel);
       const isHtml = /\.html$/i.test(rel);
       let next = isHtml ? raw : fixBrokenImagesInSource(raw);
+      if (!isHtml) {
+        next = rewriteMissingLibrarySrcs(next, libraryNames, stock);
+      }
       next = optimizeUnsplashUrlsInSource(next);
       if (next !== raw) {
         await writeProjectFile(input.projectId, rel, next);

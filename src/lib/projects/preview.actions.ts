@@ -8,12 +8,7 @@ import {
   type FileTreeNode,
 } from "@/lib/projects/fs.server";
 import { ensureProjectScaffold } from "@/lib/projects/scaffold.server";
-import {
-  findBrokenImports,
-  formatBrokenImportMessage,
-  repairProjectSourceIssues,
-} from "@/lib/projects/import-graph.server";
-import { toSandpackVirtualPath, parseDotEnv, patchSupabaseEnvInCode, prepareSandpackFileContent } from "@/lib/projects/preview-map";
+import { toSandpackVirtualPath, parseDotEnv, patchSupabaseEnvInCode, prepareSandpackFileContent, rewriteLibrarySrcsForPreview } from "@/lib/projects/preview-map";
 
 async function assertOwner(projectId: string) {
   const supabase = await createClient();
@@ -24,7 +19,7 @@ async function assertOwner(projectId: string) {
 
   const { data: project } = await supabase
     .from("projects")
-    .select("id, workspace_id, status, brief_prompt")
+    .select("id, workspace_id, status, brief_prompt, slug")
     .eq("id", projectId)
     .maybeSingle();
 
@@ -66,37 +61,17 @@ export async function getProjectPreviewFiles(
   const supabase = await createClient();
   const { data: project } = await supabase
     .from("projects")
-    .select("status, brief_prompt")
+    .select("status, brief_prompt, slug")
     .eq("id", projectId)
     .maybeSingle();
 
   const briefPrompt = project?.brief_prompt ?? null;
-  const projectStatus = project?.status ?? "draft";
 
   try {
     if (!(await projectDirExists(projectId))) {
       await ensureProjectScaffold(projectId, { briefPrompt });
-    } else if (briefPrompt) {
-      await ensureProjectScaffold(projectId, { briefPrompt });
     }
 
-    await repairProjectSourceIssues(projectId);
-
-    const broken = await findBrokenImports(projectId);
-    if (broken.length > 0) {
-      if (projectStatus === "generating") {
-        return {
-          ok: false,
-          error:
-            "A IA ainda está gerando o app. Aguarde a conclusão ou volte e clique em «Continuar build».",
-          generating: true,
-        };
-      }
-      return {
-        ok: false,
-        error: `${formatBrokenImportMessage(broken)}. Abra o Builder e clique em «Continuar build» ou regenere o projeto.`,
-      };
-    }
     const tree = await listProjectTree(projectId);
     const paths = flattenFiles(tree);
     const files: Record<string, string> = {};
@@ -129,12 +104,18 @@ export async function getProjectPreviewFiles(
       }
     }
 
+    const libraryBase = project?.slug
+      ? `${(process.env.NEXT_PUBLIC_APP_URL ?? "https://studio.x09.com.br").replace(/\/$/, "")}/api/public/library/${project.slug}`
+      : "";
     const prepared: Record<string, string> = {};
     for (const [path, code] of Object.entries(files)) {
       if (path === "/lib/supabase.ts" || path === "/lib/supabase.tsx") {
         prepared[path] = patchSupabaseEnvInCode(code, env);
       } else {
-        prepared[path] = prepareSandpackFileContent(path, code);
+        const next = prepareSandpackFileContent(path, code);
+        prepared[path] = libraryBase
+          ? rewriteLibrarySrcsForPreview(next, libraryBase)
+          : next;
       }
     }
 

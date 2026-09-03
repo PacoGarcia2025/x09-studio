@@ -85,6 +85,22 @@ export function patchSupabaseEnvInCode(
   return next;
 }
 
+/** Sandpack corre noutro origin — /library/file vira URL pública do Studio. */
+export function rewriteLibrarySrcsForPreview(
+  code: string,
+  libraryOrigin: string,
+): string {
+  const base = libraryOrigin.replace(/\/$/, "");
+  if (!base) return code;
+  return code.replace(
+    /(["'`])\/library\/([A-Za-z0-9._-]+)\1/g,
+    (full, quote: string, file: string) => {
+      if (/^https?:\/\//i.test(file)) return full;
+      return `${quote}${base}/${file}${quote}`;
+    },
+  );
+}
+
 /** Mapeia arquivos do disco (Vite src/*) para paths virtuais do Sandpack. */
 export function toSandpackVirtualPath(relativePath: string): string | null {
   const normalized = relativePath.replace(/\\/g, "/").replace(/^\/+/, "");
