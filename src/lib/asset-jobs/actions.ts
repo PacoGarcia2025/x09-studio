@@ -37,6 +37,7 @@ export async function tickAssetQueueAction(): Promise<
 
   if (tick.processed) {
     revalidatePath("/assets");
+    revalidatePath("/biblioteca");
   }
   return tick;
 }

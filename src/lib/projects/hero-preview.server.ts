@@ -120,10 +120,11 @@ function injectBase(html: string): string {
 function wrapHtmlDocument(bodyOrFull: string, title: string): string {
   const isFull = /<html[\s>]/i.test(bodyOrFull);
   if (isFull) {
-    return bodyOrFull.replace(
-      /<\/head>/i,
-      `<style>html,body{margin:0;padding:0;overflow:hidden;background:#fff}body{transform-origin:top left}</style></head>`,
-    );
+    const stripped = bodyOrFull.replace(/<script[\s\S]*?<\/script>/gi, "");
+    if (/<\/head>/i.test(stripped)) {
+      return stripped.replace(/<\/head>/i, `${cardPreviewStyles()}</head>`);
+    }
+    return stripped;
   }
 
   return `<!doctype html>
@@ -132,16 +133,23 @@ function wrapHtmlDocument(bodyOrFull: string, title: string): string {
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>${escapeHtml(title)}</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <style>
-    html, body { margin: 0; padding: 0; overflow: hidden; background: #fff; }
-    body { font-family: ui-sans-serif, system-ui, sans-serif; }
-  </style>
+  ${cardPreviewStyles()}
 </head>
 <body>
 ${bodyOrFull}
 </body>
 </html>`;
+}
+
+function cardPreviewStyles(): string {
+  return `<style>
+html,body{margin:0;padding:0;overflow:hidden;background:#0b0b12;color:#f4f4f5;font-family:ui-sans-serif,system-ui,sans-serif}
+img,video,canvas{max-width:100%;height:auto;display:block}
+h1{font-size:clamp(1.5rem,4vw,2.5rem);line-height:1.1;margin:0 0 .6rem;font-weight:700}
+p{margin:.35rem 0;opacity:.85}
+a,button{border-radius:999px;padding:.55rem 1rem;background:#7c3aed;color:#fff;border:0;font:inherit;font-weight:600}
+section,header,main,nav{box-sizing:border-box}
+</style>`;
 }
 
 /**
@@ -208,12 +216,11 @@ function truncateToRoot(jsx: string): string {
 
 function fallbackHero(name: string): string {
   const safe = escapeHtml(name);
-  return `<section class="min-h-[420px] bg-gradient-to-br from-violet-600 via-fuchsia-500 to-indigo-600 text-white">
-  <div class="mx-auto flex max-w-3xl flex-col items-center px-8 py-16 text-center">
-    <p class="mb-4 rounded-full bg-white/15 px-3 py-1 text-xs font-medium">Studio X09</p>
-    <h1 class="text-4xl font-bold tracking-tight">${safe}</h1>
-    <p class="mt-4 text-sm text-white/80">Preview do projeto</p>
-    <button class="mt-8 rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-zinc-900">Começar</button>
+  return `<section style="min-height:420px;display:grid;place-items:center;background:linear-gradient(145deg,#4c1d95,#6d28d9,#1e3a8a);color:#fff">
+  <div style="text-align:center;padding:3rem 2rem;max-width:36rem">
+    <p style="margin:0 0 12px;font-size:12px;letter-spacing:.18em;text-transform:uppercase;opacity:.75">Site</p>
+    <h1 style="margin:0;font-size:2.2rem">${safe}</h1>
+    <p style="margin:14px 0 0;opacity:.8">Página principal</p>
   </div>
 </section>`;
 }

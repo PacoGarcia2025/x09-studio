@@ -83,7 +83,7 @@ export type BillingSnapshot = {
     amount_cents: number;
     currency: string;
   }>;
-  costs: { generation: number; edit: number };
+  costs: { ask: number; generation: number; edit: number };
 };
 
 export async function fetchBillingMe(): Promise<BillingSnapshot> {

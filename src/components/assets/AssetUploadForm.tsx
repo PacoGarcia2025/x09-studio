@@ -38,7 +38,7 @@ export function AssetUploadForm() {
           className="x09-input w-full rounded-2xl px-4 py-3 text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-violet-500/20 file:px-3 file:py-1.5 file:text-xs file:text-violet-100"
         />
         <p className="text-xs text-zinc-500">
-          Até 24 MB. Imagem, áudio, vídeo, HDRI, mesh, textura. Sem execução de IA.
+          Foto, logo ou GLB. Até 24 MB.
         </p>
       </div>
 
@@ -67,7 +67,7 @@ export function AssetUploadForm() {
       ) : null}
       {state?.ok ? (
         <p className="text-sm text-emerald-300">
-          Arquivo na biblioteca. Job criado na fila (queued) — sem processamento.
+          Arquivo na biblioteca.
         </p>
       ) : null}
 
@@ -76,7 +76,7 @@ export function AssetUploadForm() {
         disabled={pending}
         className="x09-button-primary rounded-2xl px-5 py-2.5 text-sm font-medium disabled:opacity-50"
       >
-        {pending ? "Enviando…" : "Adicionar à biblioteca"}
+        {pending ? "Enviando…" : "Guardar"}
       </button>
     </form>
   );

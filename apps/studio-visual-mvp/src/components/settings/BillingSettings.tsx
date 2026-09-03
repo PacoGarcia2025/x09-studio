@@ -117,7 +117,8 @@ export function BillingSettings({
         <div>
           <p className="text-xs uppercase tracking-wide text-secondary">Custos</p>
           <p className="mt-1 text-sm text-primary">
-            Build: {data?.costs.generation ?? 1} crédito
+            Pergunta {data?.costs.ask ?? 1} · edição {data?.costs.edit ?? 2} ·
+            site {data?.costs.generation ?? 3}
           </p>
         </div>
       </section>

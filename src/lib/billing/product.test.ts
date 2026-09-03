@@ -9,12 +9,12 @@ import {
 } from "@/lib/billing/product";
 
 describe("billing product constants", () => {
-  it("signup bonus covers one commercial 3D plus one site", () => {
-    expect(SIGNUP_BONUS_CREDITS).toBe(22);
+  it("signup bonus covers one commercial 3D plus one site and one edit", () => {
+    expect(SIGNUP_BONUS_CREDITS).toBe(23);
     expect(TEXT_TO_3D_CREDIT_COST).toBe(18);
     expect(BUILD_CREDIT_COST).toBe(3);
-    expect(SIGNUP_BONUS_CREDITS).toBeGreaterThanOrEqual(
-      TEXT_TO_3D_CREDIT_COST + BUILD_CREDIT_COST,
+    expect(SIGNUP_BONUS_CREDITS).toBe(
+      TEXT_TO_3D_CREDIT_COST + BUILD_CREDIT_COST + 2,
     );
   });
 

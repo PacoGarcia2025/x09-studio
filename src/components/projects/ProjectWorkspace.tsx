@@ -464,11 +464,14 @@ export function ProjectWorkspace({
       if (!result.ok) {
         setBusy(false);
         setIsGenerating(false);
+        const creditError = /créditos insuficientes/i.test(result.error);
         setChatLog((prev) => [
           ...stripBuildingMessages(prev),
           {
             kind: "ai",
-            text: `Não consegui montar agora: ${humanizeBuildError(result.error)}`,
+            text: creditError
+              ? `${humanizeBuildError(result.error)} Abra Planos para recarregar.`
+              : `Não consegui montar agora: ${humanizeBuildError(result.error)}`,
           },
         ]);
         return;
@@ -836,7 +839,10 @@ export function ProjectWorkspace({
                   }
                 }}
               />
-              <div className="flex items-center justify-end gap-2 px-1 pb-1">
+              <div className="flex items-center justify-between gap-2 px-1 pb-1">
+                <p className="px-1 text-[11px] leading-4 text-zinc-500">
+                  Pergunta 1 cr · edição 2 cr · site novo 3 cr
+                </p>
                 <button
                   type="button"
                   onClick={sendChat}

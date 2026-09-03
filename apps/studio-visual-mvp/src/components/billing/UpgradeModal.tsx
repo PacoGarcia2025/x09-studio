@@ -53,8 +53,8 @@ export function UpgradeModal({
                 Seus créditos acabaram
               </h2>
               <p className="mt-2 text-sm leading-relaxed text-zinc-400">
-                Cada site custa 3 créditos. Escolha um pacote e continue do
-                ponto em que parou.
+                Pergunta no chat custa 1 crédito. Edição de código, 2. Site
+                novo, 3. Objeto 3D comercial, 18. Escolha um pacote e continue.
               </p>
             </div>
             <Button

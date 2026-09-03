@@ -18,36 +18,31 @@ export type DebitResult = {
   cost: number;
 };
 
-export async function debitForGeneration(input: {
+export async function debitStudioCredits(input: {
   userId: string;
-  mode: ResolvedMode;
-  phase?: "auto" | "plan" | "build" | "repair";
+  billable: BillableMode;
   clientRequestId: string;
 }): Promise<DebitResult> {
-  const billable = resolveBillableMode({
-    mode: input.mode,
-    phase: input.phase,
-  });
-  const cost = creditCostFor(billable);
+  const cost = creditCostFor(input.billable);
 
-  if (billable === "skip" || cost === 0) {
+  if (input.billable === "skip" || cost === 0) {
     const balance = await getWalletBalance(input.userId);
     return {
       ok: true,
       duplicate: false,
       balance,
       amount: 0,
-      billable,
+      billable: input.billable,
       cost: 0,
     };
   }
 
   const admin = createAdminClient();
-  const rpcMode = billable === "edit" ? "edit" : "generation";
   const { data, error } = await admin.rpc("debit_generation_credits", {
     p_user_id: input.userId,
-    p_mode: rpcMode,
+    p_mode: input.billable,
     p_idempotency_key: input.clientRequestId,
+    p_credits: cost,
   });
 
   if (error) {
@@ -79,9 +74,26 @@ export async function debitForGeneration(input: {
     duplicate: Boolean(result.duplicate),
     balance: Number(result.balance ?? 0),
     amount: Number(result.amount ?? -cost),
-    billable,
+    billable: input.billable,
     cost,
   };
+}
+
+export async function debitForGeneration(input: {
+  userId: string;
+  mode: ResolvedMode;
+  phase?: "auto" | "plan" | "build" | "repair";
+  clientRequestId: string;
+}): Promise<DebitResult> {
+  const billable = resolveBillableMode({
+    mode: input.mode,
+    phase: input.phase,
+  });
+  return debitStudioCredits({
+    userId: input.userId,
+    billable,
+    clientRequestId: input.clientRequestId,
+  });
 }
 
 export async function getWalletBalance(userId: string): Promise<number> {
@@ -129,8 +141,9 @@ export async function getBillingSnapshot(userId: string) {
     subscription: subscription.data ?? null,
     plans: plans.data ?? [],
     costs: {
-      generation: CREDIT_COSTS.generation,
+      ask: CREDIT_COSTS.ask,
       edit: CREDIT_COSTS.edit,
+      generation: CREDIT_COSTS.generation,
     },
   };
 }

@@ -38,6 +38,10 @@ export function humanizeBuildError(raw: string): string {
   const text = raw.trim();
   if (!text) return "Não consegui terminar agora. Tente novamente pelo chat.";
 
+  if (/créditos insuficientes/i.test(text)) {
+    return text;
+  }
+
   if (/Qualidade insuficiente/i.test(text)) {
     return "Quase pronto — o preview ainda precisa de um ajuste. Descreva no chat o que quer mudar (textos, imagens ou layout).";
   }

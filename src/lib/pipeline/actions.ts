@@ -1,6 +1,9 @@
 "use server";
 
+import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
+import { debitStudioCredits } from "@/lib/billing/credits.server";
+import { PublicError } from "@/lib/http/errors";
 import { formatLlmUserError } from "@/lib/llm/resilient";
 import { getLlmProvider } from "@/lib/llm/provider";
 import { runPlanner } from "@/lib/pipeline/planner.server";
@@ -11,6 +14,7 @@ import {
 import type { StudioPlan } from "@/lib/pipeline/plan-schema";
 import { createClient } from "@/lib/supabase/server";
 import { ensureProjectScaffold } from "@/lib/projects/scaffold.server";
+import type { BillableMode } from "@/lib/billing/credits";
 
 export type GeneratePlanResult =
   | {
@@ -54,18 +58,46 @@ async function assertProjectOwner(projectId: string) {
   return { supabase, user, project, error: null };
 }
 
+async function chargeProjectAction(
+  userId: string,
+  billable: Exclude<BillableMode, "skip">,
+  projectId: string,
+) {
+  await debitStudioCredits({
+    userId,
+    billable,
+    clientRequestId: `${billable}:${projectId}:${randomUUID()}`,
+  });
+}
+
+function billingErrorResult(err: unknown): { ok: false; error: string } | null {
+  if (err instanceof PublicError) {
+    return { ok: false, error: err.message };
+  }
+  return null;
+}
+
 export async function generatePlanAction(
   projectId: string,
   prompt: string,
 ): Promise<GeneratePlanResult> {
   const gate = await assertProjectOwner(projectId);
-  if (gate.error || !gate.project) {
+  if (gate.error || !gate.project || !gate.user) {
     return { ok: false, error: gate.error ?? "Erro ao validar projeto" };
   }
 
   const trimmed = prompt.trim();
   if (trimmed.length < 3) {
     return { ok: false, error: "Escreva um prompt com pelo menos 3 caracteres." };
+  }
+
+  try {
+    await chargeProjectAction(gate.user.id, "generation", projectId);
+  } catch (err) {
+    return billingErrorResult(err) ?? {
+      ok: false,
+      error: "Não foi possível debitar créditos.",
+    };
   }
 
   try {
@@ -257,7 +289,7 @@ export async function chatProjectAction(
   message: string,
 ): Promise<ChatTurnResult> {
   const gate = await assertProjectOwner(projectId);
-  if (gate.error || !gate.project) {
+  if (gate.error || !gate.project || !gate.user) {
     return { ok: false, error: gate.error ?? "Erro ao validar projeto" };
   }
 
@@ -371,6 +403,7 @@ export async function chatProjectAction(
     }
 
     if (intent === "ask") {
+      await chargeProjectAction(gate.user.id, "ask", projectId);
       const brief =
         (gate.project as { brief_prompt?: string | null }).brief_prompt ??
         latest?.prompt ??
@@ -434,6 +467,7 @@ export async function chatProjectAction(
         }
       }
 
+      await chargeProjectAction(gate.user.id, "edit", projectId);
       const { applyChatEditPatch } = await import(
         "@/lib/pipeline/edit-patch.server"
       );
@@ -489,6 +523,8 @@ export async function chatProjectAction(
       model: created.model,
     };
   } catch (err) {
-    return { ok: false, error: formatLlmUserError(err) };
+    return (
+      billingErrorResult(err) ?? { ok: false, error: formatLlmUserError(err) }
+    );
   }
 }

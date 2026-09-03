@@ -44,6 +44,11 @@ const ASSET_SELECT =
 
 const JOB_SELECT = ASSET_JOB_SELECT;
 
+function revalidateAssetPages() {
+  revalidatePath("/assets");
+  revalidatePath("/biblioteca");
+}
+
 function sanitizeGenerationPrompt(
   raw: string,
 ): string | { ok: false; error: string } {
@@ -240,13 +245,13 @@ async function uploadAssetActionInner(
 
   if (jobError) {
     if (isMissingRelationError(jobError)) {
-      revalidatePath("/assets");
+      revalidateAssetPages();
       return { ok: false, error: SCHEMA_PENDING_MESSAGE };
     }
     return { ok: false, error: jobError.message };
   }
 
-  revalidatePath("/assets");
+  revalidateAssetPages();
   return { ok: true, assetId, jobId: job?.id };
 }
 
@@ -565,7 +570,7 @@ async function enqueueMeshJobInner(input: {
     return { ok: false, error: jobError.message };
   }
 
-  revalidatePath("/assets");
+  revalidateAssetPages();
   return { ok: true, assetId, jobId: job?.id };
 }
 
@@ -623,7 +628,7 @@ export async function cancelAssetJobAction(
     );
   }
 
-  revalidatePath("/assets");
+  revalidateAssetPages();
   return { ok: true };
 }
 
@@ -671,6 +676,6 @@ export async function archiveAssetAction(
     () => undefined,
   );
 
-  revalidatePath("/assets");
+  revalidateAssetPages();
   return { ok: true, assetId };
 }

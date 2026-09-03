@@ -43,6 +43,7 @@ export async function updateSession(request: NextRequest) {
     path.startsWith("/projects") ||
     path.startsWith("/billing") ||
     path.startsWith("/assets") ||
+    path.startsWith("/biblioteca") ||
     path.startsWith("/ai") ||
     path.startsWith("/ecosystem");
 

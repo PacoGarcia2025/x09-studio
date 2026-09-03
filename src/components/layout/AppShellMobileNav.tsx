@@ -14,13 +14,14 @@ export type ShellNavItem = {
 const BOTTOM = [
   { href: "/projects", label: "Painel", icon: "▦" },
   { href: "/assets", label: "3D", icon: "◇" },
-  { href: "/billing", label: "Créditos", icon: "◎" },
+  { href: "/biblioteca", label: "Biblioteca", icon: "▣" },
 ] as const;
 
 function isActive(href: string, activeHref: string) {
   if (href === activeHref) return true;
   if (href === "/projects" && activeHref.startsWith("/projects")) return true;
   if (href === "/assets" && activeHref.startsWith("/assets")) return true;
+  if (href === "/biblioteca" && activeHref.startsWith("/biblioteca")) return true;
   if (href === "/billing" && activeHref.startsWith("/billing")) return true;
   return false;
 }
@@ -86,9 +87,7 @@ export function AppShellMobileNav({
 
         <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-2">
           {items.map((item) => {
-            const active =
-              isActive(item.href, activeHref) &&
-              item.href !== "/projects#prompt";
+            const active = isActive(item.href, activeHref);
             return (
               <Link
                 key={item.label}

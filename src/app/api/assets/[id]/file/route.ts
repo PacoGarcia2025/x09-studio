@@ -24,10 +24,21 @@ const MIME_BY_EXT: Record<string, string> = {
   ktx2: "application/octet-stream",
 };
 
-function extOf(storagePath: string): string {
-  const name = storagePath.split("/").pop() ?? "";
+function extOf(value: string): string {
+  const name = value.split(/[\\/]/).pop() ?? "";
   const dot = name.lastIndexOf(".");
   return dot >= 0 ? name.slice(dot + 1).toLowerCase() : "";
+}
+
+function mimeFor(asset: {
+  mime_type: string | null;
+  storage_path: string;
+  original_name: string;
+}): string {
+  const stored = asset.mime_type?.trim() || "";
+  if (stored && stored !== "application/octet-stream") return stored;
+  const ext = extOf(asset.original_name) || extOf(asset.storage_path);
+  return MIME_BY_EXT[ext] || "application/octet-stream";
 }
 
 export async function GET(
@@ -37,12 +48,17 @@ export async function GET(
   const { id } = await context.params;
   const gate = await assertWorkspaceOwner();
   if (gate.error || !gate.workspaceId) {
-    return NextResponse.json({ error: gate.error ?? "Não autenticado" }, { status: 401 });
+    return NextResponse.json(
+      { error: gate.error ?? "Não autenticado" },
+      { status: 401 },
+    );
   }
 
   const { data: asset, error } = await gate.supabase
     .from("assets")
-    .select("id, workspace_id, storage_path, mime_type, original_name, status")
+    .select(
+      "id, workspace_id, storage_path, mime_type, original_name, status",
+    )
     .eq("id", id)
     .maybeSingle();
 
@@ -59,17 +75,20 @@ export async function GET(
 
   try {
     const bytes = await readAssetFile(asset.storage_path);
-    const ext = extOf(asset.storage_path);
-    const type =
-      asset.mime_type || MIME_BY_EXT[ext] || "application/octet-stream";
-    return new NextResponse(new Uint8Array(bytes), {
+    const type = mimeFor(asset);
+    const filename = asset.original_name.replace(/[^\w.\-]+/g, "_") || "arquivo";
+    return new NextResponse(Buffer.from(bytes), {
       headers: {
         "Content-Type": type,
-        "Content-Disposition": `inline; filename="${asset.original_name.replace(/"/g, "")}"`,
-        "Cache-Control": "private, max-age=3600",
+        "Content-Disposition": `inline; filename="${filename}"`,
+        "Cache-Control": "private, max-age=120",
+        "X-Content-Type-Options": "nosniff",
       },
     });
   } catch {
-    return NextResponse.json({ error: "Arquivo ausente no disco" }, { status: 404 });
+    return NextResponse.json(
+      { error: "Arquivo ausente no disco" },
+      { status: 404 },
+    );
   }
 }

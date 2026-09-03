@@ -11,8 +11,8 @@ import { createClient } from "@/lib/supabase/server";
 
 const PRIMARY: ShellNavItem[] = [
   { href: "/projects", label: "Painel", icon: "▦" },
-  { href: "/projects#prompt", label: "Procurar", icon: "⌕", hint: "Ctrl K" },
   { href: "/assets", label: "3D", icon: "◇" },
+  { href: "/biblioteca", label: "Biblioteca", icon: "▣" },
   { href: "/ai", label: "Recursos", icon: "✦" },
   { href: "/ecosystem", label: "Conectores", icon: "⧉" },
 ];
@@ -89,13 +89,15 @@ export async function AppShell({
                 item.href === activeHref ||
                 (item.href === "/projects" &&
                   activeHref.startsWith("/projects")) ||
-                (item.href === "/assets" && activeHref.startsWith("/assets"));
+                (item.href === "/assets" && activeHref.startsWith("/assets")) ||
+                (item.href === "/biblioteca" &&
+                  activeHref.startsWith("/biblioteca"));
               return (
                 <Link
                   key={item.label}
                   href={item.href}
                   className={`flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-[13px] font-medium transition ${
-                    active && item.href !== "/projects#prompt"
+                    active
                       ? "bg-violet-500/15 text-white ring-1 ring-violet-400/20"
                       : "text-zinc-400 hover:bg-white/[0.04] hover:text-zinc-100"
                   }`}

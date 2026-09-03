@@ -15,6 +15,18 @@ export const MESH_CREDIT_COST = {
   retexture: 12,
 } as const;
 
+export const MESH_ACTION_PRICES = [
+  { id: "logo", label: "Placa ou logo 3D", credits: MESH_CREDIT_COST.logo },
+  { id: "gpu", label: "Malha 3D na GPU", credits: MESH_CREDIT_COST.gpu },
+  { id: "game", label: "Objeto 3D comercial", credits: MESH_CREDIT_COST.game },
+  {
+    id: "flagship",
+    label: "Objeto 3D de alta qualidade",
+    credits: MESH_CREDIT_COST.flagship,
+  },
+  { id: "retexture", label: "Retextura 2K", credits: MESH_CREDIT_COST.retexture },
+] as const;
+
 export function isMeshTier(value: unknown): value is MeshTier {
   return value === "gpu" || value === "game" || value === "flagship";
 }

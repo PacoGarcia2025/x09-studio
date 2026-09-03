@@ -2,14 +2,12 @@
 
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { useAssetObjectUrl } from "@/components/assets/useAssetObjectUrl";
 
 type TurntableKind = "logo" | "object";
 
-type MeshTurntableProps = {
-  src: string;
-  kind?: TurntableKind;
-  className?: string;
-};
+const MODEL_VIEWER_SRC =
+  "https://ajax.googleapis.com/ajax/libs/model-viewer/4.0.0/model-viewer.min.js";
 
 function orbitFor(kind: TurntableKind) {
   if (kind === "logo") {
@@ -28,22 +26,56 @@ function orbitFor(kind: TurntableKind) {
   };
 }
 
+function loadModelViewer(): Promise<void> {
+  if (typeof customElements !== "undefined" && customElements.get("model-viewer")) {
+    return Promise.resolve();
+  }
+  const existing = document.querySelector("script[data-x09-model-viewer]");
+  if (existing) {
+    return new Promise((resolve, reject) => {
+      existing.addEventListener("load", () => resolve(), { once: true });
+      existing.addEventListener("error", () => reject(new Error("cdn")), {
+        once: true,
+      });
+    });
+  }
+  return new Promise((resolve, reject) => {
+    const script = document.createElement("script");
+    script.type = "module";
+    script.src = MODEL_VIEWER_SRC;
+    script.dataset.x09ModelViewer = "1";
+    script.addEventListener("load", () => resolve(), { once: true });
+    script.addEventListener("error", () => reject(new Error("cdn")), {
+      once: true,
+    });
+    document.head.appendChild(script);
+  });
+}
+
 /**
- * Turntable de produto: órbita horizontal, câmara ligeiramente alta,
- * sem virar por baixo. Serve para inspecionar assets antes do jogo.
+ * Turntable: carrega o GLB com cookie de sessão (blob) e o viewer por CDN.
+ * O import npm do model-viewer falha no build standalone da VPS.
  */
 export function MeshTurntable({
+  assetId,
   src,
   kind = "object",
   className,
-}: MeshTurntableProps) {
+}: {
+  assetId?: string;
+  src?: string;
+  kind?: TurntableKind;
+  className?: string;
+}) {
+  const fromApi = useAssetObjectUrl(assetId ?? null);
+  const blobSrc = src || fromApi.url;
   const hostRef = useRef<HTMLElement | null>(null);
   const [ready, setReady] = useState(false);
   const [failed, setFailed] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
-    void import("@google/model-viewer")
+    void loadModelViewer()
       .then(() => {
         if (!cancelled) setReady(true);
       })
@@ -56,11 +88,11 @@ export function MeshTurntable({
   }, []);
 
   useEffect(() => {
-    if (!ready) return;
+    if (!ready || !blobSrc) return;
     const el = hostRef.current;
     if (!el) return;
     const cfg = orbitFor(kind);
-    el.setAttribute("src", src);
+    el.setAttribute("src", blobSrc);
     el.setAttribute("camera-orbit", cfg.orbit);
     el.setAttribute("min-camera-orbit", cfg.min);
     el.setAttribute("max-camera-orbit", cfg.max);
@@ -76,7 +108,15 @@ export function MeshTurntable({
     el.setAttribute("environment-image", "neutral");
     el.setAttribute("exposure", "1.1");
     el.setAttribute("interaction-prompt", "none");
-  }, [ready, src, kind]);
+  }, [ready, blobSrc, kind]);
+
+  if (fromApi.error && !src) {
+    return (
+      <p className="grid h-full place-items-center p-6 text-sm text-zinc-400">
+        {fromApi.error}. O arquivo pode não estar neste servidor.
+      </p>
+    );
+  }
 
   if (failed) {
     return (
@@ -86,7 +126,7 @@ export function MeshTurntable({
     );
   }
 
-  if (!ready) {
+  if (!ready || fromApi.loading || !blobSrc) {
     return (
       <p className="grid h-full place-items-center p-6 text-sm text-zinc-500">
         A preparar o 360°…
@@ -99,7 +139,7 @@ export function MeshTurntable({
       ref={(node) => {
         hostRef.current = node;
       }}
-      src={src}
+      src={blobSrc}
       alt="Pré-visualização 360 do mesh"
       className={className}
       style={{
@@ -113,12 +153,14 @@ export function MeshTurntable({
 }
 
 export function MeshPreviewDialog({
+  assetId,
   src,
   title,
   kind = "object",
   onClose,
 }: {
-  src: string;
+  assetId?: string;
+  src?: string;
   title: string;
   kind?: TurntableKind;
   onClose: () => void;
@@ -159,7 +201,7 @@ export function MeshPreviewDialog({
         <div className="flex shrink-0 items-center justify-between gap-3 border-b border-white/8 px-5 py-3">
           <div className="min-w-0">
             <p className="text-[10px] uppercase tracking-[0.18em] text-zinc-500">
-              Turntable · asset de jogo
+              Turntable · objeto 3D
             </p>
             <h2 className="truncate text-sm font-medium text-white">{title}</h2>
           </div>
@@ -173,12 +215,12 @@ export function MeshPreviewDialog({
         </div>
         <div className="relative min-h-0 flex-1 bg-[radial-gradient(ellipse_at_center,_#222536_0%,_#07080c_70%)]">
           <div className="absolute inset-0">
-            <MeshTurntable src={src} kind={kind} />
+            <MeshTurntable assetId={assetId} src={src} kind={kind} />
           </div>
         </div>
         <p className="shrink-0 border-t border-white/8 px-5 py-2 text-[11px] text-zinc-500">
-          Gira na horizontal, sempre um pouco de cima — não de lado nem por
-          baixo. Logo novo: gere outra vez na imagem (o GLB antigo não muda).
+          Gire na horizontal, sempre um pouco de cima. O objeto também ficou
+          guardado na Biblioteca.
         </p>
       </div>
     </div>,
