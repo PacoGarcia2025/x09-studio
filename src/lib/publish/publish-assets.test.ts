@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
   injectPublishHeadAssets,
-  PUBLISH_HEAD_ASSETS,
   sanitizePublishedIndexHtml,
 } from "@/lib/publish/publish-assets";
 

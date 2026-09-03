@@ -37,7 +37,7 @@ export function sanitizePublishedIndexHtml(html: string): string {
 
 /** Injeta Tailwind, model-viewer e CSS de mapas no index.html publicado. */
 export function injectPublishHeadAssets(html: string): string {
-  let out = sanitizePublishedIndexHtml(html);
+  const out = sanitizePublishedIndexHtml(html);
   const missing = PUBLISH_HEAD_ASSETS.filter((tag) => {
     if (tag.includes("cdn.tailwindcss.com")) {
       return !out.includes("cdn.tailwindcss.com");
