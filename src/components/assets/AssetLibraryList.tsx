@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { archiveAssetAction } from "@/lib/assets/actions";
 import { AssetThumb } from "@/components/assets/AssetThumb";
 import { MeshPreviewDialog } from "@/components/assets/MeshTurntable";
@@ -23,7 +24,8 @@ function isLogoMesh(asset: AssetWithJobs): boolean {
 type Filter = "all" | "image" | "mesh";
 
 export function AssetLibraryList({ assets }: { assets: AssetWithJobs[] }) {
-  const [pending, start] = useTransition();
+  const router = useRouter();
+  const [busyId, setBusyId] = useState<string | null>(null);
   const [filter, setFilter] = useState<Filter>("all");
   const [preview, setPreview] = useState<{
     id: string;
@@ -128,12 +130,13 @@ export function AssetLibraryList({ assets }: { assets: AssetWithJobs[] }) {
                 )}
                 <button
                   type="button"
-                  disabled={pending}
-                  onClick={() =>
-                    start(() => {
-                      void archiveAssetAction(asset.id);
-                    })
-                  }
+                  disabled={busyId === asset.id}
+                  onClick={() => {
+                    setBusyId(asset.id);
+                    void archiveAssetAction(asset.id)
+                      .then(() => router.refresh())
+                      .finally(() => setBusyId(null));
+                  }}
                   className="rounded-xl px-3 py-1.5 text-xs text-zinc-500 ring-1 ring-white/10 hover:text-rose-200 disabled:opacity-50"
                 >
                   Excluir

@@ -259,6 +259,12 @@ body {
   color: #f7f3ff;
 }
 
+.x09-cosmos,
+.x09-cosmos-grid,
+.x09-cosmos-stars {
+  pointer-events: none;
+}
+
 .x09-cosmos {
   position: absolute;
   inset: 0;

@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AssetThumb } from "@/components/assets/AssetThumb";
 import { MeshPreviewDialog, MeshTurntable } from "@/components/assets/MeshTurntable";
@@ -33,13 +33,16 @@ type TickPayload = {
 async function drainQueue(
   jobId: string | undefined,
   onProgress?: (message: string) => void,
+  signal?: AbortSignal,
 ) {
   for (let i = 0; i < 360; i += 1) {
+    if (signal?.aborted) return "Geração cancelada.";
     const response = await fetch("/api/assets/queue/tick", {
       method: "POST",
       credentials: "include",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(jobId ? { jobId } : {}),
+      signal,
     });
     const text = await response.text();
     let tick: TickPayload;
@@ -76,7 +79,8 @@ export function GenerateStudio({
 }) {
   const router = useRouter();
   const fileRef = useRef<HTMLInputElement>(null);
-  const [pending, start] = useTransition();
+  const abortRef = useRef<AbortController | null>(null);
+  const [busy, setBusy] = useState(false);
   const [prompt, setPrompt] = useState("");
   const [imageId, setImageId] = useState<string | null>(null);
   const [imageName, setImageName] = useState<string | null>(null);
@@ -86,10 +90,12 @@ export function GenerateStudio({
   const [message, setMessage] = useState<string | null>(null);
   const [ok, setOk] = useState<boolean | null>(null);
 
-  const busy = pending;
   const hasSession = Boolean(imageId || meshId || prompt);
 
   const resetSession = () => {
+    abortRef.current?.abort();
+    abortRef.current = null;
+    setBusy(false);
     setImageId(null);
     setImageName(null);
     setMeshId(null);
@@ -102,22 +108,31 @@ export function GenerateStudio({
   };
 
   const runJob = (
-    fn: () => Promise<{ ok: true; assetId?: string } | { ok: false; error: string }>,
+    fn: () => Promise<{ ok: true; assetId?: string; jobId?: string } | { ok: false; error: string }>,
     label: string,
-  ) =>
-    start(async () => {
+  ) => {
+    if (busy) return;
+    abortRef.current?.abort();
+    const abort = new AbortController();
+    abortRef.current = abort;
+    void (async () => {
+      setBusy(true);
       setMessage(label);
       setOk(null);
       try {
         const result = await fn();
+        if (abort.signal.aborted) return;
         if (!result.ok) {
           setOk(false);
           setMessage(result.error);
           return;
         }
-        const drainError = await drainQueue(result.jobId, (progress) => {
-          setMessage(progress);
-        });
+        const drainError = await drainQueue(
+          result.jobId,
+          (progress) => setMessage(progress),
+          abort.signal,
+        );
+        if (abort.signal.aborted) return;
         if (drainError) {
           setOk(false);
           setMessage(drainError);
@@ -131,33 +146,48 @@ export function GenerateStudio({
         setMessage("Pronto. Também foi enviado para a Biblioteca.");
         router.refresh();
       } catch (err) {
+        if (abort.signal.aborted) return;
         setOk(false);
         setMessage(err instanceof Error ? err.message : "Falha ao gerar.");
+      } finally {
+        if (abortRef.current === abort) {
+          abortRef.current = null;
+          setBusy(false);
+        }
       }
-    });
+    })();
+  };
 
   const onUpload = (file: File | undefined) => {
-    if (!file) return;
-    start(async () => {
+    if (!file || busy) return;
+    void (async () => {
+      setBusy(true);
       setMessage("A enviar a imagem…");
       setOk(null);
-      const data = new FormData();
-      data.set("file", file);
-      data.set("kind", "image");
-      const result = await uploadAssetAction(null, data);
-      if (!result.ok) {
+      try {
+        const data = new FormData();
+        data.set("file", file);
+        data.set("kind", "image");
+        const result = await uploadAssetAction(null, data);
+        if (!result.ok) {
+          setOk(false);
+          setMessage(result.error);
+          return;
+        }
+        setImageId(result.assetId ?? null);
+        setImageName(file.name);
+        setMeshId(null);
+        setMeshName(null);
+        setOk(true);
+        setMessage("Imagem pronta. Escolha como gerar o 3D.");
+        router.refresh();
+      } catch (err) {
         setOk(false);
-        setMessage(result.error);
-        return;
+        setMessage(err instanceof Error ? err.message : "Falha ao enviar a imagem.");
+      } finally {
+        setBusy(false);
       }
-      setImageId(result.assetId ?? null);
-      setImageName(file.name);
-      setMeshId(null);
-      setMeshName(null);
-      setOk(true);
-      setMessage("Imagem pronta. Escolha como gerar o 3D.");
-      router.refresh();
-    });
+    })();
   };
 
   return (
@@ -303,11 +333,10 @@ export function GenerateStudio({
           {hasSession ? (
             <button
               type="button"
-              disabled={busy}
               onClick={resetSession}
-              className="rounded-xl px-3 py-1.5 text-xs text-zinc-400 ring-1 ring-white/10 hover:text-white disabled:opacity-50"
+              className="rounded-xl px-3 py-1.5 text-xs text-zinc-400 ring-1 ring-white/10 hover:text-white"
             >
-              Gerar novo
+              {busy ? "Cancelar" : "Gerar novo"}
             </button>
           ) : null}
         </div>
@@ -358,15 +387,20 @@ export function GenerateStudio({
                   <button
                     type="button"
                     disabled={busy}
-                    onClick={() =>
-                      start(async () => {
-                        if (!meshId) return;
-                        await archiveAssetAction(meshId);
-                        setMeshId(null);
-                        setMeshName(null);
-                        router.refresh();
-                      })
-                    }
+                    onClick={() => {
+                      if (!meshId || busy) return;
+                      void (async () => {
+                        setBusy(true);
+                        try {
+                          await archiveAssetAction(meshId);
+                          setMeshId(null);
+                          setMeshName(null);
+                          router.refresh();
+                        } finally {
+                          setBusy(false);
+                        }
+                      })();
+                    }}
                     className="rounded-xl px-3 py-1.5 text-xs text-zinc-500 ring-1 ring-white/10 hover:text-rose-200"
                   >
                     Excluir
