@@ -16,7 +16,9 @@ import {
   meshyRetextureBody,
   meshyTextPreviewBody,
   meshyTextRefineBody,
+  pickRiggedGlbUrl,
   RETEXTURE_URL,
+  RIGGING_URL,
   TEXT_TO_3D_URL,
   toGlbDataUri,
   toImageDataUri,
@@ -132,6 +134,12 @@ async function executeMeshy(
       message: `Malha comercial não cobre ${ctx.capability}`,
     };
   }
+  if (
+    stringParam(ctx.params, "sourceMode") === "rig" ||
+    stringParam(ctx.params, "commercialPhase") === "rig"
+  ) {
+    return executeRig(ctx, opts, null);
+  }
   if (!isCommercialMeshTier(ctx.params.meshTier)) {
     return {
       status: "skipped",
@@ -144,6 +152,16 @@ async function executeMeshy(
     return executeTextTo3d(ctx, opts, prompt);
   }
   return executeImageTo3d(ctx, opts);
+}
+
+function wantsGameRig(ctx: ExecutionContext): boolean {
+  return ctx.params.rigForGame === true || ctx.params.rigForGame === "true";
+}
+
+function poseModeFromCtx(ctx: ExecutionContext): "t-pose" | "a-pose" | null {
+  const raw = stringParam(ctx.params, "poseMode");
+  if (raw === "t-pose" || raw === "a-pose") return raw;
+  return wantsGameRig(ctx) ? "t-pose" : null;
 }
 
 function stringParam(
@@ -176,6 +194,7 @@ function waitingResult(
   opts: MeshyOpts,
   extra: Record<string, unknown>,
   progress?: number,
+  message?: string,
 ): ProviderResult {
   const pct =
     typeof progress === "number" && progress > 0
@@ -183,7 +202,8 @@ function waitingResult(
       : "";
   return {
     status: "waiting",
-    message: `A gerar o objeto 3D${pct}. Pode levar alguns minutos.`,
+    message:
+      message ?? `A gerar o objeto 3D${pct}. Pode levar alguns minutos.`,
     meta: {
       commercialDeadlineMs: deadlineMs(ctx, opts.timeoutMs),
       ...extra,
@@ -249,7 +269,11 @@ async function executeImageTo3d(
 
     const created = await createMeshyImageTo3dTask({
       apiKey: opts.apiKey!,
-      body: meshyCreateBodyForTier(tier, toImageDataUri(imageBytes, mime)),
+      body: meshyCreateBodyForTier(
+        tier,
+        toImageDataUri(imageBytes, mime),
+        poseModeFromCtx(ctx),
+      ),
       http: opts.http,
     });
     if ("error" in created) {
@@ -276,9 +300,14 @@ async function executeImageTo3d(
         commercialPhase: "image",
         meshTier: tier,
         sourceMode: "image",
+        poseMode: poseModeFromCtx(ctx),
+        rigForGame: wantsGameRig(ctx),
       },
       inspected.task.progress,
     );
+  }
+  if (wantsGameRig(ctx)) {
+    return executeRig(ctx, opts, { meshTaskId: taskId, fallback: inspected.task });
   }
   return writeSucceededGlb(ctx, opts, inspected.task, {
     meshTier: tier,
@@ -311,7 +340,7 @@ async function executeTextTo3d(
       const preview = await createMeshyTask({
         apiKey: opts.apiKey!,
         url: TEXT_TO_3D_URL,
-        body: meshyTextPreviewBody(tier, prompt),
+        body: meshyTextPreviewBody(tier, prompt, poseModeFromCtx(ctx)),
         http: opts.http,
       });
       if ("error" in preview) {
@@ -384,12 +413,191 @@ async function executeTextTo3d(
       refineInspected.task.progress,
     );
   }
+  if (wantsGameRig(ctx)) {
+    return executeRig(ctx, opts, {
+      meshTaskId: taskId,
+      fallback: refineInspected.task,
+    });
+  }
   return writeSucceededGlb(ctx, opts, refineInspected.task, {
     meshTier: tier,
     commercialTaskId: taskId,
     previewTaskId: previewId,
     sourceMode: "text",
   });
+}
+
+async function writeUnriggedFallback(
+  ctx: ExecutionContext,
+  opts: MeshyOpts,
+  fromMesh: { meshTaskId: string; fallback: MeshyTask } | null,
+  meshTaskId: string | null,
+): Promise<ProviderResult | null> {
+  if (fromMesh?.fallback) {
+    return writeSucceededGlb(ctx, opts, fromMesh.fallback, {
+      commercialTaskId: meshTaskId,
+      rigFailed: true,
+    });
+  }
+  const url = stringParam(ctx.params, "unriggedGlbUrl");
+  if (!url || !ctx.outputPath) return null;
+  const glb = await downloadMeshyGlb({ url, http: opts.http });
+  if ("error" in glb || !isGlbMagic(glb)) return null;
+  await ctx.storage.writeFile(ctx.outputPath, glb);
+  return {
+    status: "done",
+    outputPath: ctx.outputPath,
+    message: "Malha pronta, mas o esqueleto não concluiu.",
+    meta: {
+      capability: ctx.capability,
+      byteSize: glb.byteLength,
+      rigFailed: true,
+      commercialTaskId: meshTaskId,
+    },
+  };
+}
+
+async function executeRig(
+  ctx: ExecutionContext,
+  opts: MeshyOpts,
+  fromMesh: { meshTaskId: string; fallback: MeshyTask } | null,
+): Promise<ProviderResult> {
+  const blocked = gateCommercial(ctx, opts);
+  if (blocked) return blocked;
+  if (Date.now() > deadlineMs(ctx, opts.timeoutMs)) {
+    return { status: "failed", message: "Tempo esgotado à espera do esqueleto" };
+  }
+
+  const meshTaskId =
+    fromMesh?.meshTaskId ||
+    stringParam(ctx.params, "commercialMeshTaskId") ||
+    (stringParam(ctx.params, "sourceMode") === "rig"
+      ? null
+      : stringParam(ctx.params, "commercialTaskId"));
+  let rigId = stringParam(ctx.params, "rigTaskId");
+
+  if (!rigId) {
+    let body: Record<string, unknown>;
+    if (meshTaskId && stringParam(ctx.params, "sourceMode") !== "rig") {
+      body = { input_task_id: meshTaskId, height_meters: 1.7 };
+    } else {
+      if (!ctx.inputPath) {
+        return {
+          status: "failed",
+          message: "Preparar para jogo exige um objeto 3D na biblioteca.",
+        };
+      }
+      const exists = await ctx.storage.exists(ctx.inputPath);
+      if (!exists) {
+        return { status: "failed", message: "GLB de origem ausente no storage" };
+      }
+      const glbBytes = await ctx.storage.readFile(ctx.inputPath);
+      if (!isGlbMagic(glbBytes)) {
+        return { status: "failed", message: "A origem não é um GLB" };
+      }
+      body = { model_url: toGlbDataUri(glbBytes), height_meters: 1.7 };
+    }
+
+    const created = await createMeshyTask({
+      apiKey: opts.apiKey!,
+      url: RIGGING_URL,
+      body,
+      http: opts.http,
+    });
+    if ("error" in created) {
+      if (fromMesh?.fallback) {
+        const written = await writeSucceededGlb(ctx, opts, fromMesh.fallback, {
+          sourceMode: "image",
+          commercialTaskId: meshTaskId,
+          rigFailed: true,
+        });
+        return {
+          ...written,
+          message: `Malha pronta, mas o esqueleto falhou: ${created.error}`,
+        };
+      }
+      return { status: "failed", message: created.error };
+    }
+    rigId = created.id;
+    return waitingResult(
+      ctx,
+      opts,
+      {
+        commercialPhase: "rig",
+        rigTaskId: rigId,
+        commercialTaskId: rigId,
+        commercialMeshTaskId: meshTaskId,
+        unriggedGlbUrl: fromMesh?.fallback.model_urls?.glb ?? null,
+        rigForGame: true,
+        poseMode: poseModeFromCtx(ctx) ?? "t-pose",
+      },
+      undefined,
+      "A montar o esqueleto para jogo…",
+    );
+  }
+
+  const inspected = await inspectMeshyTask({
+    apiKey: opts.apiKey!,
+    taskId: rigId,
+    pollUrl: `${RIGGING_URL}/${rigId}`,
+    http: opts.http,
+  });
+  if ("error" in inspected) {
+    const saved = await writeUnriggedFallback(ctx, opts, fromMesh, meshTaskId);
+    if (saved) {
+      return {
+        ...saved,
+        message: `Malha pronta, mas o esqueleto falhou: ${inspected.error}`,
+      };
+    }
+    return { status: "failed", message: inspected.error };
+  }
+  if (inspected.status === "waiting") {
+    return waitingResult(
+      ctx,
+      opts,
+      {
+        commercialPhase: "rig",
+        rigTaskId: rigId,
+        commercialTaskId: rigId,
+        commercialMeshTaskId: meshTaskId,
+        rigForGame: true,
+      },
+      inspected.task.progress,
+      "A montar o esqueleto para jogo…",
+    );
+  }
+
+  const glbUrl = pickRiggedGlbUrl(inspected.task);
+  if (!glbUrl) {
+    return { status: "failed", message: "O esqueleto concluiu sem arquivo GLB" };
+  }
+  const glb = await downloadMeshyGlb({ url: glbUrl, http: opts.http });
+  if ("error" in glb) {
+    return { status: "failed", message: glb.error };
+  }
+  if (!isGlbMagic(glb)) {
+    return { status: "failed", message: "Arquivo do esqueleto não é um GLB" };
+  }
+  await ctx.storage.writeFile(ctx.outputPath!, glb);
+  const hasWalk = Boolean(inspected.task.basic_animations?.walking_glb_url);
+  return {
+    status: "done",
+    outputPath: ctx.outputPath,
+    message: hasWalk
+      ? "Personagem pronto para jogo — esqueleto e passo."
+      : "Personagem pronto para jogo — esqueleto montado.",
+    meta: {
+      capability: ctx.capability,
+      byteSize: glb.byteLength,
+      rigged: true,
+      hasWalk,
+      gameReady: true,
+      commercialTaskId: rigId,
+      commercialMeshTaskId: meshTaskId,
+      consumedUpstreamCredits: inspected.task.consumed_credits ?? null,
+    },
+  };
 }
 
 async function executeRetexture(

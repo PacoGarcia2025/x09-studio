@@ -12,6 +12,7 @@ export type MeshyCreateBody = {
   should_texture: boolean;
   enable_pbr?: boolean;
   should_remesh?: boolean;
+  pose_mode?: "t-pose" | "a-pose";
   target_formats: string[];
 };
 
@@ -20,6 +21,11 @@ export type MeshyTask = {
   status: MeshyTaskStatus;
   progress?: number;
   model_urls?: { glb?: string };
+  rigged_character_glb_url?: string;
+  basic_animations?: {
+    walking_glb_url?: string;
+    running_glb_url?: string;
+  };
   task_error?: { message?: string };
   consumed_credits?: number;
 };
@@ -32,11 +38,15 @@ export type MeshyHttp = (
 const IMAGE_TO_3D_URL = "https://api.meshy.ai/openapi/v1/image-to-3d";
 const TEXT_TO_3D_URL = "https://api.meshy.ai/openapi/v2/text-to-3d";
 const RETEXTURE_URL = "https://api.meshy.ai/openapi/v1/retexture";
+const RIGGING_URL = "https://api.meshy.ai/openapi/v1/rigging";
 
 export function meshyCreateBodyForTier(
   tier: "game" | "flagship",
   imageDataUri: string,
+  poseMode?: "t-pose" | "a-pose" | null,
 ): MeshyCreateBody {
+  const pose =
+    poseMode === "t-pose" || poseMode === "a-pose" ? { pose_mode: poseMode } : {};
   if (tier === "game") {
     return {
       image_url: imageDataUri,
@@ -44,6 +54,7 @@ export function meshyCreateBodyForTier(
       ai_model: "meshy-t2",
       should_texture: true,
       target_formats: ["glb"],
+      ...pose,
     };
   }
   return {
@@ -54,6 +65,7 @@ export function meshyCreateBodyForTier(
     enable_pbr: true,
     should_remesh: false,
     target_formats: ["glb"],
+    ...pose,
   };
 }
 
@@ -71,7 +83,10 @@ export function toGlbDataUri(bytes: Uint8Array): string {
 export function meshyTextPreviewBody(
   tier: "game" | "flagship",
   prompt: string,
+  poseMode?: "t-pose" | "a-pose" | null,
 ): Record<string, unknown> {
+  const pose =
+    poseMode === "t-pose" || poseMode === "a-pose" ? { pose_mode: poseMode } : {};
   if (tier === "game") {
     return {
       mode: "preview",
@@ -79,6 +94,7 @@ export function meshyTextPreviewBody(
       model_type: "smart-topology",
       ai_model: "meshy-t2",
       target_formats: ["glb"],
+      ...pose,
     };
   }
   return {
@@ -88,6 +104,7 @@ export function meshyTextPreviewBody(
     ai_model: "meshy-7",
     should_remesh: false,
     target_formats: ["glb"],
+    ...pose,
   };
 }
 
@@ -133,6 +150,40 @@ function taskIdFromJson(json: Record<string, unknown>): string {
   return "";
 }
 
+function nestedResult(json: Record<string, unknown>): Record<string, unknown> {
+  return json.result && typeof json.result === "object" && !Array.isArray(json.result)
+    ? (json.result as Record<string, unknown>)
+    : {};
+}
+
+/** Image/text tasks put URLs at the root; rigging nests them under `result`. */
+export function normalizeMeshyTask(json: Record<string, unknown>): MeshyTask {
+  const nested = nestedResult(json);
+  const modelUrls = (json.model_urls ?? nested.model_urls) as
+    | MeshyTask["model_urls"]
+    | undefined;
+  const animations = (json.basic_animations ?? nested.basic_animations) as
+    | MeshyTask["basic_animations"]
+    | undefined;
+  const rigged =
+    (typeof json.rigged_character_glb_url === "string" &&
+      json.rigged_character_glb_url) ||
+    (typeof nested.rigged_character_glb_url === "string" &&
+      nested.rigged_character_glb_url) ||
+    undefined;
+  return {
+    id: typeof json.id === "string" ? json.id : "",
+    status: json.status as MeshyTaskStatus,
+    progress: typeof json.progress === "number" ? json.progress : undefined,
+    model_urls: modelUrls,
+    rigged_character_glb_url: rigged,
+    basic_animations: animations,
+    task_error: json.task_error as MeshyTask["task_error"],
+    consumed_credits:
+      typeof json.consumed_credits === "number" ? json.consumed_credits : undefined,
+  };
+}
+
 export async function createMeshyTask(input: {
   apiKey: string;
   url: string;
@@ -151,6 +202,12 @@ export async function createMeshyTask(input: {
   const json = await readJson(res);
   if (res.status === 402) {
     return { error: "Créditos da API comercial esgotados." };
+  }
+  if (res.status === 422 && input.url.includes("/rigging")) {
+    return {
+      error:
+        "O esqueleto só funciona em personagens humanoides, de frente e com textura.",
+    };
   }
   if (!res.ok) {
     const msg =
@@ -181,7 +238,7 @@ export async function getMeshyTask(input: {
         : `Falha ao consultar a tarefa (${res.status})`;
     return { error: msg.slice(0, 400) };
   }
-  return json as unknown as MeshyTask;
+  return normalizeMeshyTask(json);
 }
 
 export async function createMeshyImageTo3dTask(input: {
@@ -255,4 +312,14 @@ export async function pollMeshyTask(input: {
   return { error: "Tempo esgotado à espera da geração comercial" };
 }
 
-export { IMAGE_TO_3D_URL, TEXT_TO_3D_URL, RETEXTURE_URL };
+export function pickRiggedGlbUrl(task: MeshyTask): string | null {
+  return (
+    task.basic_animations?.walking_glb_url ||
+    task.basic_animations?.running_glb_url ||
+    task.rigged_character_glb_url ||
+    task.model_urls?.glb ||
+    null
+  );
+}
+
+export { IMAGE_TO_3D_URL, TEXT_TO_3D_URL, RETEXTURE_URL, RIGGING_URL };

@@ -27,7 +27,19 @@ describe("mesh credit SKUs", () => {
       }),
     ).toBe(MESH_CREDIT_COST.flagship);
     expect(
-      creditCostForMeshJob({ capability: "texture.generate" }),
-    ).toBe(MESH_CREDIT_COST.retexture);
+      creditCostForMeshJob({
+        capability: "mesh.generate",
+        meshTier: "game",
+        rigForGame: true,
+      }),
+    ).toBe(MESH_CREDIT_COST.game + MESH_CREDIT_COST.rig);
+    expect(
+      creditCostForMeshJob({
+        capability: "mesh.generate",
+        meshTier: "game",
+        rigForGame: true,
+        sourceMode: "rig",
+      }),
+    ).toBe(MESH_CREDIT_COST.rig);
   });
 });

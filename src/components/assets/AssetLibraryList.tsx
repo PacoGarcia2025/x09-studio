@@ -2,11 +2,16 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { archiveAssetAction } from "@/lib/assets/actions";
+import {
+  archiveAssetAction,
+  enqueueMeshRigAction,
+} from "@/lib/assets/actions";
 import { AssetThumb } from "@/components/assets/AssetThumb";
 import { MeshPreviewDialog } from "@/components/assets/MeshTurntable";
 import type { AssetWithJobs } from "@/lib/assets/types";
+import { MESH_CREDIT_COST } from "@/lib/assets/mesh-tiers";
 import { sanitizeUserFacingCopy } from "@/lib/assets/user-facing";
+import { drainAssetQueue } from "@/components/assets/drainAssetQueue";
 
 function formatBytes(n: number): string {
   if (n < 1024) return `${n} B`;
@@ -91,6 +96,7 @@ export function AssetLibraryList({ assets }: { assets: AssetWithJobs[] }) {
                   <p className="mt-0.5 text-xs text-zinc-500">
                     {asset.kind === "mesh" ? "objeto 3D" : "foto"} ·{" "}
                     {formatBytes(asset.byte_size)}
+                    {asset.meta?.rigged === true ? " · pronto para jogo" : ""}
                   </p>
                   {latest?.status === "failed" && latest.error_message ? (
                     <p className="mt-1 break-words text-[11px] leading-4 text-rose-300/90">
@@ -100,6 +106,28 @@ export function AssetLibraryList({ assets }: { assets: AssetWithJobs[] }) {
                 </div>
               </div>
               <div className="flex shrink-0 flex-wrap gap-2">
+                {canTurntable &&
+                !isLogoMesh(asset) &&
+                asset.meta?.rigged !== true ? (
+                  <button
+                    type="button"
+                    disabled={busyId === asset.id}
+                    onClick={() => {
+                      setBusyId(asset.id);
+                      void (async () => {
+                        const result = await enqueueMeshRigAction(asset.id);
+                        if (result.ok) {
+                          await drainAssetQueue(result.jobId);
+                        }
+                        router.refresh();
+                        setBusyId(null);
+                      })();
+                    }}
+                    className="rounded-xl px-3 py-1.5 text-xs text-violet-200 ring-1 ring-violet-400/25 hover:bg-violet-500/10 disabled:opacity-50"
+                  >
+                    Para jogo · {MESH_CREDIT_COST.rig} cr
+                  </button>
+                ) : null}
                 {canTurntable ? (
                   <button
                     type="button"

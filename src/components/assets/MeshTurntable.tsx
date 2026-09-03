@@ -107,6 +107,7 @@ export function MeshTurntable({
     el.setAttribute("shadow-softness", "0.65");
     el.setAttribute("environment-image", "neutral");
     el.setAttribute("exposure", "1.1");
+    el.toggleAttribute("autoplay", true);
     el.setAttribute("interaction-prompt", "none");
   }, [ready, blobSrc, kind]);
 
@@ -140,6 +141,7 @@ export function MeshTurntable({
         hostRef.current = node;
       }}
       src={blobSrc}
+      autoplay
       alt="Pré-visualização 360 do mesh"
       className={className}
       style={{

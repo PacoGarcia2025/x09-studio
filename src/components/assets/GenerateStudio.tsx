@@ -8,69 +8,16 @@ import {
   archiveAssetAction,
   enqueueLogoPlateAction,
   enqueueMeshGenerateAction,
+  enqueueMeshRigAction,
   enqueueTextTo3dAction,
   uploadAssetAction,
 } from "@/lib/assets/actions";
-import { MESH_CREDIT_COST } from "@/lib/assets/mesh-tiers";
+import { MESH_CREDIT_COST, MESH_CREDIT_COST_GAME_CHARACTER } from "@/lib/assets/mesh-tiers";
 import { sanitizeUserFacingCopy } from "@/lib/assets/user-facing";
+import { drainAssetQueue } from "@/components/assets/drainAssetQueue";
 
 const BTN =
   "rounded-2xl px-4 py-2.5 text-sm font-medium text-violet-100 ring-1 ring-violet-400/30 hover:bg-violet-500/15 disabled:opacity-50";
-
-type TickPayload = {
-  ok?: boolean;
-  error?: string;
-  processed?: boolean;
-  done?: boolean;
-  status?: string | null;
-  message?: string;
-  watch?: {
-    status: string;
-    error_message: string | null;
-  } | null;
-};
-
-async function drainQueue(
-  jobId: string | undefined,
-  onProgress?: (message: string) => void,
-  signal?: AbortSignal,
-) {
-  for (let i = 0; i < 360; i += 1) {
-    if (signal?.aborted) return "Geração cancelada.";
-    const response = await fetch("/api/assets/queue/tick", {
-      method: "POST",
-      credentials: "include",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(jobId ? { jobId } : {}),
-      signal,
-    });
-    const text = await response.text();
-    let tick: TickPayload;
-    try {
-      tick = JSON.parse(text) as TickPayload;
-    } catch {
-      return "O servidor cortou a geração. Tente de novo — o objeto pode aparecer na Biblioteca.";
-    }
-    if (!response.ok || tick.ok === false) {
-      return tick.error || "Não foi possível avançar a geração.";
-    }
-
-    const status = tick.watch?.status ?? tick.status;
-    const message =
-      tick.watch?.error_message ||
-      tick.message ||
-      "A gerar o objeto 3D…";
-    if (status === "failed" || status === "skipped" || status === "cancelled") {
-      return message;
-    }
-    if (jobId ? status === "done" : tick.done) {
-      return null;
-    }
-    onProgress?.(sanitizeUserFacingCopy(message));
-    await new Promise((resolve) => setTimeout(resolve, 2500));
-  }
-  return "Ainda a gerar. Abra a Biblioteca daqui a pouco — o arquivo entra sozinho.";
-}
 
 export function GenerateStudio({
   commercialMesh,
@@ -86,6 +33,7 @@ export function GenerateStudio({
   const [imageName, setImageName] = useState<string | null>(null);
   const [meshId, setMeshId] = useState<string | null>(null);
   const [meshName, setMeshName] = useState<string | null>(null);
+  const [meshCanRig, setMeshCanRig] = useState(false);
   const [preview, setPreview] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [ok, setOk] = useState<boolean | null>(null);
@@ -100,6 +48,7 @@ export function GenerateStudio({
     setImageName(null);
     setMeshId(null);
     setMeshName(null);
+    setMeshCanRig(false);
     setPrompt("");
     setMessage(null);
     setOk(null);
@@ -110,6 +59,7 @@ export function GenerateStudio({
   const runJob = (
     fn: () => Promise<{ ok: true; assetId?: string; jobId?: string } | { ok: false; error: string }>,
     label: string,
+    options?: { canRig?: boolean },
   ) => {
     if (busy) return;
     abortRef.current?.abort();
@@ -127,7 +77,7 @@ export function GenerateStudio({
           setMessage(result.error);
           return;
         }
-        const drainError = await drainQueue(
+        const drainError = await drainAssetQueue(
           result.jobId,
           (progress) => setMessage(progress),
           abort.signal,
@@ -141,6 +91,7 @@ export function GenerateStudio({
         if (result.assetId) {
           setMeshId(result.assetId);
           setMeshName("objeto-3d.glb");
+          setMeshCanRig(options?.canRig !== false);
         }
         setOk(true);
         setMessage("Pronto. Também foi enviado para a Biblioteca.");
@@ -178,6 +129,7 @@ export function GenerateStudio({
         setImageName(file.name);
         setMeshId(null);
         setMeshName(null);
+        setMeshCanRig(false);
         setOk(true);
         setMessage("Imagem pronta. Escolha como gerar o 3D.");
         router.refresh();
@@ -231,7 +183,12 @@ export function GenerateStudio({
             Texto → 3D usa a geração comercial. Se o botão falhar, a API 3D
             ainda não está ligada neste servidor.
           </p>
-        ) : null}
+        ) : (
+          <p className="mt-2 text-xs text-zinc-600">
+            Personagem para jogo: uma pose de frente, em pé. Folha com várias
+            poses vira vários bonecos. O esqueleto só funciona em humanoides.
+          </p>
+        )}
 
         <div className="mt-4 grid gap-2">
           <button
@@ -292,6 +249,56 @@ export function GenerateStudio({
               Alta qualidade · {MESH_CREDIT_COST.flagship} cr
             </button>
           ) : null}
+          {commercialMesh ? (
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => {
+                if (imageId) {
+                  runJob(
+                    () =>
+                      enqueueMeshGenerateAction(imageId, "game", {
+                        forGame: true,
+                      }),
+                    "A gerar o personagem para jogo…",
+                    { canRig: false },
+                  );
+                  return;
+                }
+                if (prompt.trim().length < 3) {
+                  setOk(false);
+                  setMessage(
+                    "Envie uma foto de frente, em pé, ou descreva o personagem.",
+                  );
+                  return;
+                }
+                runJob(
+                  () => enqueueTextTo3dAction(prompt, "game", { forGame: true }),
+                  "A gerar o personagem para jogo…",
+                  { canRig: false },
+                );
+              }}
+              className={BTN}
+            >
+              Personagem para jogo · {MESH_CREDIT_COST_GAME_CHARACTER} cr
+            </button>
+          ) : null}
+          {commercialMesh && meshId && meshCanRig ? (
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() =>
+                runJob(
+                  () => enqueueMeshRigAction(meshId),
+                  "A preparar o esqueleto para jogo…",
+                  { canRig: false },
+                )
+              }
+              className={BTN}
+            >
+              Preparar este GLB para jogo · {MESH_CREDIT_COST.rig} cr
+            </button>
+          ) : null}
           {imageId ? (
             <button
               type="button"
@@ -300,6 +307,7 @@ export function GenerateStudio({
                 runJob(
                   () => enqueueLogoPlateAction(imageId),
                   "A gerar a placa do logo…",
+                  { canRig: false },
                 )
               }
               className={BTN}

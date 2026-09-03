@@ -201,9 +201,27 @@ export async function tickAssetJobQueue(
         }
       }
       if (byteSize > 0) {
+        const { data: asset } = await supabase
+          .from("assets")
+          .select("meta")
+          .eq("id", job.asset_id)
+          .maybeSingle();
+        const currentMeta =
+          asset?.meta && typeof asset.meta === "object"
+            ? (asset.meta as Record<string, unknown>)
+            : {};
         await supabase
           .from("assets")
-          .update({ byte_size: byteSize, status: "ready" })
+          .update({
+            byte_size: byteSize,
+            status: "ready",
+            meta: {
+              ...currentMeta,
+              ...(result.meta?.rigged ? { rigged: true, gameReady: true } : {}),
+              ...(result.meta?.hasWalk ? { hasWalk: true } : {}),
+              ...(result.meta?.rigFailed ? { rigFailed: true } : {}),
+            },
+          })
           .eq("id", job.asset_id);
       }
     }

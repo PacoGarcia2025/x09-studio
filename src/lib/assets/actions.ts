@@ -261,17 +261,27 @@ async function uploadAssetActionInner(
 export async function enqueueMeshGenerateAction(
   sourceAssetId?: string,
   meshTier: MeshTier = "gpu",
+  options?: { forGame?: boolean },
 ): Promise<AssetActionResult> {
   const tier = parseMeshTier(meshTier) ?? "gpu";
   const commercial = isCommercialMeshTier(tier);
+  const forGame = Boolean(options?.forGame) && commercial;
   return enqueueMeshJob({
     capability: "mesh.generate",
     sourceAssetId,
-    nameSuffix:
-      tier === "flagship" ? "qualidade" : commercial ? "comercial" : "objeto",
+    nameSuffix: forGame
+      ? "jogo"
+      : tier === "flagship"
+        ? "qualidade"
+        : commercial
+          ? "comercial"
+          : "objeto",
     requireImageIfGpu: !commercial,
     requireImage: commercial,
-    extraMeta: { meshTier: tier },
+    extraMeta: {
+      meshTier: tier,
+      ...(forGame ? { poseMode: "t-pose", rigForGame: true } : {}),
+    },
     commercial,
   });
 }
@@ -279,6 +289,7 @@ export async function enqueueMeshGenerateAction(
 export async function enqueueTextTo3dAction(
   prompt: string,
   meshTier: MeshTier = "game",
+  options?: { forGame?: boolean },
 ): Promise<AssetActionResult> {
   const cleaned = sanitizeGenerationPrompt(prompt);
   if (typeof cleaned !== "string") return cleaned;
@@ -286,13 +297,38 @@ export async function enqueueTextTo3dAction(
   if (tier !== "game" && tier !== "flagship") {
     return { ok: false, error: "Escolha qualidade comercial ou alta qualidade." };
   }
+  const forGame = Boolean(options?.forGame);
   return enqueueMeshJob({
     capability: "mesh.generate",
-    nameSuffix: tier === "flagship" ? "texto-hq" : "texto",
+    nameSuffix: forGame ? "jogo" : tier === "flagship" ? "texto-hq" : "texto",
     requireImageIfGpu: false,
-    extraMeta: { meshTier: tier, prompt: cleaned, sourceMode: "text" },
+    extraMeta: {
+      meshTier: tier,
+      prompt: cleaned,
+      sourceMode: "text",
+      ...(forGame ? { poseMode: "t-pose", rigForGame: true } : {}),
+    },
     commercial: true,
     fallbackName: slugFromPrompt(cleaned),
+  });
+}
+
+export async function enqueueMeshRigAction(
+  sourceAssetId: string,
+): Promise<AssetActionResult> {
+  return enqueueMeshJob({
+    capability: "mesh.generate",
+    sourceAssetId,
+    sourceKind: "mesh",
+    nameSuffix: "jogo",
+    requireImageIfGpu: false,
+    extraMeta: {
+      meshTier: "game",
+      sourceMode: "rig",
+      rigForGame: true,
+      poseMode: "t-pose",
+    },
+    commercial: true,
   });
 }
 
@@ -443,7 +479,7 @@ async function enqueueMeshJobInner(input: {
         ok: false,
         error:
           expectedKind === "mesh"
-            ? "Retextura espera um mesh da biblioteca."
+            ? "Esta ação espera um objeto 3D da biblioteca."
             : `${input.capability} a partir de um asset espera uma imagem.`,
       };
     }
@@ -508,6 +544,8 @@ async function enqueueMeshJobInner(input: {
     meshTier: input.extraMeta?.meshTier,
     requiresGpu:
       resolved.ok && resolved.provider.manifest.requiresGpu && !input.commercial,
+    rigForGame: Boolean(input.extraMeta?.rigForGame),
+    sourceMode: input.extraMeta?.sourceMode,
   });
 
   try {

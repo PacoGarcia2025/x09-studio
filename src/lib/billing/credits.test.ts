@@ -60,6 +60,8 @@ describe("credit billing modes", () => {
       ["gpu", MESH_CREDIT_COST.gpu],
       ["game", MESH_CREDIT_COST.game],
       ["flagship", MESH_CREDIT_COST.flagship],
+      ["gameCharacter", MESH_CREDIT_COST.game + MESH_CREDIT_COST.rig],
+      ["rig", MESH_CREDIT_COST.rig],
       ["retexture", MESH_CREDIT_COST.retexture],
     ]);
   });

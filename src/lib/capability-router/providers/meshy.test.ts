@@ -2,7 +2,7 @@ import { describe, expect, it, beforeEach } from "vitest";
 import { createExecutionContext } from "@/lib/capability-router/context";
 import { createLocalCapabilityProvider } from "@/lib/capability-router/providers/local";
 import { createMeshyProvider } from "@/lib/capability-router/providers/meshy";
-import { meshyCreateBodyForTier } from "@/lib/capability-router/providers/meshy-api";
+import { meshyCreateBodyForTier, normalizeMeshyTask, pickRiggedGlbUrl } from "@/lib/capability-router/providers/meshy-api";
 import { buildFakeMeshGlb, isGlbMagic } from "@/lib/capability-router/providers/fake-mesh-glb";
 import { resetCapabilityProvidersForTests } from "@/lib/capability-router/register";
 import {
@@ -88,6 +88,10 @@ describe("commercial mesh provider", () => {
     expect(body.model_type).toBe("smart-topology");
     expect(body.should_texture).toBe(true);
     expect(body.ai_model).toMatch(/t2/i);
+    expect(body.pose_mode).toBeUndefined();
+    expect(meshyCreateBodyForTier("game", "data:image/png;base64,xx", "t-pose").pose_mode).toBe(
+      "t-pose",
+    );
   });
 
   it("só entra na lista quando paidApisAllowed", () => {
@@ -199,6 +203,76 @@ describe("commercial mesh provider", () => {
     }).execute(ctx);
     expect(result.status).toBe("waiting");
     expect(result.meta?.commercialTaskId).toBe("task-1");
+  });
+
+  it("personagem para jogo cria o esqueleto depois da malha", async () => {
+    const http: MeshyHttp = async (input, init) => {
+      const url = String(input);
+      if (init?.method === "POST" && url.includes("image-to-3d")) {
+        return new Response(JSON.stringify({ result: "task-1" }), { status: 200 });
+      }
+      if (init?.method === "POST" && url.includes("rigging")) {
+        return new Response(JSON.stringify({ result: "rig-1" }), { status: 200 });
+      }
+      if (url.endsWith("/image-to-3d/task-1")) {
+        return new Response(
+          JSON.stringify({
+            id: "task-1",
+            status: "SUCCEEDED",
+            model_urls: { glb: "https://cdn.example/model.glb" },
+          }),
+          { status: 200 },
+        );
+      }
+      return new Response("nope", { status: 404 });
+    };
+    const files = new Map<string, Uint8Array>([
+      ["w1/image/src/source.png", PNG_1X1],
+    ]);
+    const ctx = createExecutionContext({
+      job: job({
+        meta: {
+          capability: "mesh.generate",
+          meshTier: "game",
+          rigForGame: true,
+          poseMode: "t-pose",
+        },
+      }),
+      capability: "mesh.generate",
+      storage: memoryStorage(files),
+      policies: policiesPaid,
+    });
+    const result = await createMeshyProvider({
+      http,
+      apiKey: "k",
+      timeoutMs: 5_000,
+    }).execute(ctx);
+    expect(result.status).toBe("waiting");
+    expect(result.meta?.commercialPhase).toBe("rig");
+    expect(result.meta?.rigTaskId).toBe("rig-1");
+  });
+
+  it("lê o GLB com esqueleto mesmo quando a API aninha o resultado", async () => {
+    const nested = normalizeMeshyTask({
+      id: "rig-1",
+      status: "SUCCEEDED",
+      result: {
+        rigged_character_glb_url: "https://cdn.example/rigged.glb",
+        basic_animations: {
+          walking_glb_url: "https://cdn.example/walk.glb",
+        },
+      },
+    });
+    expect(pickRiggedGlbUrl(nested)).toBe("https://cdn.example/walk.glb");
+    expect(
+      pickRiggedGlbUrl(
+        normalizeMeshyTask({
+          id: "rig-2",
+          status: "SUCCEEDED",
+          result: { rigged_character_glb_url: "https://cdn.example/rigged.glb" },
+        }),
+      ),
+    ).toBe("https://cdn.example/rigged.glb");
   });
 
   it("texto → 3D faz preview e refine", async () => {
