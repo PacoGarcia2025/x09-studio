@@ -41,8 +41,15 @@ function mimeFor(asset: {
   return MIME_BY_EXT[ext] || "application/octet-stream";
 }
 
+const GAME_CLIPS = new Set(["idle", "attack"]);
+
+function siblingClipPath(storagePath: string, clip: string): string | null {
+  if (!GAME_CLIPS.has(clip)) return null;
+  return storagePath.replace(/[^/\\]+$/, `${clip}.glb`);
+}
+
 export async function GET(
-  _request: Request,
+  request: Request,
   context: { params: Promise<{ id: string }> },
 ) {
   const { id } = await context.params;
@@ -73,10 +80,20 @@ export async function GET(
     return NextResponse.json({ error: "Arquivado" }, { status: 410 });
   }
 
+  const clip = new URL(request.url).searchParams.get("clip")?.trim() ?? "";
+  const storagePath = clip
+    ? siblingClipPath(asset.storage_path, clip)
+    : asset.storage_path;
+  if (clip && !storagePath) {
+    return NextResponse.json({ error: "Clipe inválido" }, { status: 400 });
+  }
+
   try {
-    const bytes = await readAssetFile(asset.storage_path);
+    const bytes = await readAssetFile(storagePath!);
     const type = mimeFor(asset);
-    const filename = asset.original_name.replace(/[^\w.\-]+/g, "_") || "arquivo";
+    const filename = clip
+      ? `${clip}.glb`
+      : asset.original_name.replace(/[^\w.\-]+/g, "_") || "arquivo";
     return new NextResponse(Buffer.from(bytes), {
       headers: {
         "Content-Type": type,

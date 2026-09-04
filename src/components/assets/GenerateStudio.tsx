@@ -12,7 +12,7 @@ import {
   enqueueTextTo3dAction,
   uploadAssetAction,
 } from "@/lib/assets/actions";
-import { MESH_CREDIT_COST, MESH_CREDIT_COST_GAME_CHARACTER } from "@/lib/assets/mesh-tiers";
+import { MESH_CREDIT_COST, MESH_CREDIT_COST_GAME_CHARACTER, MESH_CREDIT_COST_PREPARE_GAME } from "@/lib/assets/mesh-tiers";
 import { sanitizeUserFacingCopy } from "@/lib/assets/user-facing";
 import { drainAssetQueue } from "@/components/assets/drainAssetQueue";
 
@@ -44,6 +44,7 @@ export function GenerateStudio({
   const [meshId, setMeshId] = useState<string | null>(null);
   const [meshName, setMeshName] = useState<string | null>(null);
   const [meshCanRig, setMeshCanRig] = useState(false);
+  const [meshGameClips, setMeshGameClips] = useState(false);
   const [preview, setPreview] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [ok, setOk] = useState<boolean | null>(null);
@@ -59,6 +60,7 @@ export function GenerateStudio({
     setMeshId(null);
     setMeshName(null);
     setMeshCanRig(false);
+    setMeshGameClips(false);
     setPrompt("");
     setMessage(null);
     setOk(null);
@@ -69,7 +71,7 @@ export function GenerateStudio({
   const runJob = (
     fn: () => Promise<{ ok: true; assetId?: string; jobId?: string } | { ok: false; error: string }>,
     label: string,
-    options?: { canRig?: boolean },
+    options?: { canRig?: boolean; gameClips?: boolean },
   ) => {
     if (busy) return;
     abortRef.current?.abort();
@@ -102,6 +104,7 @@ export function GenerateStudio({
           setMeshId(result.assetId);
           setMeshName("objeto-3d.glb");
           setMeshCanRig(options?.canRig !== false);
+          setMeshGameClips(options?.gameClips === true);
         }
         setOk(true);
         setMessage("Pronto. Também foi enviado para a Biblioteca.");
@@ -196,7 +199,8 @@ export function GenerateStudio({
         ) : (
           <p className="mt-2 text-xs text-zinc-600">
             Personagem para jogo: uma pose de frente, em pé. Folha com várias
-            poses vira vários bonecos. O esqueleto só funciona em humanoides.
+            poses vira vários bonecos. O esqueleto, idle, passo e ataque só
+            funcionam em humanoides.
           </p>
         )}
 
@@ -271,7 +275,7 @@ export function GenerateStudio({
                         forGame: true,
                       }),
                     "A gerar o personagem para jogo…",
-                    { canRig: false },
+                    { canRig: false, gameClips: true },
                   );
                   return;
                 }
@@ -285,7 +289,7 @@ export function GenerateStudio({
                 runJob(
                   () => enqueueTextTo3dAction(prompt, "game", { forGame: true }),
                   "A gerar o personagem para jogo…",
-                  { canRig: false },
+                  { canRig: false, gameClips: true },
                 );
               }}
               className={BTN}
@@ -301,12 +305,12 @@ export function GenerateStudio({
                 runJob(
                   () => enqueueMeshRigAction(meshId),
                   "A preparar o esqueleto para jogo…",
-                  { canRig: false },
+                  { canRig: false, gameClips: true },
                 )
               }
               className={BTN}
             >
-              Preparar este GLB para jogo · {MESH_CREDIT_COST.rig} cr
+              Preparar este GLB para jogo · {MESH_CREDIT_COST_PREPARE_GAME} cr
             </button>
           ) : null}
           {imageId ? (
@@ -402,6 +406,24 @@ export function GenerateStudio({
                   >
                     Download
                   </a>
+                  {meshGameClips ? (
+                    <>
+                      <a
+                        href={`/api/assets/${meshId}/file?clip=idle`}
+                        download="idle.glb"
+                        className="rounded-xl px-3 py-1.5 text-xs text-zinc-300 ring-1 ring-white/10 hover:text-white"
+                      >
+                        Parado
+                      </a>
+                      <a
+                        href={`/api/assets/${meshId}/file?clip=attack`}
+                        download="attack.glb"
+                        className="rounded-xl px-3 py-1.5 text-xs text-zinc-300 ring-1 ring-white/10 hover:text-white"
+                      >
+                        Ataque
+                      </a>
+                    </>
+                  ) : null}
                   <button
                     type="button"
                     disabled={busy}

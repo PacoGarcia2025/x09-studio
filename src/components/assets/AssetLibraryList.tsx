@@ -9,7 +9,7 @@ import {
 } from "@/lib/assets/actions";
 import { AssetThumb } from "@/components/assets/AssetThumb";
 import type { AssetWithJobs } from "@/lib/assets/types";
-import { MESH_CREDIT_COST } from "@/lib/assets/mesh-tiers";
+import { MESH_CREDIT_COST_PREPARE_GAME } from "@/lib/assets/mesh-tiers";
 import { sanitizeUserFacingCopy } from "@/lib/assets/user-facing";
 import { drainAssetQueue } from "@/components/assets/drainAssetQueue";
 
@@ -107,6 +107,8 @@ export function AssetLibraryList({ assets }: { assets: AssetWithJobs[] }) {
                     {asset.kind === "mesh" ? "objeto 3D" : "foto"} ·{" "}
                     {formatBytes(asset.byte_size)}
                     {asset.meta?.rigged === true ? " · pronto para jogo" : ""}
+                    {asset.meta?.hasIdle === true ? " · parado" : ""}
+                    {asset.meta?.hasAttack === true ? " · ataque" : ""}
                   </p>
                   {latest?.status === "failed" && latest.error_message ? (
                     <p className="mt-1 break-words text-[11px] leading-4 text-rose-300/90">
@@ -135,7 +137,7 @@ export function AssetLibraryList({ assets }: { assets: AssetWithJobs[] }) {
                     }}
                     className="rounded-xl px-3 py-1.5 text-xs text-violet-200 ring-1 ring-violet-400/25 hover:bg-violet-500/10 disabled:opacity-50"
                   >
-                    Para jogo · {MESH_CREDIT_COST.rig} cr
+                    Para jogo · {MESH_CREDIT_COST_PREPARE_GAME} cr
                   </button>
                 ) : null}
                 {canTurntable ? (
@@ -166,6 +168,24 @@ export function AssetLibraryList({ assets }: { assets: AssetWithJobs[] }) {
                     Sem arquivo
                   </span>
                 )}
+                {hasFile && asset.meta?.hasIdle === true ? (
+                  <a
+                    href={`/api/assets/${asset.id}/file?clip=idle`}
+                    download="idle.glb"
+                    className="rounded-xl px-3 py-1.5 text-xs text-zinc-400 ring-1 ring-white/10 hover:text-white"
+                  >
+                    Parado
+                  </a>
+                ) : null}
+                {hasFile && asset.meta?.hasAttack === true ? (
+                  <a
+                    href={`/api/assets/${asset.id}/file?clip=attack`}
+                    download="attack.glb"
+                    className="rounded-xl px-3 py-1.5 text-xs text-zinc-400 ring-1 ring-white/10 hover:text-white"
+                  >
+                    Ataque
+                  </a>
+                ) : null}
                 <button
                   type="button"
                   disabled={busyId === asset.id}

@@ -17,8 +17,11 @@ import {
   meshyTextPreviewBody,
   meshyTextRefineBody,
   pickRiggedGlbUrl,
+  pickAnimationGlbUrl,
   RETEXTURE_URL,
   RIGGING_URL,
+  ANIMATION_URL,
+  GAME_CLIP_ACTIONS,
   TEXT_TO_3D_URL,
   toGlbDataUri,
   toImageDataUri,
@@ -133,6 +136,11 @@ async function executeMeshy(
       status: "skipped",
       message: `Malha comercial não cobre ${ctx.capability}`,
     };
+  }
+  if (
+    stringParam(ctx.params, "commercialPhase") === "animate"
+  ) {
+    return executeGameClips(ctx, opts);
   }
   if (
     stringParam(ctx.params, "sourceMode") === "rig" ||
@@ -581,22 +589,221 @@ async function executeRig(
   }
   await ctx.storage.writeFile(ctx.outputPath!, glb);
   const hasWalk = Boolean(inspected.task.basic_animations?.walking_glb_url);
+  ctx.params.hasWalk = hasWalk;
+  ctx.params.rigTaskId = rigId;
+  ctx.params.clipIndex = 0;
+  ctx.params.clipTaskId = null;
+  return executeGameClips(ctx, opts, {
+    rigTaskId: rigId,
+    hasWalk,
+  });
+}
+
+function siblingGlbPath(outputPath: string, stem: string): string {
+  return outputPath.replace(/[^/\\]+$/, `${stem}.glb`);
+}
+
+function clipDoneMeta(
+  ctx: ExecutionContext,
+  extra: Record<string, unknown>,
+): Record<string, unknown> {
+  const idle = ctx.params.hasIdle === true || extra.hasIdle === true;
+  const attack = ctx.params.hasAttack === true || extra.hasAttack === true;
+  const hasWalk = ctx.params.hasWalk === true || extra.hasWalk === true;
+  const names = [
+    idle ? "idle" : null,
+    hasWalk ? "walk" : null,
+    attack ? "attack" : null,
+  ].filter(Boolean);
+  return {
+    capability: ctx.capability,
+    rigged: true,
+    gameReady: true,
+    hasWalk,
+    hasIdle: idle,
+    hasAttack: attack,
+    clipNames: names,
+    ...extra,
+  };
+}
+
+async function executeGameClips(
+  ctx: ExecutionContext,
+  opts: MeshyOpts,
+  seed?: { rigTaskId: string; hasWalk: boolean },
+): Promise<ProviderResult> {
+  const blocked = gateCommercial(ctx, opts);
+  if (blocked) return blocked;
+  if (Date.now() > deadlineMs(ctx, opts.timeoutMs)) {
+    return clipsFinished(ctx, {
+      hasWalk: seed?.hasWalk ?? ctx.params.hasWalk === true,
+      message: "Personagem com esqueleto. Idle/ataque não concluíram a tempo.",
+    });
+  }
+
+  const rigTaskId =
+    seed?.rigTaskId || stringParam(ctx.params, "rigTaskId");
+  if (!rigTaskId || !ctx.outputPath) {
+    return clipsFinished(ctx, {
+      hasWalk: seed?.hasWalk ?? true,
+      message: "Personagem pronto para jogo — esqueleto e passo.",
+    });
+  }
+
+  const index = numberParam(ctx.params, "clipIndex") ?? 0;
+  if (index >= GAME_CLIP_ACTIONS.length) {
+    return clipsFinished(ctx, {
+      hasWalk: seed?.hasWalk ?? ctx.params.hasWalk === true,
+      hasIdle: ctx.params.hasIdle === true,
+      hasAttack: ctx.params.hasAttack === true,
+    });
+  }
+
+  const clip = GAME_CLIP_ACTIONS[index];
+  let taskId = stringParam(ctx.params, "clipTaskId");
+  if (!taskId) {
+    const created = await createMeshyTask({
+      apiKey: opts.apiKey!,
+      url: ANIMATION_URL,
+      body: { rig_task_id: rigTaskId, action_id: clip.actionId },
+      http: opts.http,
+    });
+    if ("error" in created) {
+      return executeGameClipsSkip(ctx, opts, index, rigTaskId, created.error);
+    }
+    return waitingResult(
+      ctx,
+      opts,
+      {
+        commercialPhase: "animate",
+        rigTaskId,
+        clipIndex: index,
+        clipName: clip.name,
+        clipTaskId: created.id,
+        commercialTaskId: created.id,
+        rigForGame: true,
+        hasWalk: seed?.hasWalk ?? ctx.params.hasWalk === true,
+        hasIdle: ctx.params.hasIdle === true,
+        hasAttack: ctx.params.hasAttack === true,
+      },
+      undefined,
+      clip.name === "idle"
+        ? "A gravar o idle para jogo…"
+        : "A gravar o ataque para jogo…",
+    );
+  }
+
+  const inspected = await inspectMeshyTask({
+    apiKey: opts.apiKey!,
+    taskId,
+    pollUrl: `${ANIMATION_URL}/${taskId}`,
+    http: opts.http,
+  });
+  if ("error" in inspected) {
+    return executeGameClipsSkip(ctx, opts, index, rigTaskId, inspected.error);
+  }
+  if (inspected.status === "waiting") {
+    return waitingResult(
+      ctx,
+      opts,
+      {
+        commercialPhase: "animate",
+        rigTaskId,
+        clipIndex: index,
+        clipName: clip.name,
+        clipTaskId: taskId,
+        commercialTaskId: taskId,
+        rigForGame: true,
+        hasWalk: ctx.params.hasWalk === true,
+        hasIdle: ctx.params.hasIdle === true,
+        hasAttack: ctx.params.hasAttack === true,
+      },
+      inspected.task.progress,
+      clip.name === "idle"
+        ? "A gravar o idle para jogo…"
+        : "A gravar o ataque para jogo…",
+    );
+  }
+
+  const glbUrl = pickAnimationGlbUrl(inspected.task);
+  if (glbUrl && ctx.outputPath) {
+    const glb = await downloadMeshyGlb({ url: glbUrl, http: opts.http });
+    if (!("error" in glb) && isGlbMagic(glb)) {
+      await ctx.storage.writeFile(siblingGlbPath(ctx.outputPath, clip.name), glb);
+    }
+  }
+
+  const flags = {
+    hasWalk: seed?.hasWalk ?? ctx.params.hasWalk === true,
+    hasIdle: clip.name === "idle" || ctx.params.hasIdle === true,
+    hasAttack: clip.name === "attack" || ctx.params.hasAttack === true,
+  };
+  const next = index + 1;
+  if (next >= GAME_CLIP_ACTIONS.length) {
+    return clipsFinished(ctx, flags);
+  }
+
+  ctx.params.clipIndex = next;
+  ctx.params.clipTaskId = null;
+  ctx.params.hasIdle = flags.hasIdle;
+  ctx.params.hasAttack = flags.hasAttack;
+  ctx.params.hasWalk = flags.hasWalk;
+  ctx.params.rigTaskId = rigTaskId;
+  return executeGameClips(ctx, opts);
+}
+
+async function executeGameClipsSkip(
+  ctx: ExecutionContext,
+  opts: MeshyOpts,
+  index: number,
+  rigTaskId: string,
+  _reason: string,
+): Promise<ProviderResult> {
+  const next = index + 1;
+  ctx.params.clipIndex = next;
+  ctx.params.clipTaskId = null;
+  ctx.params.rigTaskId = rigTaskId;
+  if (next >= GAME_CLIP_ACTIONS.length) {
+    return clipsFinished(ctx, {
+      hasWalk: ctx.params.hasWalk === true,
+      hasIdle: ctx.params.hasIdle === true,
+      hasAttack: ctx.params.hasAttack === true,
+      message:
+        "Personagem com esqueleto e passo. Idle/ataque não entraram neste ficheiro.",
+    });
+  }
+  return executeGameClips(ctx, opts);
+}
+
+function clipsFinished(
+  ctx: ExecutionContext,
+  flags: {
+    hasWalk?: boolean;
+    hasIdle?: boolean;
+    hasAttack?: boolean;
+    message?: string;
+  },
+): ProviderResult {
+  const idle = Boolean(flags.hasIdle);
+  const attack = Boolean(flags.hasAttack);
+  const hasWalk = flags.hasWalk !== false;
+  const message =
+    flags.message ??
+    (idle && attack
+      ? "Personagem pronto para jogo — idle, passo e ataque."
+      : hasWalk
+        ? "Personagem pronto para jogo — esqueleto e passo."
+        : "Personagem pronto para jogo — esqueleto montado.");
   return {
     status: "done",
     outputPath: ctx.outputPath,
-    message: hasWalk
-      ? "Personagem pronto para jogo — esqueleto e passo."
-      : "Personagem pronto para jogo — esqueleto montado.",
-    meta: {
-      capability: ctx.capability,
-      byteSize: glb.byteLength,
-      rigged: true,
+    message,
+    meta: clipDoneMeta(ctx, {
       hasWalk,
-      gameReady: true,
-      commercialTaskId: rigId,
-      commercialMeshTaskId: meshTaskId,
-      consumedUpstreamCredits: inspected.task.consumed_credits ?? null,
-    },
+      hasIdle: idle,
+      hasAttack: attack,
+      commercialTaskId: stringParam(ctx.params, "rigTaskId"),
+    }),
   };
 }
 

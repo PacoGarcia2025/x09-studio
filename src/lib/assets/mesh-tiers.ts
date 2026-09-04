@@ -11,14 +11,19 @@ export const MESH_CREDIT_COST = {
   gpu: 6,
   game: 18,
   flagship: 34,
-  /** Auto-rig + passo básico (API comercial). */
+  /** Auto-rig + passo (walk/run vêm no rig). */
   rig: 6,
+  /** Idle + attack (3+3 créditos upstream). */
+  clips: 8,
   /** Retextura 2K (10 créditos upstream). */
   retexture: 12,
 } as const;
 
 export const MESH_CREDIT_COST_GAME_CHARACTER =
-  MESH_CREDIT_COST.game + MESH_CREDIT_COST.rig;
+  MESH_CREDIT_COST.game + MESH_CREDIT_COST.rig + MESH_CREDIT_COST.clips;
+
+export const MESH_CREDIT_COST_PREPARE_GAME =
+  MESH_CREDIT_COST.rig + MESH_CREDIT_COST.clips;
 
 export const MESH_ACTION_PRICES = [
   { id: "logo", label: "Placa ou logo 3D", credits: MESH_CREDIT_COST.logo },
@@ -37,7 +42,7 @@ export const MESH_ACTION_PRICES = [
   {
     id: "rig",
     label: "Preparar malha para jogo",
-    credits: MESH_CREDIT_COST.rig,
+    credits: MESH_CREDIT_COST_PREPARE_GAME,
   },
   { id: "retexture", label: "Retextura 2K", credits: MESH_CREDIT_COST.retexture },
 ] as const;
@@ -63,12 +68,14 @@ export function creditCostForMeshJob(input: {
 }): number {
   if (input.capability === "mesh.logo") return MESH_CREDIT_COST.logo;
   if (input.capability === "texture.generate") return MESH_CREDIT_COST.retexture;
-  if (input.rigForGame && input.sourceMode === "rig") return MESH_CREDIT_COST.rig;
+  if (input.rigForGame && input.sourceMode === "rig") {
+    return MESH_CREDIT_COST.rig + MESH_CREDIT_COST.clips;
+  }
   if (input.rigForGame) {
     const tier = parseMeshTier(input.meshTier);
     const base =
       tier === "flagship" ? MESH_CREDIT_COST.flagship : MESH_CREDIT_COST.game;
-    return base + MESH_CREDIT_COST.rig;
+    return base + MESH_CREDIT_COST.rig + MESH_CREDIT_COST.clips;
   }
   const tier = parseMeshTier(input.meshTier);
   if (tier === "game") return MESH_CREDIT_COST.game;

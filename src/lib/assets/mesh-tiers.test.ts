@@ -32,7 +32,7 @@ describe("mesh credit SKUs", () => {
         meshTier: "game",
         rigForGame: true,
       }),
-    ).toBe(MESH_CREDIT_COST.game + MESH_CREDIT_COST.rig);
+    ).toBe(MESH_CREDIT_COST.game + MESH_CREDIT_COST.rig + MESH_CREDIT_COST.clips);
     expect(
       creditCostForMeshJob({
         capability: "mesh.generate",
@@ -40,6 +40,6 @@ describe("mesh credit SKUs", () => {
         rigForGame: true,
         sourceMode: "rig",
       }),
-    ).toBe(MESH_CREDIT_COST.rig);
+    ).toBe(MESH_CREDIT_COST.rig + MESH_CREDIT_COST.clips);
   });
 });

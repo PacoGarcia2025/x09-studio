@@ -22,6 +22,7 @@ export type MeshyTask = {
   progress?: number;
   model_urls?: { glb?: string };
   rigged_character_glb_url?: string;
+  animation_glb_url?: string;
   basic_animations?: {
     walking_glb_url?: string;
     running_glb_url?: string;
@@ -39,6 +40,13 @@ const IMAGE_TO_3D_URL = "https://api.meshy.ai/openapi/v1/image-to-3d";
 const TEXT_TO_3D_URL = "https://api.meshy.ai/openapi/v2/text-to-3d";
 const RETEXTURE_URL = "https://api.meshy.ai/openapi/v1/retexture";
 const RIGGING_URL = "https://api.meshy.ai/openapi/v1/rigging";
+const ANIMATION_URL = "https://api.meshy.ai/openapi/v1/animations";
+
+/** Presets da biblioteca comercial: Idle e Attack. Walk já vem no rig. */
+export const GAME_CLIP_ACTIONS = [
+  { name: "idle", actionId: 0 },
+  { name: "attack", actionId: 4 },
+] as const;
 
 export function meshyCreateBodyForTier(
   tier: "game" | "flagship",
@@ -171,12 +179,17 @@ export function normalizeMeshyTask(json: Record<string, unknown>): MeshyTask {
     (typeof nested.rigged_character_glb_url === "string" &&
       nested.rigged_character_glb_url) ||
     undefined;
+  const animationGlb =
+    (typeof json.animation_glb_url === "string" && json.animation_glb_url) ||
+    (typeof nested.animation_glb_url === "string" && nested.animation_glb_url) ||
+    undefined;
   return {
     id: typeof json.id === "string" ? json.id : "",
     status: json.status as MeshyTaskStatus,
     progress: typeof json.progress === "number" ? json.progress : undefined,
     model_urls: modelUrls,
     rigged_character_glb_url: rigged,
+    animation_glb_url: animationGlb,
     basic_animations: animations,
     task_error: json.task_error as MeshyTask["task_error"],
     consumed_credits:
@@ -322,4 +335,8 @@ export function pickRiggedGlbUrl(task: MeshyTask): string | null {
   );
 }
 
-export { IMAGE_TO_3D_URL, TEXT_TO_3D_URL, RETEXTURE_URL, RIGGING_URL };
+export function pickAnimationGlbUrl(task: MeshyTask): string | null {
+  return task.animation_glb_url || task.model_urls?.glb || null;
+}
+
+export { IMAGE_TO_3D_URL, TEXT_TO_3D_URL, RETEXTURE_URL, RIGGING_URL, ANIMATION_URL };

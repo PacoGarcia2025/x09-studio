@@ -2,7 +2,7 @@ import { describe, expect, it, beforeEach } from "vitest";
 import { createExecutionContext } from "@/lib/capability-router/context";
 import { createLocalCapabilityProvider } from "@/lib/capability-router/providers/local";
 import { createMeshyProvider } from "@/lib/capability-router/providers/meshy";
-import { meshyCreateBodyForTier, normalizeMeshyTask, pickRiggedGlbUrl } from "@/lib/capability-router/providers/meshy-api";
+import { meshyCreateBodyForTier, normalizeMeshyTask, pickAnimationGlbUrl, pickRiggedGlbUrl } from "@/lib/capability-router/providers/meshy-api";
 import { buildFakeMeshGlb, isGlbMagic } from "@/lib/capability-router/providers/fake-mesh-glb";
 import { resetCapabilityProvidersForTests } from "@/lib/capability-router/register";
 import {
@@ -265,6 +265,15 @@ describe("commercial mesh provider", () => {
     });
     expect(pickRiggedGlbUrl(nested)).toBe("https://cdn.example/walk.glb");
     expect(
+      pickAnimationGlbUrl(
+        normalizeMeshyTask({
+          id: "anim-1",
+          status: "SUCCEEDED",
+          result: { animation_glb_url: "https://cdn.example/idle.glb" },
+        }),
+      ),
+    ).toBe("https://cdn.example/idle.glb");
+    expect(
       pickRiggedGlbUrl(
         normalizeMeshyTask({
           id: "rig-2",
@@ -321,6 +330,158 @@ describe("commercial mesh provider", () => {
     expect(result.status).toBe("done");
     expect(result.meta?.sourceMode).toBe("text");
     expect(isGlbMagic(files.get("w1/mesh/a1/source.glb")!)).toBe(true);
+  });
+
+  it("depois do esqueleto começa o idle", async () => {
+    const glb = buildFakeMeshGlb();
+    const posted: unknown[] = [];
+    const http: MeshyHttp = async (input, init) => {
+      const url = String(input);
+      if (init?.method === "POST" && url.includes("/animations")) {
+        posted.push(JSON.parse(String(init.body ?? "{}")));
+        return new Response(JSON.stringify({ result: "anim-idle" }), {
+          status: 200,
+        });
+      }
+      if (url.endsWith("/rigging/rig-1")) {
+        return new Response(
+          JSON.stringify({
+            id: "rig-1",
+            status: "SUCCEEDED",
+            result: {
+              rigged_character_glb_url: "https://cdn.example/rigged.glb",
+              basic_animations: {
+                walking_glb_url: "https://cdn.example/walk.glb",
+              },
+            },
+          }),
+          { status: 200 },
+        );
+      }
+      if (url.includes("cdn.example")) {
+        return new Response(glb, { status: 200 });
+      }
+      return new Response("nope", { status: 404 });
+    };
+    const files = new Map<string, Uint8Array>();
+    const ctx = createExecutionContext({
+      job: job({
+        meta: {
+          capability: "mesh.generate",
+          meshTier: "game",
+          rigForGame: true,
+          commercialPhase: "rig",
+          rigTaskId: "rig-1",
+        },
+      }),
+      capability: "mesh.generate",
+      storage: memoryStorage(files),
+      policies: policiesPaid,
+    });
+    const result = await createMeshyProvider({
+      http,
+      apiKey: "k",
+      timeoutMs: 5_000,
+    }).execute(ctx);
+    expect(result.status).toBe("waiting");
+    expect(result.meta?.commercialPhase).toBe("animate");
+    expect(result.meta?.clipTaskId).toBe("anim-idle");
+    expect(result.meta?.hasWalk).toBe(true);
+    expect(posted).toEqual([{ rig_task_id: "rig-1", action_id: 0 }]);
+    expect(isGlbMagic(files.get("w1/mesh/a1/source.glb")!)).toBe(true);
+  });
+
+  it("grava idle e passa ao ataque", async () => {
+    const glb = buildFakeMeshGlb();
+    const posted: unknown[] = [];
+    const http: MeshyHttp = async (input, init) => {
+      const url = String(input);
+      if (init?.method === "POST" && url.includes("/animations")) {
+        posted.push(JSON.parse(String(init.body ?? "{}")));
+        return new Response(JSON.stringify({ result: "anim-attack" }), {
+          status: 200,
+        });
+      }
+      if (url.endsWith("/animations/anim-idle")) {
+        return new Response(
+          JSON.stringify({
+            id: "anim-idle",
+            status: "SUCCEEDED",
+            result: { animation_glb_url: "https://cdn.example/idle.glb" },
+          }),
+          { status: 200 },
+        );
+      }
+      if (url.includes("cdn.example")) {
+        return new Response(glb, { status: 200 });
+      }
+      return new Response("nope", { status: 404 });
+    };
+    const files = new Map<string, Uint8Array>();
+    const ctx = createExecutionContext({
+      job: job({
+        meta: {
+          capability: "mesh.generate",
+          meshTier: "game",
+          rigForGame: true,
+          commercialPhase: "animate",
+          rigTaskId: "rig-1",
+          clipIndex: 0,
+          clipTaskId: "anim-idle",
+          hasWalk: true,
+        },
+      }),
+      capability: "mesh.generate",
+      storage: memoryStorage(files),
+      policies: policiesPaid,
+    });
+    const result = await createMeshyProvider({
+      http,
+      apiKey: "k",
+      timeoutMs: 5_000,
+    }).execute(ctx);
+    expect(result.status).toBe("waiting");
+    expect(result.meta?.clipTaskId).toBe("anim-attack");
+    expect(result.meta?.hasIdle).toBe(true);
+    expect(posted).toEqual([{ rig_task_id: "rig-1", action_id: 4 }]);
+    expect(isGlbMagic(files.get("w1/mesh/a1/idle.glb")!)).toBe(true);
+  });
+
+  it("se o idle/ataque falharem, o personagem fica com o passo", async () => {
+    const http: MeshyHttp = async (input, init) => {
+      const url = String(input);
+      if (init?.method === "POST" && url.includes("/animations")) {
+        return new Response("fail", { status: 500 });
+      }
+      return new Response("nope", { status: 404 });
+    };
+    const files = new Map<string, Uint8Array>();
+    const ctx = createExecutionContext({
+      job: job({
+        meta: {
+          capability: "mesh.generate",
+          meshTier: "game",
+          rigForGame: true,
+          commercialPhase: "animate",
+          rigTaskId: "rig-1",
+          hasWalk: true,
+        },
+        output_path: "w1/mesh/a1/source.glb",
+      }),
+      capability: "mesh.generate",
+      storage: memoryStorage(files),
+      policies: policiesPaid,
+    });
+    const result = await createMeshyProvider({
+      http,
+      apiKey: "k",
+      timeoutMs: 5_000,
+    }).execute(ctx);
+    expect(result.status).toBe("done");
+    expect(result.meta?.rigged).toBe(true);
+    expect(result.meta?.hasWalk).toBe(true);
+    expect(result.meta?.hasIdle).toBe(false);
+    expect(result.meta?.hasAttack).toBe(false);
   });
 
   it("retextura grava um GLB novo", async () => {

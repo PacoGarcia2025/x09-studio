@@ -219,6 +219,11 @@ export async function tickAssetJobQueue(
               ...currentMeta,
               ...(result.meta?.rigged ? { rigged: true, gameReady: true } : {}),
               ...(result.meta?.hasWalk ? { hasWalk: true } : {}),
+              ...(result.meta?.hasIdle ? { hasIdle: true } : {}),
+              ...(result.meta?.hasAttack ? { hasAttack: true } : {}),
+              ...(Array.isArray(result.meta?.clipNames)
+                ? { clipNames: result.meta.clipNames }
+                : {}),
               ...(result.meta?.rigFailed ? { rigFailed: true } : {}),
             },
           })
