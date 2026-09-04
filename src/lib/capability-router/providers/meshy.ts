@@ -660,7 +660,7 @@ async function executeGameClips(
   }
 
   const clip = GAME_CLIP_ACTIONS[index];
-  let taskId = stringParam(ctx.params, "clipTaskId");
+  const taskId = stringParam(ctx.params, "clipTaskId");
   if (!taskId) {
     const created = await createMeshyTask({
       apiKey: opts.apiKey!,
@@ -669,7 +669,7 @@ async function executeGameClips(
       http: opts.http,
     });
     if ("error" in created) {
-      return executeGameClipsSkip(ctx, opts, index, rigTaskId, created.error);
+      return executeGameClipsSkip(ctx, opts, index, rigTaskId);
     }
     return waitingResult(
       ctx,
@@ -700,7 +700,7 @@ async function executeGameClips(
     http: opts.http,
   });
   if ("error" in inspected) {
-    return executeGameClipsSkip(ctx, opts, index, rigTaskId, inspected.error);
+    return executeGameClipsSkip(ctx, opts, index, rigTaskId);
   }
   if (inspected.status === "waiting") {
     return waitingResult(
@@ -757,7 +757,6 @@ async function executeGameClipsSkip(
   opts: MeshyOpts,
   index: number,
   rigTaskId: string,
-  _reason: string,
 ): Promise<ProviderResult> {
   const next = index + 1;
   ctx.params.clipIndex = next;
