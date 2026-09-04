@@ -84,7 +84,9 @@ module.exports = {
         ...loadEnv(),
         NODE_ENV: "production",
         PORT: 3001,
-        HOSTNAME: "0.0.0.0",
+        // 0.0.0.0 faz o Next devolver 400 em /_next/static (initURL inválido).
+        // Nginx na mesma máquina fala com 127.0.0.1:3001.
+        HOSTNAME: "127.0.0.1",
         STUDIO_APP_ROOT: APP_ROOT,
       },
       error_file: "/var/log/x09-studio/error.log",
