@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { ProjectHeroCard } from "@/components/projects/ProjectHeroCard";
 import { projectCreatePath } from "@/lib/auth/paths";
@@ -13,6 +14,7 @@ type Template = {
   description: string;
   hue: number;
   prompt: string;
+  image?: string;
 };
 
 export function ProjectsBoard({
@@ -86,6 +88,7 @@ export function ProjectsBoard({
                 title={template.title}
                 subtitle={template.description}
                 hue={template.hue}
+                image={template.image}
               />
               <CardMeta
                 title={template.title}
@@ -130,54 +133,69 @@ function HeroPreview({
   title,
   subtitle,
   hue,
+  image,
 }: {
   title: string;
   subtitle?: string;
   hue: number;
+  image?: string;
 }) {
   const short = title.length > 28 ? `${title.slice(0, 26)}…` : title;
 
   return (
-    <div className="relative aspect-[16/10] overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03] shadow-[0_12px_40px_rgba(0,0,0,0.25)] transition group-hover:-translate-y-0.5 group-hover:border-violet-400/30">
-      <div
-        className="absolute inset-0"
-        style={{
-          background: `linear-gradient(145deg, hsl(${hue} 55% 28%), hsl(${(hue + 55) % 360} 60% 22%), hsl(${(hue + 110) % 360} 50% 14%))`,
-        }}
-      >
-        <div className="absolute inset-x-3 top-3 overflow-hidden rounded-xl border border-white/10 bg-black/50 shadow-lg backdrop-blur-md">
-          <div className="flex items-center gap-1.5 border-b border-white/8 px-3 py-2">
-            <span className="h-1.5 w-1.5 rounded-full bg-zinc-500" />
-            <span className="h-1.5 w-1.5 rounded-full bg-zinc-500" />
-            <span className="h-1.5 w-1.5 rounded-full bg-zinc-500" />
-            <span className="ml-2 h-1.5 flex-1 rounded-full bg-white/10" />
-          </div>
-          <div className="space-y-2.5 px-4 pb-4 pt-3">
-            <div className="flex items-center justify-between">
-              <span className="text-[9px] font-semibold text-zinc-200">
-                {short.split(" ")[0] || "App"}
-              </span>
-              <span className="rounded-full bg-violet-500/80 px-2 py-0.5 text-[8px] font-semibold text-white">
-                Começar
-              </span>
+    <div className="relative aspect-[16/10] overflow-hidden rounded-2xl bg-zinc-100 shadow-[0_12px_40px_rgba(0,0,0,0.25)] ring-1 ring-white/10 transition group-hover:-translate-y-0.5 group-hover:ring-violet-400/30">
+      {image ? (
+        <Image
+          src={image}
+          alt={title}
+          fill
+          sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
+          className="object-cover"
+        />
+      ) : (
+        <div
+          className="absolute inset-0"
+          style={{
+            background: `linear-gradient(145deg, hsl(${hue} 72% 58%), hsl(${(hue + 55) % 360} 78% 52%), hsl(${(hue + 110) % 360} 65% 45%))`,
+          }}
+        >
+          <div className="absolute inset-x-3 top-3 overflow-hidden rounded-xl bg-white/95 shadow-lg shadow-black/10">
+            <div className="flex items-center gap-1.5 border-b border-zinc-100 px-3 py-2">
+              <span className="h-1.5 w-1.5 rounded-full bg-zinc-300" />
+              <span className="h-1.5 w-1.5 rounded-full bg-zinc-300" />
+              <span className="h-1.5 w-1.5 rounded-full bg-zinc-300" />
+              <span className="ml-2 h-1.5 flex-1 rounded-full bg-zinc-100" />
             </div>
-            <p className="text-[11px] font-bold leading-tight tracking-tight text-white">
-              {short}
-            </p>
-            {subtitle ? (
-              <p className="line-clamp-2 text-[9px] leading-snug text-zinc-400">
-                {subtitle}
+            <div className="space-y-2.5 px-4 pb-4 pt-3">
+              <div className="flex items-center justify-between">
+                <span className="text-[9px] font-semibold text-zinc-800">
+                  {short.split(" ")[0] || "App"}
+                </span>
+                <span
+                  className="rounded-full px-2 py-0.5 text-[8px] font-semibold text-white"
+                  style={{ background: `hsl(${hue} 70% 45%)` }}
+                >
+                  Começar
+                </span>
+              </div>
+              <p className="text-[11px] font-bold leading-tight tracking-tight text-zinc-900">
+                {short}
               </p>
-            ) : null}
-            <div
-              className="mt-1 h-10 rounded-lg opacity-90"
-              style={{
-                background: `linear-gradient(90deg, hsl(${hue} 50% 35% / 0.5), hsl(${(hue + 40) % 360} 55% 40% / 0.35))`,
-              }}
-            />
+              {subtitle ? (
+                <p className="line-clamp-2 text-[9px] leading-snug text-zinc-500">
+                  {subtitle}
+                </p>
+              ) : null}
+              <div
+                className="mt-1 h-10 rounded-lg opacity-90"
+                style={{
+                  background: `linear-gradient(90deg, hsl(${hue} 65% 92%), hsl(${(hue + 40) % 360} 70% 88%))`,
+                }}
+              />
+            </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

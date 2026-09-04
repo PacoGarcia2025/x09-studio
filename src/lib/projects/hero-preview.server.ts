@@ -67,6 +67,7 @@ export async function buildProjectCardPreviewHtml(
     try {
       const raw = await readProjectFile(projectId, relativePath);
       if (relativePath.endsWith(".html")) {
+        if (isEmptySpaShell(raw)) continue;
         return wrapHtmlDocument(injectBase(raw), projectName);
       }
 
@@ -117,12 +118,20 @@ function injectBase(html: string): string {
   );
 }
 
+function isEmptySpaShell(html: string): boolean {
+  const body = html.match(/<body[^>]*>([\s\S]*)<\/body>/i)?.[1] ?? html;
+  const withoutScripts = body.replace(/<script[\s\S]*?<\/script>/gi, "");
+  const hasRoot = /id=["'](?:root|app)["']/.test(withoutScripts);
+  const text = withoutScripts.replace(/<[^>]+>/g, "").replace(/\s+/g, "");
+  return hasRoot && text.length < 80;
+}
+
 function wrapHtmlDocument(bodyOrFull: string, title: string): string {
   const isFull = /<html[\s>]/i.test(bodyOrFull);
   if (isFull) {
     const stripped = bodyOrFull.replace(/<script[\s\S]*?<\/script>/gi, "");
     if (/<\/head>/i.test(stripped)) {
-      return stripped.replace(/<\/head>/i, `${cardPreviewStyles()}</head>`);
+      return stripped.replace(/<\/head>/i, `${cardPreviewHead()}</head>`);
     }
     return stripped;
   }
@@ -133,7 +142,7 @@ function wrapHtmlDocument(bodyOrFull: string, title: string): string {
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>${escapeHtml(title)}</title>
-  ${cardPreviewStyles()}
+  ${cardPreviewHead()}
 </head>
 <body>
 ${bodyOrFull}
@@ -141,9 +150,14 @@ ${bodyOrFull}
 </html>`;
 }
 
+function cardPreviewHead(): string {
+  return `${cardPreviewStyles()}
+<script src="https://cdn.tailwindcss.com"></script>`;
+}
+
 function cardPreviewStyles(): string {
   return `<style>
-html,body{margin:0;padding:0;overflow:hidden;background:#0b0b12;color:#f4f4f5;font-family:ui-sans-serif,system-ui,sans-serif}
+html,body{margin:0;padding:0;overflow:hidden;background:#f4f4f5;color:#18181b;font-family:ui-sans-serif,system-ui,sans-serif}
 img,video,canvas{max-width:100%;height:auto;display:block}
 h1{font-size:clamp(1.5rem,4vw,2.5rem);line-height:1.1;margin:0 0 .6rem;font-weight:700}
 p{margin:.35rem 0;opacity:.85}

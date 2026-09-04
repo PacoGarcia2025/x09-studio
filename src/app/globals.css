@@ -307,7 +307,7 @@ body {
 
 .x09-mascot-wrap {
   position: relative;
-  width: min(100%, 520px);
+  width: min(100%, 480px);
   aspect-ratio: 1;
 }
 
@@ -328,7 +328,7 @@ body {
   display: none;
 }
 
-.x09-mascot-3d .x09-mascot-floor {
+.x09-mascot-ready .x09-mascot-floor {
   display: block;
   position: absolute;
   left: 18%;
@@ -359,21 +359,39 @@ body {
   position: relative;
   z-index: 1;
   width: 100%;
-  height: auto;
+  height: 100%;
   object-fit: contain;
   filter: drop-shadow(0 0 42px rgba(115, 92, 255, 0.35));
   animation: x09-float 5s ease-in-out infinite;
+  transition: opacity 280ms ease;
+}
+
+.x09-mascot-ready .x09-mascot-img {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  pointer-events: none;
+  animation: none;
 }
 
 .x09-mascot-viewer {
-  position: relative;
-  z-index: 1;
+  position: absolute;
+  inset: 0;
+  z-index: 2;
   width: 100%;
   height: 100%;
   display: block;
+  opacity: 0;
+  pointer-events: none;
   background: transparent;
   --poster-color: transparent;
   touch-action: pan-y;
+  transition: opacity 320ms ease;
+}
+
+.x09-mascot-viewer.is-ready {
+  opacity: 1;
+  pointer-events: auto;
 }
 
 .x09-mascot-load {
@@ -404,17 +422,41 @@ body {
   z-index: 10;
   display: flex;
   width: 100%;
-  max-width: 32rem;
+  max-width: 28rem;
   flex-direction: column;
   align-items: center;
 }
 
 .x09-stage-hint {
-  margin-top: 0.75rem;
-  font-size: 11px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: #71717a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-top: 0.35rem;
+  font-size: 0.95rem;
+  line-height: 1.4;
+  color: #d4d4d8;
+}
+
+.x09-stage-hint-icon {
+  width: 1.15rem;
+  height: 1.15rem;
+  flex-shrink: 0;
+  color: #c4b5fd;
+}
+
+.x09-stage-hint-touch {
+  display: none;
+}
+
+@media (hover: none) {
+  .x09-stage-hint-mouse {
+    display: none;
+  }
+
+  .x09-stage-hint-touch {
+    display: inline;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -501,6 +543,19 @@ body {
 .x09-feature-card:hover {
   transform: translateY(-2px);
   border-color: rgba(var(--x09-accent), 0.35);
+}
+
+.x09-offer-shot {
+  position: relative;
+  height: 240px;
+  overflow: hidden;
+  background: #0b0814;
+}
+
+@media (min-width: 768px) {
+  .x09-offer-shot {
+    height: 280px;
+  }
 }
 
 .x09-preview-building {

@@ -11,6 +11,7 @@ const TEMPLATES = [
     title: "Landing premium",
     description: "Showcase cinematográfico",
     hue: 265,
+    image: "/landing/offer-site.png",
     prompt:
       "Landing page premium cinematográfica de alta conversão para minha marca, com hero imersivo, prova social, bento de serviços e CTA forte",
   },
@@ -18,6 +19,7 @@ const TEMPLATES = [
     title: "Loja virtual",
     description: "Catálogo e carrinho",
     hue: 200,
+    image: "/landing/offer-product.png",
     prompt:
       "Loja virtual premium cinematográfica com catálogo de produtos, carrinho e checkout simplificado, visual dark com cor de marca",
   },
@@ -25,6 +27,7 @@ const TEMPLATES = [
     title: "Sistema de reservas",
     description: "Agenda e confirmação",
     hue: 175,
+    image: "/templates/reservas.png",
     prompt:
       "Sistema de reservas online premium com calendário, confirmação por e-mail e painel administrativo cinematográfico",
   },
@@ -32,6 +35,7 @@ const TEMPLATES = [
     title: "Dashboard SaaS",
     description: "Métricas e gráficos",
     hue: 240,
+    image: "/templates/dashboard.png",
     prompt:
       "Dashboard SaaS cinematográfico premium com métricas, gráficos recharts, cards KPI e layout profissional dark",
   },
@@ -39,6 +43,7 @@ const TEMPLATES = [
     title: "CRM leve",
     description: "Contatos e pipeline",
     hue: 155,
+    image: "/templates/crm.png",
     prompt:
       "CRM leve premium com pipeline de vendas, contatos, status e dashboard cinematográfico para equipe comercial",
   },
@@ -46,6 +51,7 @@ const TEMPLATES = [
     title: "Portfólio",
     description: "Showcase e cases",
     hue: 290,
+    image: "/templates/portfolio.png",
     prompt:
       "Site portfólio showcase premium cinematográfico com cases em bento, sobre mim e formulário de contato elegante",
   },

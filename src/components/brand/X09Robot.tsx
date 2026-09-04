@@ -42,22 +42,34 @@ function loadModelViewer(): Promise<void> {
   });
 }
 
+function preloadGlb() {
+  if (document.querySelector("link[data-x09-robot-glb]")) return;
+  const link = document.createElement("link");
+  link.rel = "preload";
+  link.as = "fetch";
+  link.href = LANDING_ROBOT_GLB;
+  link.crossOrigin = "anonymous";
+  link.dataset.x09RobotGlb = "1";
+  document.head.appendChild(link);
+}
+
 /**
- * Mascote X09. Com GLB de alta qualidade no public/, gira no palco.
- * Senão, o PNG oficial.
+ * Mascote X09. O PNG fica no tamanho certo até o GLB estar pronto;
+ * depois o 3D entra por cima, no mesmo enquadramento.
  */
 export function X09Robot({ compact = false, hasGlb = false }: X09RobotProps) {
-  const size = compact ? 176 : 560;
+  const size = compact ? 176 : 520;
   const hostRef = useRef<HTMLElement | null>(null);
   const [viewer, setViewer] = useState(false);
   const [failed, setFailed] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [progress, setProgress] = useState(0);
 
-  const showGlb = hasGlb && viewer && !failed && !compact;
+  const mountViewer = hasGlb && viewer && !failed && !compact;
 
   useEffect(() => {
     if (compact || !hasGlb) return;
+    preloadGlb();
     let cancelled = false;
     void loadModelViewer().then(
       () => {
@@ -73,30 +85,29 @@ export function X09Robot({ compact = false, hasGlb = false }: X09RobotProps) {
   }, [compact, hasGlb]);
 
   useEffect(() => {
-    if (!showGlb) return;
+    if (!mountViewer) return;
     const el = hostRef.current;
     if (!el) return;
 
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
     el.setAttribute("src", LANDING_ROBOT_GLB);
-    el.setAttribute("poster", LANDING_ROBOT_PNG);
-    el.setAttribute("camera-orbit", "32deg 68deg 108%");
-    el.setAttribute("min-camera-orbit", "auto 48deg auto");
-    el.setAttribute("max-camera-orbit", "auto 92deg auto");
-    el.setAttribute("field-of-view", "26deg");
-    el.setAttribute("min-field-of-view", "18deg");
+    el.setAttribute("camera-orbit", "18deg 72deg 108%");
+    el.setAttribute("min-camera-orbit", "auto 58deg 95%");
+    el.setAttribute("max-camera-orbit", "auto 88deg 160%");
+    el.setAttribute("field-of-view", "28deg");
+    el.setAttribute("min-field-of-view", "22deg");
     el.setAttribute("max-field-of-view", "34deg");
-    el.setAttribute("auto-rotate-delay", "400");
+    el.setAttribute("auto-rotate-delay", "600");
     el.setAttribute("rotation-per-second", "18deg");
     el.setAttribute("shadow-intensity", "1");
     el.setAttribute("shadow-softness", "0.92");
     el.setAttribute("environment-image", "neutral");
     el.setAttribute("tone-mapping", "commerce");
-    el.setAttribute("exposure", "1.18");
+    el.setAttribute("exposure", "1.12");
     el.setAttribute("interaction-prompt", "none");
     el.setAttribute("loading", "eager");
-    el.setAttribute("reveal", "auto");
+    el.setAttribute("reveal", "manual");
     el.setAttribute("interpolation-decay", "180");
     el.toggleAttribute("auto-rotate", !reduce);
     el.toggleAttribute("camera-controls", true);
@@ -111,6 +122,9 @@ export function X09Robot({ compact = false, hasGlb = false }: X09RobotProps) {
     const onLoad = () => {
       setProgress(1);
       setLoaded(true);
+      if ("dismissPoster" in el && typeof el.dismissPoster === "function") {
+        el.dismissPoster();
+      }
     };
     const onError = () => setFailed(true);
 
@@ -122,28 +136,35 @@ export function X09Robot({ compact = false, hasGlb = false }: X09RobotProps) {
       el.removeEventListener("load", onLoad);
       el.removeEventListener("error", onError);
     };
-  }, [showGlb]);
+  }, [mountViewer]);
 
   return (
     <div
       className={`x09-mascot-wrap ${compact ? "x09-mascot-compact" : ""} ${
-        showGlb ? "x09-mascot-3d" : ""
-      }`}
+        mountViewer ? "x09-mascot-3d" : ""
+      } ${loaded ? "x09-mascot-ready" : ""}`}
       aria-label="Robô X09"
     >
       <div className="x09-mascot-glow" aria-hidden />
       <div className="x09-mascot-floor" aria-hidden />
-      {!showGlb ? <div className="x09-mascot-orbit" aria-hidden /> : null}
-      {showGlb ? (
+      {!loaded ? <div className="x09-mascot-orbit" aria-hidden /> : null}
+      <Image
+        src={LANDING_ROBOT_PNG}
+        alt={loaded ? "" : "Robô X09"}
+        width={size}
+        height={size}
+        priority={!compact}
+        className="x09-mascot-img"
+      />
+      {mountViewer ? (
         <>
           <model-viewer
             ref={(node) => {
               hostRef.current = node;
             }}
             src={LANDING_ROBOT_GLB}
-            poster={LANDING_ROBOT_PNG}
-            alt="Robô X09 em 3D de alta qualidade"
-            className="x09-mascot-viewer"
+            alt="Robô X09 em 3D"
+            className={`x09-mascot-viewer ${loaded ? "is-ready" : ""}`}
           />
           {!loaded ? (
             <div className="x09-mascot-load" aria-hidden>
@@ -154,16 +175,7 @@ export function X09Robot({ compact = false, hasGlb = false }: X09RobotProps) {
             </div>
           ) : null}
         </>
-      ) : (
-        <Image
-          src={LANDING_ROBOT_PNG}
-          alt="Robô X09"
-          width={size}
-          height={size}
-          priority={!compact}
-          className="x09-mascot-img"
-        />
-      )}
+      ) : null}
     </div>
   );
 }

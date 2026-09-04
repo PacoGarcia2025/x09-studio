@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import type { CSSProperties } from "react";
 import { LandingHeroPrompt } from "@/components/landing/LandingHeroPrompt";
 import { StudioAtmosphere } from "@/components/brand/StudioAtmosphere";
@@ -6,40 +7,35 @@ import { X09Robot } from "@/components/brand/X09Robot";
 import { authLink } from "@/lib/auth/paths";
 import { landingRobotGlbExists } from "@/lib/brand/landing-robot.server";
 
-const STAGES = [
+const OFFERS = [
   {
-    kicker: "01 · Site",
-    title: "Prompt vira produto no ar",
-    copy: "Planeja, constrói, verifica e publica. Preview ao vivo, não mockup.",
-    stat: "3 cr",
-    hint: "criar o site",
+    id: "site",
+    title: "Crie um site incrível",
+    copy: "Diz o que a sua empresa faz. A gente monta um site bonito e coloca no ar.",
+    image: "/landing/offer-site.png",
     accent: "124, 92, 255",
   },
   {
-    kicker: "02 · Objeto 3D",
-    title: "Uma foto, um GLB a girar",
-    copy: "Manda a referência. Sai volume fechado para catálogo, site ou anúncio — alta qualidade no hero.",
-    stat: "18–34 cr",
-    hint: "comercial ou alta qualidade",
+    id: "product",
+    title: "Foto vira produto 3D",
+    copy: "Manda a foto do seu produto. Ele aparece inteiro, girando, como na loja.",
+    image: "/landing/offer-product.png",
     accent: "47, 158, 255",
   },
   {
-    kicker: "03 · Personagem",
-    title: "Humanoide pronto para o vale",
-    copy: "Pose de frente, esqueleto, passo — e parado/ataque quando o pipeline novo está no ar.",
-    stat: "32 cr",
-    hint: "personagem para jogo",
+    id: "logo",
+    title: "Logo comum vira logo 3D",
+    copy: "O mesmo logotipo de sempre, agora em volume — para o site, o vídeo ou o anúncio.",
+    image: "/landing/offer-logo.png",
+    accent: "255, 157, 69",
+  },
+  {
+    id: "game",
+    title: "Crie jogos",
+    copy: "Personagens e objetos prontos para o seu jogo, a partir de uma foto ou de uma ideia.",
+    image: "/landing/offer-game.png",
     accent: "210, 76, 255",
   },
-] as const;
-
-const PIPELINE = [
-  "Plan",
-  "Build",
-  "3D",
-  "Verify",
-  "Preview",
-  "Deploy",
 ] as const;
 
 type Props = {
@@ -63,8 +59,8 @@ export function StudioLanding({ authError }: Props) {
               <span className="block text-sm font-semibold tracking-wide text-white">
                 Studio
               </span>
-              <span className="block text-[10px] uppercase tracking-[0.22em] text-violet-300/80">
-                Lab de software e 3D
+              <span className="block text-[11px] text-violet-300/80">
+                Sites, 3D e jogos
               </span>
             </div>
           </Link>
@@ -79,112 +75,101 @@ export function StudioLanding({ authError }: Props) {
               href={authLink("/signup")}
               className="x09-button-primary px-3 py-2 text-sm sm:px-4"
             >
-              Criar conta
+              Começar grátis
             </Link>
           </nav>
         </header>
 
         {authError ? (
           <div className="mt-4 rounded-2xl border border-red-400/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">
-            Falha ao confirmar login. Tente entrar novamente ou crie uma conta.
+            Não deu para entrar. Tente de novo ou crie uma conta.
           </div>
         ) : null}
 
-        <section className="x09-hero grid flex-1 items-center gap-8 py-8 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)] lg:gap-10 lg:py-10">
-          <div className="x09-fade-in max-w-2xl space-y-6">
-            <p className="inline-flex items-center gap-2 rounded-full border border-violet-400/25 bg-violet-500/10 px-4 py-2 text-[11px] font-bold uppercase tracking-[0.24em] text-violet-200">
-              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-violet-400" />
-              Site · objeto 3D · personagem
+        <section className="x09-hero grid flex-1 items-center gap-8 py-8 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)] lg:gap-8 lg:py-10">
+          <div className="x09-fade-in max-w-xl space-y-6">
+            <p className="inline-flex items-center gap-2 rounded-full border border-violet-400/25 bg-violet-500/10 px-4 py-2 text-xs font-medium text-violet-200">
+              Sem precisar saber de tecnologia
             </p>
 
-            <h1 className="text-4xl font-semibold leading-[1.05] tracking-[-0.045em] text-white md:text-6xl lg:text-[3.35rem]">
-              Descreve. Fotografa.
+            <h1 className="text-4xl font-semibold leading-[1.08] tracking-[-0.045em] text-white md:text-6xl lg:text-[3.5rem]">
+              Crie um site incrível.
               <span className="mt-1 block bg-gradient-to-r from-violet-200 via-fuchsia-200 to-sky-200 bg-clip-text text-transparent">
-                O X09 constrói o resto.
+                Ou transforme uma foto em 3D.
               </span>
             </h1>
-            <p className="max-w-xl text-base leading-7 text-zinc-400 md:text-lg">
-              Um laboratório: prompt vira site publicado, foto vira GLB a
-              girar, humanoide sai com esqueleto e passo — créditos à vista,
-              ficheiro na Biblioteca.
+            <p className="max-w-lg text-base leading-7 text-zinc-400 md:text-lg">
+              Também dá para criar jogos e deixar o seu logotipo em 3D. Você
+              escreve o que quer — o X09 faz o resto.
             </p>
 
             <LandingHeroPrompt />
           </div>
 
-          <div className="relative flex min-h-[380px] flex-col items-center justify-center lg:min-h-[520px]">
+          <div className="relative flex min-h-[420px] flex-col items-center justify-center lg:min-h-[520px]">
             <div className="x09-stage">
               <X09Robot hasGlb={hasGlb} />
               <p className="x09-stage-hint">
-                {hasGlb
-                  ? "Arrasta para orbitar · malha de alta qualidade"
-                  : "Palco 3D · espera o GLB em public/landing"}
+                <svg
+                  viewBox="0 0 24 24"
+                  className="x09-stage-hint-icon"
+                  aria-hidden
+                >
+                  <path
+                    fill="currentColor"
+                    d="M13 2a3 3 0 0 1 3 3v6.2l1.4-.7a2.5 2.5 0 0 1 3.4 1.1l.2.4a2.5 2.5 0 0 1-.8 3.2L14.5 20H9a5 5 0 0 1-5-5V9.5A1.5 1.5 0 0 1 5.5 8H7V5a3 3 0 0 1 3-3h3Zm-1 2h-2a1 1 0 0 0-1 1v7H5.5a.5.5 0 0 0-.5.5V15a3 3 0 0 0 3 3h4.7l5.3-3.8a.5.5 0 0 0 .16-.64l-.2-.4a.5.5 0 0 0-.68-.22L13 15.2V5a1 1 0 0 0-1-1Z"
+                  />
+                </svg>
+                <span className="x09-stage-hint-mouse">
+                  Arraste o mouse sobre o robô para girar
+                </span>
+                <span className="x09-stage-hint-touch">
+                  Arraste o dedo sobre o robô para girar
+                </span>
               </p>
-            </div>
-            <div className="x09-card relative z-20 mt-5 w-full max-w-md rounded-3xl p-4">
-              <div className="flex items-center justify-between text-xs text-zinc-500">
-                <span>Pipeline</span>
-                <span className="font-medium text-emerald-300">online</span>
-              </div>
-              <div className="mt-4 grid grid-cols-6 gap-2">
-                {PIPELINE.map((step, index) => (
-                  <div key={step} className="space-y-2">
-                    <div
-                      className="h-1.5 rounded-full bg-gradient-to-r from-violet-500 to-sky-400"
-                      style={{ opacity: 1 - index * 0.08 }}
-                    />
-                    <div className="truncate text-[10px] text-zinc-500">
-                      {step}
-                    </div>
-                  </div>
-                ))}
-              </div>
             </div>
           </div>
         </section>
 
-        <section className="pb-20 pt-6">
+        <section className="pb-20 pt-4">
           <div className="mb-8 max-w-2xl">
-            <p className="text-xs font-bold uppercase tracking-[0.24em] text-violet-300">
-              Três saídas, um saldo
-            </p>
-            <h2 className="mt-2 text-2xl font-semibold tracking-tight text-white md:text-3xl">
-              O GLB não é o produto. É o meio.
+            <h2 className="text-2xl font-semibold tracking-tight text-white md:text-3xl">
+              O que você pode criar
             </h2>
             <p className="mt-2 text-sm leading-6 text-zinc-400 md:text-base">
-              Loja quer o objeto a girar. Jogo quer o passo. Marca quer o
-              site com o 3D no hero. O Studio entrega os três — sem segundo
-              plano, só créditos.
+              Escolhe uma ideia. Não precisa entender de site, de 3D nem de
+              jogo — só do seu negócio.
             </p>
           </div>
 
-          <div className="grid gap-4 md:grid-cols-3">
-            {STAGES.map((stage) => (
+          <div className="grid gap-5 md:grid-cols-2">
+            {OFFERS.map((offer) => (
               <article
-                key={stage.kicker}
-                className="x09-feature-card rounded-[1.75rem] p-6"
+                key={offer.id}
+                className="x09-feature-card overflow-hidden rounded-[1.75rem]"
                 style={
                   {
-                    "--x09-accent": stage.accent,
+                    "--x09-accent": offer.accent,
                   } as CSSProperties
                 }
               >
-                <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-violet-300">
-                  {stage.kicker}
-                </p>
-                <h3 className="mt-3 text-lg font-semibold text-white">
-                  {stage.title}
-                </h3>
-                <p className="mt-2 text-sm leading-6 text-zinc-400">
-                  {stage.copy}
-                </p>
-                <p className="mt-5 text-xs text-zinc-500">
-                  <span className="font-semibold text-violet-200">
-                    {stage.stat}
-                  </span>
-                  {" · "}
-                  {stage.hint}
-                </p>
+                <div className="x09-offer-shot">
+                  <Image
+                    src={offer.image}
+                    alt={offer.title}
+                    fill
+                    sizes="(min-width: 768px) 50vw, 100vw"
+                    className="object-cover"
+                  />
+                </div>
+                <div className="p-6">
+                  <h3 className="text-xl font-semibold text-white">
+                    {offer.title}
+                  </h3>
+                  <p className="mt-2 text-sm leading-6 text-zinc-400">
+                    {offer.copy}
+                  </p>
+                </div>
               </article>
             ))}
           </div>
@@ -200,7 +185,7 @@ export function StudioLanding({ authError }: Props) {
               Termos
             </Link>
             <Link href="/billing" className="hover:text-violet-200">
-              Créditos
+              Preços
             </Link>
           </p>
         </footer>
