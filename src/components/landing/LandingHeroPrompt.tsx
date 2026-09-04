@@ -44,12 +44,12 @@ export function LandingHeroPrompt({ isAuthenticated = false }: Props) {
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
           rows={3}
-          placeholder="Ex.: Landing page premium para uma imobiliária de alto padrão em Florianópolis…"
+          placeholder="Ex.: site para a minha construtora, ou um personagem 3D de frente…"
           className="x09-hero-prompt-input"
         />
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-xs text-zinc-500">
-            Descreva em uma frase. A IA planeja, constrói e publica.
+            Descreve o site, ou começa pelo 3D depois de entrar.
           </p>
           <button type="submit" className="x09-button-primary shrink-0">
             Começar grátis

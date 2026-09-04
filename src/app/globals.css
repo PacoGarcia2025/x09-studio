@@ -307,7 +307,7 @@ body {
 
 .x09-mascot-wrap {
   position: relative;
-  width: min(100%, 480px);
+  width: min(100%, 520px);
   aspect-ratio: 1;
 }
 
@@ -324,12 +324,35 @@ body {
   filter: blur(28px);
 }
 
+.x09-mascot-floor {
+  display: none;
+}
+
+.x09-mascot-3d .x09-mascot-floor {
+  display: block;
+  position: absolute;
+  left: 18%;
+  right: 18%;
+  bottom: 8%;
+  height: 18%;
+  border-radius: 9999px;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(115, 92, 255, 0.28),
+    rgba(8, 6, 18, 0.15) 55%,
+    transparent 72%
+  );
+  filter: blur(8px);
+  pointer-events: none;
+}
+
 .x09-mascot-orbit {
   position: absolute;
-  inset: 6%;
+  inset: 4%;
   border-radius: 9999px;
   border: 1px solid rgba(139, 92, 246, 0.18);
   animation: x09-orbit 18s linear infinite;
+  pointer-events: none;
 }
 
 .x09-mascot-img {
@@ -340,6 +363,65 @@ body {
   object-fit: contain;
   filter: drop-shadow(0 0 42px rgba(115, 92, 255, 0.35));
   animation: x09-float 5s ease-in-out infinite;
+}
+
+.x09-mascot-viewer {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  display: block;
+  background: transparent;
+  --poster-color: transparent;
+  touch-action: pan-y;
+}
+
+.x09-mascot-load {
+  position: absolute;
+  left: 22%;
+  right: 22%;
+  bottom: 14%;
+  z-index: 2;
+  height: 3px;
+  overflow: hidden;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.08);
+  pointer-events: none;
+}
+
+.x09-mascot-load-bar {
+  display: block;
+  height: 100%;
+  width: 100%;
+  transform-origin: left center;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #735cff, #45c8ff);
+  transition: transform 160ms ease;
+}
+
+.x09-stage {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  width: 100%;
+  max-width: 32rem;
+  flex-direction: column;
+  align-items: center;
+}
+
+.x09-stage-hint {
+  margin-top: 0.75rem;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #71717a;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .x09-mascot-orbit,
+  .x09-mascot-img {
+    animation: none;
+  }
 }
 
 .x09-button-primary {

@@ -6,6 +6,7 @@ type ModelViewerProps = DetailedHTMLProps<
 > & {
   src?: string;
   alt?: string;
+  poster?: string;
   autoplay?: boolean;
   "camera-controls"?: boolean;
   "auto-rotate"?: boolean;
@@ -22,6 +23,11 @@ type ModelViewerProps = DetailedHTMLProps<
   "min-field-of-view"?: string;
   "max-field-of-view"?: string;
   "interaction-prompt"?: string;
+  "tone-mapping"?: string;
+  loading?: string;
+  reveal?: string;
+  "interpolation-decay"?: string;
+  "disable-tap"?: boolean;
 };
 
 declare module "react" {

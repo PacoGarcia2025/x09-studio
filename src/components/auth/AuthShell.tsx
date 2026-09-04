@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { StudioAtmosphere } from "@/components/brand/StudioAtmosphere";
 import { X09Robot } from "@/components/brand/X09Robot";
+import { landingRobotGlbExists } from "@/lib/brand/landing-robot.server";
 
 type AuthShellProps = {
   title: string;
@@ -11,6 +12,8 @@ type AuthShellProps = {
 
 /** Login / signup — cosmos da landing, robô grande sem sobrepor o card. */
 export function AuthShell({ title, subtitle, children, footer }: AuthShellProps) {
+  const hasGlb = landingRobotGlbExists();
+
   return (
     <main className="x09-landing relative min-h-dvh overflow-x-hidden overflow-y-auto p-4 text-zinc-100 sm:p-6">
       <StudioAtmosphere />
@@ -25,7 +28,7 @@ export function AuthShell({ title, subtitle, children, footer }: AuthShellProps)
       <div className="relative z-10 mx-auto flex min-h-[calc(100vh-2rem)] w-full max-w-6xl flex-col items-center justify-center gap-10 py-16 lg:flex-row lg:items-center lg:justify-between lg:gap-16 lg:py-8">
         <div className="flex w-full max-w-md flex-col items-center gap-5 lg:max-w-lg lg:flex-1 lg:items-center">
           <div className="x09-auth-robot">
-            <X09Robot />
+            <X09Robot hasGlb={hasGlb} />
           </div>
           <p className="max-w-xs text-center text-sm leading-6 text-zinc-500">
             Pipeline Plan → Build → Verify → Fix → Preview → Deploy

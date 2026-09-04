@@ -17,6 +17,17 @@ const nextConfig: NextConfig = {
   async redirects() {
     return [{ source: "/3d", destination: "/assets", permanent: false }];
   },
+  async headers() {
+    return [
+      {
+        source: "/landing/:file*.glb",
+        headers: [
+          { key: "Content-Type", value: "model/gltf-binary" },
+          { key: "Cache-Control", value: "public, max-age=86400" },
+        ],
+      },
+    ];
+  },
 };
 
 export default nextConfig;
