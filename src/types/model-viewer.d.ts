@@ -6,6 +6,7 @@ type ModelViewerProps = DetailedHTMLProps<
 > & {
   src?: string;
   alt?: string;
+  autoplay?: boolean;
   "camera-controls"?: boolean;
   "auto-rotate"?: boolean;
   "auto-rotate-delay"?: string;

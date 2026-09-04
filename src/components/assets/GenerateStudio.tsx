@@ -2,8 +2,8 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import dynamic from "next/dynamic";
 import { AssetThumb } from "@/components/assets/AssetThumb";
-import { MeshPreviewDialog, MeshTurntable } from "@/components/assets/MeshTurntable";
 import {
   archiveAssetAction,
   enqueueLogoPlateAction,
@@ -15,6 +15,16 @@ import {
 import { MESH_CREDIT_COST, MESH_CREDIT_COST_GAME_CHARACTER } from "@/lib/assets/mesh-tiers";
 import { sanitizeUserFacingCopy } from "@/lib/assets/user-facing";
 import { drainAssetQueue } from "@/components/assets/drainAssetQueue";
+
+const MeshTurntable = dynamic(
+  () => import("@/components/assets/MeshTurntable").then((m) => m.MeshTurntable),
+  { ssr: false },
+);
+const MeshPreviewDialog = dynamic(
+  () =>
+    import("@/components/assets/MeshTurntable").then((m) => m.MeshPreviewDialog),
+  { ssr: false },
+);
 
 const BTN =
   "rounded-2xl px-4 py-2.5 text-sm font-medium text-violet-100 ring-1 ring-violet-400/30 hover:bg-violet-500/15 disabled:opacity-50";

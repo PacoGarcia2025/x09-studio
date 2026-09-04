@@ -2,27 +2,35 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import dynamic from "next/dynamic";
 import {
   archiveAssetAction,
   enqueueMeshRigAction,
 } from "@/lib/assets/actions";
 import { AssetThumb } from "@/components/assets/AssetThumb";
-import { MeshPreviewDialog } from "@/components/assets/MeshTurntable";
 import type { AssetWithJobs } from "@/lib/assets/types";
 import { MESH_CREDIT_COST } from "@/lib/assets/mesh-tiers";
 import { sanitizeUserFacingCopy } from "@/lib/assets/user-facing";
 import { drainAssetQueue } from "@/components/assets/drainAssetQueue";
 
+const MeshPreviewDialog = dynamic(
+  () =>
+    import("@/components/assets/MeshTurntable").then((m) => m.MeshPreviewDialog),
+  { ssr: false },
+);
+
 function formatBytes(n: number): string {
-  if (n < 1024) return `${n} B`;
-  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
-  return `${(n / (1024 * 1024)).toFixed(1)} MB`;
+  const size = Number(n);
+  if (!Number.isFinite(size) || size < 0) return "0 B";
+  if (size < 1024) return `${size} B`;
+  if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`;
+  return `${(size / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 function isLogoMesh(asset: AssetWithJobs): boolean {
+  const name = String(asset.original_name ?? "");
   return (
-    asset.meta?.capability === "mesh.logo" ||
-    /-logo\.glb$/i.test(asset.original_name)
+    asset.meta?.capability === "mesh.logo" || /-logo\.glb$/i.test(name)
   );
 }
 
@@ -38,12 +46,13 @@ export function AssetLibraryList({ assets }: { assets: AssetWithJobs[] }) {
     kind: "logo" | "object";
   } | null>(null);
 
+  const safeAssets = Array.isArray(assets) ? assets : [];
   const visible = useMemo(() => {
-    if (filter === "all") return assets;
-    return assets.filter((asset) => asset.kind === filter);
-  }, [assets, filter]);
+    if (filter === "all") return safeAssets;
+    return safeAssets.filter((asset) => asset.kind === filter);
+  }, [safeAssets, filter]);
 
-  if (assets.length === 0) {
+  if (safeAssets.length === 0) {
     return (
       <p className="text-sm text-zinc-500">
         Ainda não há arquivos. Gere um 3D ou envie uma foto na página 3D.
@@ -77,10 +86,11 @@ export function AssetLibraryList({ assets }: { assets: AssetWithJobs[] }) {
       </div>
       <ul className="space-y-3">
         {visible.map((asset) => {
-          const latest = asset.jobs[0];
+          const jobs = asset.jobs ?? [];
+          const latest = jobs[0];
           const hasFile =
-            asset.byte_size > 0 ||
-            asset.jobs.some((job) => job.status === "done");
+            Number(asset.byte_size) > 0 ||
+            jobs.some((job) => job.status === "done");
           const canTurntable = asset.kind === "mesh" && hasFile;
           return (
             <li
