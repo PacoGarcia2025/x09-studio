@@ -13,6 +13,14 @@ if [ ! -f .env ] && [ ! -f .env.local ]; then
   exit 1
 fi
 
+if ! grep -qE '^STUDIO_ASSET_GPU_AVAILABLE=true' .env .env.local 2>/dev/null \
+  && ! grep -qE '^STUDIO_RUNPOD_API_KEY=.+' .env .env.local 2>/dev/null; then
+  echo "AVISO: objeto 3D simples (6 cr) sem GPU — falta STUDIO_ASSET_GPU_AVAILABLE=true ou STUDIO_RUNPOD_* no .env"
+fi
+if [ ! -f .runpod-ssh/trellis_ed25519 ]; then
+  echo "AVISO: falta .runpod-ssh/trellis_ed25519 — a geração simples não consegue ligar a GPU"
+fi
+
 # --- Next.js BFF (API) ---
 npm ci
 rm -rf .next

@@ -3,6 +3,8 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
+import { runtimeEnv, studioAppRoot } from "@/lib/env/runtime";
+
 export const TRELLIS_EXIT = {
   deps: 10,
   cuda: 11,
@@ -34,37 +36,44 @@ export type TrellisSidecarResult =
 export function huggingfaceTokenFromEnv(
   env: NodeJS.ProcessEnv = process.env,
 ): string | null {
-  for (const key of [
-    "HUGGINGFACE_TOKEN",
-    "HUGGINGFACE_API_KEY",
-    "HF_TOKEN",
-    "HUGGINGFACE_HUB_TOKEN",
-    "HUGGING_FACE_HUB_TOKEN",
-  ]) {
-    const value = env[key]?.trim();
+  if (env !== process.env) {
+    for (const key of HF_TOKEN_KEYS) {
+      const value = env[key]?.trim();
+      if (value) return value;
+    }
+    return null;
+  }
+  for (const key of HF_TOKEN_KEYS) {
+    const value = runtimeEnv(key);
     if (value) return value;
   }
   return null;
 }
 
+const HF_TOKEN_KEYS = [
+  "HUGGINGFACE_TOKEN",
+  "HUGGINGFACE_API_KEY",
+  "HF_TOKEN",
+  "HUGGINGFACE_HUB_TOKEN",
+  "HUGGING_FACE_HUB_TOKEN",
+] as const;
+
 export function resolveTrellisPython(): string | null {
-  const raw = process.env.STUDIO_TRELLIS_PYTHON?.trim();
-  return raw || null;
+  return runtimeEnv("STUDIO_TRELLIS_PYTHON") || null;
 }
 
 export function resolveTrellisScript(): string {
-  const explicit = process.env.STUDIO_TRELLIS_SCRIPT?.trim();
+  const explicit = runtimeEnv("STUDIO_TRELLIS_SCRIPT");
   if (explicit) return explicit;
-  return path.join(process.cwd(), "services", "trellis-worker", "run.py");
+  return path.join(studioAppRoot(), "services", "trellis-worker", "run.py");
 }
 
 export function resolveTrellisRoot(): string | null {
-  const raw = process.env.STUDIO_TRELLIS_ROOT?.trim();
-  return raw || null;
+  return runtimeEnv("STUDIO_TRELLIS_ROOT") || null;
 }
 
 export function trellisTimeoutMs(): number {
-  const raw = Number(process.env.STUDIO_TRELLIS_TIMEOUT_MS ?? 1_800_000);
+  const raw = Number(runtimeEnv("STUDIO_TRELLIS_TIMEOUT_MS") || 1_800_000);
   return Number.isFinite(raw) && raw > 0 ? raw : 1_800_000;
 }
 

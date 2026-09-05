@@ -66,7 +66,14 @@ function loadEnv() {
     "SUPABASE_SECRET_KEY",
     "SUPABASE_SERVICE_ROLE_KEY",
   ].filter((k) => Boolean(envVars[k]));
+  const gpuPresent = [
+    "STUDIO_ASSET_GPU_AVAILABLE",
+    "STUDIO_RUNPOD_API_KEY",
+    "STUDIO_RUNPOD_POD_ID",
+    "STUDIO_RUNPOD_NETWORK_VOLUME_ID",
+  ].filter((k) => Boolean(envVars[k]));
   console.log(`[ecosystem] env carregado: ${present.join(", ") || "(nenhuma chave crítica)"}`);
+  console.log(`[ecosystem] gpu: ${gpuPresent.join(", ") || "(nenhuma)"}`);
 
   return envVars;
 }

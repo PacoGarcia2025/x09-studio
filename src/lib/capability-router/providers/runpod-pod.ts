@@ -7,6 +7,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { TRELLIS_VOLUME } from "@/lib/capability-router/providers/trellis-volume";
+import { runtimeEnv, studioAppRoot } from "@/lib/env/runtime";
 
 export type RunpodSshTarget = {
   podId: string;
@@ -51,7 +52,7 @@ function readEnv(
     const value = env[key]?.trim();
     return value || undefined;
   }
-  const live = (process.env as NodeJS.Dict<string>)[key]?.trim();
+  const live = runtimeEnv(key);
   if (live) return live;
   // Fallback estático: o bundler do Next só injeta process.env.NOME_FIXO.
   switch (key) {
@@ -114,7 +115,9 @@ export function isRunpodOnDemandConfigured(
 export function resolveRunpodSshKeyPath(
   env: NodeJS.ProcessEnv = process.env,
 ): string {
-  return readEnv(env, "STUDIO_RUNPOD_SSH_KEY") || ".runpod-ssh/trellis_ed25519";
+  const raw = readEnv(env, "STUDIO_RUNPOD_SSH_KEY") || ".runpod-ssh/trellis_ed25519";
+  if (path.isAbsolute(raw)) return raw;
+  return path.resolve(studioAppRoot(), raw);
 }
 
 export function runpodStartTimeoutMs(
