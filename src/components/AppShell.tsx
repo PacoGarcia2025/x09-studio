@@ -7,12 +7,14 @@ import {
 } from "@/components/layout/AppShellMobileNav";
 import { isCurrentUserStudioOperator } from "@/lib/auth/studio-operator.server";
 import { signOut } from "@/lib/projects/actions";
+import { loadCurrentProfile } from "@/lib/profile/load";
 import { createClient } from "@/lib/supabase/server";
 
 const PRIMARY: ShellNavItem[] = [
   { href: "/projects", label: "Painel", icon: "▦" },
   { href: "/assets", label: "3D", icon: "◇" },
   { href: "/biblioteca", label: "Biblioteca", icon: "▣" },
+  { href: "/perfil", label: "Meu perfil", icon: "◐" },
   { href: "/ai", label: "Recursos", icon: "✦" },
   { href: "/ecosystem", label: "Conectores", icon: "⧉" },
 ];
@@ -45,6 +47,9 @@ export async function AppShell({
     data: { user },
   } = await supabase.auth.getUser();
   let creditBalance = 0;
+  let avatarUrl: string | null = null;
+  let shellName = workspaceName;
+  let shellLabel = avatarLabel;
   if (user) {
     const { data: wallet } = await supabase
       .from("credit_wallets")
@@ -52,6 +57,19 @@ export async function AppShell({
       .eq("user_id", user.id)
       .maybeSingle();
     creditBalance = wallet?.balance ?? 0;
+    const loaded = await loadCurrentProfile();
+    if (loaded.ok) {
+      avatarUrl = loaded.data.avatarUrl;
+      const first =
+        loaded.data.profile.fullName.split(/\s+/)[0] ||
+        loaded.data.email.split("@")[0];
+      if (first) {
+        shellLabel = first.charAt(0).toUpperCase();
+        if (workspaceName === "Studio X09") {
+          shellName = `Studio do ${first}`;
+        }
+      }
+    }
   }
 
   const credits = <CreditBalanceChip balance={creditBalance} />;
@@ -73,14 +91,22 @@ export async function AppShell({
           </Link>
         </div>
 
-        <div className="mx-3 mb-3 flex items-center gap-2 rounded-xl border border-white/8 bg-white/[0.03] px-2.5 py-2">
-          <span className="grid h-6 w-6 place-items-center rounded-full bg-gradient-to-br from-violet-500 to-sky-400 text-[10px] font-semibold text-white">
-            {avatarLabel}
+        <Link
+          href="/perfil"
+          className="mx-3 mb-3 flex items-center gap-2 rounded-xl border border-white/8 bg-white/[0.03] px-2.5 py-2 transition hover:bg-white/[0.05]"
+        >
+          <span className="grid h-6 w-6 place-items-center overflow-hidden rounded-full bg-gradient-to-br from-violet-500 to-sky-400 text-[10px] font-semibold text-white">
+            {avatarUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={avatarUrl} alt="" className="h-full w-full object-cover" />
+            ) : (
+              shellLabel
+            )}
           </span>
           <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-zinc-200">
-            {workspaceName}
+            {shellName}
           </span>
-        </div>
+        </Link>
 
         <nav className="flex flex-1 flex-col gap-5 overflow-y-auto px-3">
           <div className="space-y-0.5">
@@ -91,7 +117,8 @@ export async function AppShell({
                   activeHref.startsWith("/projects")) ||
                 (item.href === "/assets" && activeHref.startsWith("/assets")) ||
                 (item.href === "/biblioteca" &&
-                  activeHref.startsWith("/biblioteca"));
+                  activeHref.startsWith("/biblioteca")) ||
+                (item.href === "/perfil" && activeHref.startsWith("/perfil"));
               return (
                 <Link
                   key={item.label}
@@ -142,9 +169,25 @@ export async function AppShell({
           </div>
 
           <div className="flex items-center justify-between px-0.5 pt-1">
-            <span className="grid h-8 w-8 place-items-center rounded-full bg-gradient-to-br from-violet-500 to-sky-400 text-xs font-semibold text-white">
-              {avatarLabel}
-            </span>
+            <Link
+              href="/perfil"
+              className="flex items-center gap-2 rounded-lg py-1 pr-2 text-zinc-400 transition hover:text-zinc-200"
+              title="Meu perfil"
+            >
+              {avatarUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={avatarUrl}
+                  alt=""
+                  className="h-8 w-8 rounded-full object-cover ring-1 ring-white/15"
+                />
+              ) : (
+                <span className="grid h-8 w-8 place-items-center rounded-full bg-gradient-to-br from-violet-500 to-sky-400 text-xs font-semibold text-white">
+                  {shellLabel}
+                </span>
+              )}
+              <span className="text-xs font-medium">Perfil</span>
+            </Link>
             <form action={signOut}>
               <button
                 type="submit"
@@ -191,6 +234,18 @@ export async function AppShell({
             <div className="hidden min-w-0 lg:block" />
             <div className="ml-auto flex min-w-0 items-center justify-end gap-2">
               {creditsCompact}
+              <Link
+                href="/perfil"
+                className="grid h-8 w-8 place-items-center overflow-hidden rounded-full bg-gradient-to-br from-violet-500 to-sky-400 text-[10px] font-semibold text-white ring-1 ring-white/15 lg:hidden"
+                title="Meu perfil"
+              >
+                {avatarUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={avatarUrl} alt="" className="h-full w-full object-cover" />
+                ) : (
+                  shellLabel
+                )}
+              </Link>
             </div>
           </div>
         </header>

@@ -39,7 +39,10 @@ export default async function AssetsPage() {
           </p>
         ) : null}
 
-        <GenerateStudio commercialMesh={commercialMesh} />
+        <GenerateStudio
+          commercialMesh={commercialMesh}
+          gpuMesh={policies.gpuAvailable}
+        />
       </div>
     </AppShell>
   );

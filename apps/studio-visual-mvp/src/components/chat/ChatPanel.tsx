@@ -4,7 +4,6 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { PromptComposer } from "@/components/dashboard/PromptComposer";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { MODE_LABELS } from "@/lib/api";
 import { hasVisibleChatProse, stripCodeFencesForChat } from "@/lib/chat-display";
 import { cn } from "@/lib/utils";
 import { useStudioStore, type ChatMessage } from "@/store/studio-store";
@@ -21,11 +20,9 @@ export function ChatPanel({
   const isGenerating = useStudioStore((state) => state.isGenerating);
   const sendMessage = useStudioStore((state) => state.sendMessage);
   const stopGeneration = useStudioStore((state) => state.stopGeneration);
-  const lastResolvedMode = useStudioStore((state) => state.lastResolvedMode);
   const agentPhaseLabel = useStudioStore((state) => state.agentPhaseLabel);
   const buildMode = useStudioStore((state) => state.buildMode);
   const setBuildMode = useStudioStore((state) => state.setBuildMode);
-  const metrics = useStudioStore((state) => state.metrics);
   const isLovable = variant === "lovable";
 
   useEffect(() => {
@@ -51,15 +48,9 @@ export function ChatPanel({
           <h2 className="mt-0.5 text-base font-semibold text-primary">
             Construa conversando
           </h2>
-          {lastResolvedMode ? (
-            <p className="mt-1 text-[11px] text-secondary">
-              {MODE_LABELS[lastResolvedMode]}
-            </p>
-          ) : null}
           {agentPhaseLabel ? (
             <p className="mt-0.5 text-[11px] text-violet-300">
               {agentPhaseLabel}
-              {metrics?.repairCycles ? ` · repairs ${metrics.repairCycles}` : ""}
             </p>
           ) : null}
         </div>
@@ -67,10 +58,7 @@ export function ChatPanel({
         <div className="border-b border-zinc-100 px-4 py-3">
           <p className="text-sm font-semibold text-zinc-900">Chat X09</p>
           <p className="mt-0.5 text-xs text-zinc-500">
-            {agentPhaseLabel ||
-              (lastResolvedMode
-                ? MODE_LABELS[lastResolvedMode]
-                : "Peça mudanças e o preview atualiza")}
+            {agentPhaseLabel || "Peça mudanças e o preview atualiza"}
           </p>
         </div>
       )}

@@ -752,7 +752,7 @@ export function ProjectWorkspace({
           <div className="border-b border-white/8 px-4 py-3">
             <p className="text-sm font-semibold text-white">Chat X09</p>
             <p className="mt-0.5 text-xs text-zinc-500">
-              IA: {activeModel ?? "X09 Router"}
+              Peça mudanças e o preview atualiza
             </p>
           </div>
 

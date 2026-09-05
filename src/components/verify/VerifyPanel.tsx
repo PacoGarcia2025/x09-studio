@@ -164,7 +164,6 @@ export function VerifyPanel({
         {state ? (
           <span className="text-xs text-zinc-500">
             status: {state.status}
-            {state.model ? ` · IA: ${state.model}` : ""}
           </span>
         ) : null}
       </div>

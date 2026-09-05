@@ -23,6 +23,7 @@ function isActive(href: string, activeHref: string) {
   if (href === "/assets" && activeHref.startsWith("/assets")) return true;
   if (href === "/biblioteca" && activeHref.startsWith("/biblioteca")) return true;
   if (href === "/billing" && activeHref.startsWith("/billing")) return true;
+  if (href === "/perfil" && activeHref.startsWith("/perfil")) return true;
   return false;
 }
 

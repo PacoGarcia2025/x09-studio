@@ -64,11 +64,11 @@ export type RouteContext = {
 };
 
 export const MODE_LABELS: Record<ResolvedMode, string> = {
-  edit: "Claude · edição",
-  fast: "Gemini · rápido",
-  premium: "Claude · premium",
-  repair: "Claude · correção",
-  plan: "Gemini · planejamento",
+  edit: "A editar",
+  fast: "A trabalhar",
+  premium: "A construir",
+  repair: "A corrigir",
+  plan: "A planejar",
 };
 
 export const PHASE_LABELS: Record<AgentPhase, string> = {

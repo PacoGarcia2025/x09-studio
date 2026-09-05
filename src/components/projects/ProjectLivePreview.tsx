@@ -74,13 +74,17 @@ type Props = {
   projectId: string;
   refreshKey?: number;
   isBuilding?: boolean;
+  /** Miniatura nos cards — landing real, sem o overlay técnico do pipeline. */
+  variant?: "workspace" | "card";
 };
 
 export function ProjectLivePreview({
   projectId,
   refreshKey = 0,
   isBuilding = false,
+  variant = "workspace",
 }: Props) {
+  const isCard = variant === "card";
   const [files, setFiles] = useState<Record<string, string> | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -155,6 +159,10 @@ export function ProjectLivePreview({
     files != null && isPlaceholderPreviewContent(files);
   const hasRealPreview = files != null && !isPlaceholder;
 
+  if (isCard && !hasRealPreview) {
+    return <CardLandingSkeleton />;
+  }
+
   const showBuildingOverlay =
     isBuilding &&
     !hasRealPreview &&
@@ -228,6 +236,17 @@ export function ProjectLivePreview({
           </SandpackLayout>
         </div>
       </SandpackProvider>
+    </div>
+  );
+}
+
+function CardLandingSkeleton() {
+  return (
+    <div className="absolute inset-0 bg-zinc-100">
+      <div className="absolute inset-x-0 top-0 h-12 bg-white" />
+      <div className="absolute inset-x-10 top-24 h-8 rounded-lg bg-zinc-200/80" />
+      <div className="absolute inset-x-16 top-36 h-4 rounded bg-zinc-200/60" />
+      <div className="absolute inset-x-8 bottom-8 top-48 rounded-2xl bg-white shadow-sm" />
     </div>
   );
 }

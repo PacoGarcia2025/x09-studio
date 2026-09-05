@@ -19,14 +19,12 @@ export function PlannerPanel({
   projectId,
   initialPrompt = "",
   initialPlan = null,
-  initialModel = null,
 }: Props) {
   const router = useRouter();
   const [prompt, setPrompt] = useState(
     initialPrompt || "Crie uma landing page para uma clínica.",
   );
   const [plan, setPlan] = useState<StudioPlan | null>(initialPlan);
-  const [model, setModel] = useState<string | null>(initialModel);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
@@ -46,7 +44,6 @@ export function PlannerPanel({
       }
 
       setPlan(result.plan);
-      setModel(result.model);
       router.refresh();
     });
   }
@@ -58,9 +55,6 @@ export function PlannerPanel({
           <label htmlFor="prompt" className="block text-sm font-medium text-zinc-200">
             Prompt
           </label>
-          {model ? (
-            <p className="text-xs text-zinc-500">Modelo: {model}</p>
-          ) : null}
         </div>
         <textarea
           id="prompt"
