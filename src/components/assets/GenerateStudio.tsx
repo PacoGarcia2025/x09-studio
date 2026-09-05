@@ -7,6 +7,7 @@ import { AssetThumb } from "@/components/assets/AssetThumb";
 import {
   archiveAssetAction,
   enqueueLogoPlateAction,
+  enqueueIdleMotionAction,
   enqueueMeshGenerateAction,
   enqueueMeshRigAction,
   enqueueTextTo3dAction,
@@ -194,7 +195,8 @@ export function GenerateStudio({
         />
         <p className="mt-2 text-xs text-zinc-600">
           Objeto 3D simples: foto de uma coisa parada (árvore, arma, cenário).
-          Personagem para jogo: boneco que anda ou ataca.
+          Personagem para jogo: boneco que anda ou ataca. Dar movimento: o
+          animal respira e balança no sítio.
         </p>
 
         <div className="mt-4 grid gap-2">
@@ -308,6 +310,23 @@ export function GenerateStudio({
               className={BTN}
             >
               Personagem para jogo · {MESH_CREDIT_COST_GAME_CHARACTER} cr
+            </button>
+          ) : null}
+          {meshId ? (
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() =>
+                runJob(
+                  () => enqueueIdleMotionAction(meshId),
+                  "A dar movimento ao objeto…",
+                )
+              }
+              className="x09-button-primary rounded-2xl px-4 py-2.5 text-sm disabled:opacity-50"
+            >
+              {busy
+                ? "Gerando…"
+                : `Dar movimento · ${MESH_CREDIT_COST.idleMotion} cr`}
             </button>
           ) : null}
           {commercialMesh && meshId && meshCanRig ? (

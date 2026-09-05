@@ -10,6 +10,9 @@ describe("mesh credit SKUs", () => {
       creditCostForMeshJob({ capability: "mesh.generate", requiresGpu: true }),
     ).toBe(MESH_CREDIT_COST.gpu);
     expect(creditCostForMeshJob({ capability: "mesh.generate" })).toBe(0);
+    expect(
+      creditCostForMeshJob({ capability: "animation.generate" }),
+    ).toBe(MESH_CREDIT_COST.idleMotion);
   });
 
   it("tiers comerciais não dependem de GPU", () => {

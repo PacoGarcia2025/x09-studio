@@ -63,6 +63,7 @@ describe("credit billing modes", () => {
       ["gameCharacter", MESH_CREDIT_COST.game + MESH_CREDIT_COST.rig + MESH_CREDIT_COST.clips],
       ["rig", MESH_CREDIT_COST.rig + MESH_CREDIT_COST.clips],
       ["retexture", MESH_CREDIT_COST.retexture],
+      ["idleMotion", MESH_CREDIT_COST.idleMotion],
     ]);
   });
 });

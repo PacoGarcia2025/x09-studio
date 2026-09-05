@@ -3,6 +3,7 @@ import { createFakeMeshProvider } from "@/lib/capability-router/providers/fake-m
 import { createLocalCapabilityProvider } from "@/lib/capability-router/providers/local";
 import { createLogoPlateProvider } from "@/lib/capability-router/providers/logo-plate";
 import { createMeshyProvider } from "@/lib/capability-router/providers/meshy";
+import { createIdleMotionProvider } from "@/lib/capability-router/providers/idle-motion";
 import { createTrellisProvider } from "@/lib/capability-router/providers/trellis";
 
 const providers: CapabilityProvider[] = [];
@@ -17,6 +18,7 @@ function seed() {
   registerCapabilityProvider(createLogoPlateProvider());
   registerCapabilityProvider(createMeshyProvider());
   registerCapabilityProvider(createTrellisProvider());
+  registerCapabilityProvider(createIdleMotionProvider());
 }
 
 /** Único ponto para plugar um motor. O restante do Studio não importa o arquivo do provider. */

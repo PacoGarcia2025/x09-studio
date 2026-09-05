@@ -313,6 +313,19 @@ export async function enqueueTextTo3dAction(
   });
 }
 
+export async function enqueueIdleMotionAction(
+  sourceAssetId: string,
+): Promise<AssetActionResult> {
+  return enqueueMeshJob({
+    capability: "animation.generate",
+    sourceAssetId,
+    sourceKind: "mesh",
+    nameSuffix: "movimento",
+    requireImageIfGpu: false,
+    extraMeta: { sourceMode: "idle-motion" },
+  });
+}
+
 export async function enqueueMeshRigAction(
   sourceAssetId: string,
 ): Promise<AssetActionResult> {

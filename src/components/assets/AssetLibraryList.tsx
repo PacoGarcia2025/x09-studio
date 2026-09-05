@@ -5,11 +5,12 @@ import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import {
   archiveAssetAction,
+  enqueueIdleMotionAction,
   enqueueMeshRigAction,
 } from "@/lib/assets/actions";
 import { AssetThumb } from "@/components/assets/AssetThumb";
 import type { AssetWithJobs } from "@/lib/assets/types";
-import { MESH_CREDIT_COST_PREPARE_GAME } from "@/lib/assets/mesh-tiers";
+import { MESH_CREDIT_COST, MESH_CREDIT_COST_PREPARE_GAME } from "@/lib/assets/mesh-tiers";
 import { sanitizeUserFacingCopy } from "@/lib/assets/user-facing";
 import { drainAssetQueue } from "@/components/assets/drainAssetQueue";
 
@@ -108,6 +109,7 @@ export function AssetLibraryList({ assets }: { assets: AssetWithJobs[] }) {
                     {formatBytes(asset.byte_size)}
                     {asset.meta?.rigged === true ? " · pronto para jogo" : ""}
                     {asset.meta?.hasIdle === true ? " · parado" : ""}
+                    {asset.meta?.hasIdleMotion === true ? " · mexe-se" : ""}
                     {asset.meta?.hasAttack === true ? " · ataque" : ""}
                   </p>
                   {latest?.status === "failed" && latest.error_message ? (
@@ -118,6 +120,28 @@ export function AssetLibraryList({ assets }: { assets: AssetWithJobs[] }) {
                 </div>
               </div>
               <div className="flex shrink-0 flex-wrap gap-2">
+                {canTurntable &&
+                !isLogoMesh(asset) &&
+                asset.meta?.hasIdleMotion !== true ? (
+                  <button
+                    type="button"
+                    disabled={busyId === asset.id}
+                    onClick={() => {
+                      setBusyId(asset.id);
+                      void (async () => {
+                        const result = await enqueueIdleMotionAction(asset.id);
+                        if (result.ok) {
+                          await drainAssetQueue(result.jobId);
+                        }
+                        router.refresh();
+                        setBusyId(null);
+                      })();
+                    }}
+                    className="rounded-xl px-3 py-1.5 text-xs text-emerald-200 ring-1 ring-emerald-400/25 hover:bg-emerald-500/10 disabled:opacity-50"
+                  >
+                    Dar movimento · {MESH_CREDIT_COST.idleMotion} cr
+                  </button>
+                ) : null}
                 {canTurntable &&
                 !isLogoMesh(asset) &&
                 asset.meta?.rigged !== true ? (

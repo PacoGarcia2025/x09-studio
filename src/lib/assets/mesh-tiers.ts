@@ -17,6 +17,8 @@ export const MESH_CREDIT_COST = {
   clips: 8,
   /** Retextura 2K (10 créditos upstream). */
   retexture: 12,
+  /** Idle local no GLB (respirar / balançar). */
+  idleMotion: 3,
 } as const;
 
 export const MESH_CREDIT_COST_GAME_CHARACTER =
@@ -45,6 +47,11 @@ export const MESH_ACTION_PRICES = [
     credits: MESH_CREDIT_COST_PREPARE_GAME,
   },
   { id: "retexture", label: "Retextura 2K", credits: MESH_CREDIT_COST.retexture },
+  {
+    id: "idleMotion",
+    label: "Dar movimento ao objeto",
+    credits: MESH_CREDIT_COST.idleMotion,
+  },
 ] as const;
 
 export function isMeshTier(value: unknown): value is MeshTier {
@@ -67,6 +74,12 @@ export function creditCostForMeshJob(input: {
   sourceMode?: unknown;
 }): number {
   if (input.capability === "mesh.logo") return MESH_CREDIT_COST.logo;
+  if (
+    input.capability === "animation.generate" ||
+    input.sourceMode === "idle-motion"
+  ) {
+    return MESH_CREDIT_COST.idleMotion;
+  }
   if (input.capability === "texture.generate") return MESH_CREDIT_COST.retexture;
   if (input.rigForGame && input.sourceMode === "rig") {
     return MESH_CREDIT_COST.rig + MESH_CREDIT_COST.clips;
