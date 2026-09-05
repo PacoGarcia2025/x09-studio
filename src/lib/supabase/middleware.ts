@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { sanitizeNextPath } from "@/lib/auth/paths";
+import { publicOriginFromHeaders } from "@/lib/http/public-origin";
 import {
   getSupabasePublishableKey,
   getSupabaseUrl,
@@ -49,8 +50,11 @@ export async function updateSession(request: NextRequest) {
     path.startsWith("/perfil");
 
   if (!user && isProtected) {
-    const url = request.nextUrl.clone();
-    url.pathname = "/login";
+    const origin = publicOriginFromHeaders(
+      request.headers,
+      request.nextUrl.origin,
+    );
+    const url = new URL("/login", origin);
     const nextPath =
       request.nextUrl.pathname + (request.nextUrl.search || "");
     url.searchParams.set("next", nextPath);
@@ -60,7 +64,11 @@ export async function updateSession(request: NextRequest) {
   if (user && isAuthPage) {
     const nextParam = request.nextUrl.searchParams.get("next");
     const destination = sanitizeNextPath(nextParam);
-    return NextResponse.redirect(new URL(destination, request.url));
+    const origin = publicOriginFromHeaders(
+      request.headers,
+      request.nextUrl.origin,
+    );
+    return NextResponse.redirect(new URL(destination, origin));
   }
 
   return supabaseResponse;
