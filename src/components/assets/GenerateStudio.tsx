@@ -31,7 +31,6 @@ const BTN =
 
 export function GenerateStudio({
   commercialMesh,
-  gpuMesh = false,
 }: {
   commercialMesh: boolean;
   gpuMesh?: boolean;
@@ -193,61 +192,42 @@ export function GenerateStudio({
           placeholder="Ex.: carro esportivo vermelho, volume fechado para jogo"
           className="mt-1.5 w-full resize-y rounded-2xl bg-white/[0.04] px-4 py-3 text-sm text-white outline-none ring-1 ring-white/10 placeholder:text-zinc-600 focus:ring-violet-400/40"
         />
-        {gpuMesh ? (
-          <p className="mt-2 text-xs text-zinc-600">
-            Objeto simples: foto de uma coisa parada (árvore, arma, cenário).
-            Personagem para jogo: boneco que anda ou ataca.
-          </p>
-        ) : !commercialMesh ? (
-          <p className="mt-2 text-xs text-zinc-600">
-            Texto → 3D usa a geração comercial. Se o botão falhar, a API 3D
-            ainda não está ligada neste servidor.
-          </p>
-        ) : (
-          <p className="mt-2 text-xs text-zinc-600">
-            Personagem para jogo: uma pose de frente, em pé. Folha com várias
-            poses vira vários bonecos. O esqueleto, idle, passo e ataque só
-            funcionam em humanoides.
-          </p>
-        )}
+        <p className="mt-2 text-xs text-zinc-600">
+          Objeto 3D simples: foto de uma coisa parada (árvore, arma, cenário).
+          Personagem para jogo: boneco que anda ou ataca.
+        </p>
 
         <div className="mt-4 grid gap-2">
-          {gpuMesh ? (
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() => {
-                if (!imageId) {
-                  setOk(false);
-                  setMessage(
-                    "O modo simples precisa de uma foto. Envie a imagem e tente de novo.",
-                  );
-                  return;
-                }
-                runJob(
-                  () => enqueueMeshGenerateAction(imageId, "gpu"),
-                  "A gerar o objeto 3D…",
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => {
+              if (!imageId) {
+                setOk(false);
+                setMessage(
+                  "O modo simples precisa de uma foto. Envie a imagem e tente de novo.",
                 );
-              }}
-              className="x09-button-primary rounded-2xl px-4 py-2.5 text-sm disabled:opacity-50"
-            >
-              {busy
-                ? "Gerando…"
-                : `Objeto 3D simples · ${MESH_CREDIT_COST.gpu} cr`}
-            </button>
-          ) : null}
-          {!gpuMesh || commercialMesh ? (
+                return;
+              }
+              runJob(
+                () => enqueueMeshGenerateAction(imageId, "gpu"),
+                "A gerar o objeto 3D…",
+              );
+            }}
+            className="x09-button-primary rounded-2xl px-4 py-2.5 text-sm disabled:opacity-50"
+          >
+            {busy
+              ? "Gerando…"
+              : `Objeto 3D simples · ${MESH_CREDIT_COST.gpu} cr`}
+          </button>
+          {commercialMesh ? (
           <button
             type="button"
             disabled={busy}
             onClick={() => {
               if (imageId) {
                 runJob(
-                  () =>
-                    enqueueMeshGenerateAction(
-                      imageId,
-                      commercialMesh ? "game" : "gpu",
-                    ),
+                  () => enqueueMeshGenerateAction(imageId, "game"),
                   "A gerar o objeto 3D…",
                 );
                 return;
@@ -262,17 +242,11 @@ export function GenerateStudio({
                 "A gerar a partir do texto…",
               );
             }}
-            className={
-              gpuMesh
-                ? BTN
-                : "x09-button-primary rounded-2xl px-4 py-2.5 text-sm disabled:opacity-50"
-            }
+            className={BTN}
           >
             {busy
               ? "Gerando…"
-              : gpuMesh
-                ? `Objeto mais detalhado · ${MESH_CREDIT_COST.game} cr`
-                : `Gerar 3D · ${commercialMesh ? MESH_CREDIT_COST.game : MESH_CREDIT_COST.gpu} cr`}
+              : `Objeto mais detalhado · ${MESH_CREDIT_COST.game} cr`}
           </button>
           ) : null}
           {commercialMesh ? (
