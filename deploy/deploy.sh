@@ -23,7 +23,8 @@ fi
 
 # --- Next.js BFF (API) ---
 npm ci
-rm -rf .next
+# Não apagar .next antes do build: o Nginx serve o CSS daqui.
+# Se o build falhar, o site antigo continua no ar.
 npm run build
 
 test -f .next/standalone/server.js
