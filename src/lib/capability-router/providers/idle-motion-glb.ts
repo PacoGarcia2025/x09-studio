@@ -47,7 +47,9 @@ export function parseGlb(bytes: Uint8Array): { json: GltfJson; bin: Uint8Array }
         new TextDecoder().decode(bytes.subarray(start, end)),
       ) as GltfJson;
     } else if (chunkType === 0x004e4942) {
-      bin = bytes.subarray(start, end);
+      const slice = bytes.subarray(start, end);
+      bin = new Uint8Array(slice.length);
+      bin.set(slice);
     }
     offset = end;
   }
