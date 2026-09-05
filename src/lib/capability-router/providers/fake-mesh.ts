@@ -1,4 +1,4 @@
-import { isCommercialMeshTier } from "@/lib/assets/mesh-tiers";
+import { isCommercialMeshTier, parseMeshTier } from "@/lib/assets/mesh-tiers";
 import {
   buildFakeMeshGlb,
 } from "@/lib/capability-router/providers/fake-mesh-glb";
@@ -34,6 +34,12 @@ export function createFakeMeshProvider(): CapabilityProvider {
         return {
           status: "skipped",
           message: "Job comercial — outro provider",
+        };
+      }
+      if (parseMeshTier(ctx.params.meshTier) === "gpu") {
+        return {
+          status: "skipped",
+          message: "Objeto simples exige GPU — o stub de teste não substitui.",
         };
       }
       if (!ctx.outputPath) {

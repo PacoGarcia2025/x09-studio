@@ -1,3 +1,4 @@
+import { parseMeshTier } from "@/lib/assets/mesh-tiers";
 import { createExecutionContext } from "@/lib/capability-router/context";
 import { capabilityFromJob } from "@/lib/capability-router/from-job";
 import { getExecutionPolicies } from "@/lib/capability-router/policies";
@@ -25,10 +26,15 @@ export function createLocalAssetProcessor(): AssetProcessor {
 
       const policies = getExecutionPolicies();
       const candidates = listCapabilityCandidates(capability, policies);
+      const gpuJob = parseMeshTier(
+        (job.meta as { meshTier?: unknown } | null)?.meshTier,
+      ) === "gpu";
       if (candidates.length === 0) {
         return {
-          status: "skipped",
-          message: `Nenhum provider habilitado para ${capability}`,
+          status: gpuJob ? "failed" : "skipped",
+          message: gpuJob
+            ? "A geração simples ainda não conseguiu usar a GPU. Os créditos voltam. Tente de novo ou use objeto mais detalhado."
+            : `Nenhum provider habilitado para ${capability}`,
           meta: { capability },
         };
       }
@@ -71,9 +77,10 @@ export function createLocalAssetProcessor(): AssetProcessor {
       }
 
       return {
-        status: "skipped",
-        message:
-          lastSkip?.message ?? `Nenhum provider aceitou ${capability}`,
+        status: gpuJob ? "failed" : "skipped",
+        message: gpuJob
+          ? "A geração simples ainda não conseguiu usar a GPU. Os créditos voltam. Tente de novo ou use objeto mais detalhado."
+          : (lastSkip?.message ?? `Nenhum provider aceitou ${capability}`),
         meta: { capability, ...(lastSkip?.meta ?? {}) },
       };
     },

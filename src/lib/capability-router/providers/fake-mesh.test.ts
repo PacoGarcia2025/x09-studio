@@ -113,6 +113,21 @@ describe("FakeMeshProvider (Fase 5)", () => {
     expect(isGlbMagic(written!)).toBe(true);
   });
 
+  it("não gera o triângulo de teste para objeto simples (GPU)", async () => {
+    const files = new Map<string, Uint8Array>();
+    const ctx = createExecutionContext({
+      job: meshJob({
+        meta: { capability: "mesh.generate", meshTier: "gpu" },
+      }),
+      capability: "mesh.generate",
+      storage: memoryStorage(files),
+      policies: policiesOn,
+    });
+    const result = await createFakeMeshProvider().execute(ctx);
+    expect(result.status).toBe("skipped");
+    expect(files.size).toBe(0);
+  });
+
   it("não gera o cubo de exemplo para jobs comerciais", async () => {
     const files = new Map<string, Uint8Array>();
     const ctx = createExecutionContext({

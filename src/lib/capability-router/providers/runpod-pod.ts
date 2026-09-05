@@ -51,7 +51,9 @@ function readEnv(
     const value = env[key]?.trim();
     return value || undefined;
   }
-  // Acesso estático: o bundler do Next não injeta process.env[key] dinâmico.
+  const live = (process.env as NodeJS.Dict<string>)[key]?.trim();
+  if (live) return live;
+  // Fallback estático: o bundler do Next só injeta process.env.NOME_FIXO.
   switch (key) {
     case "STUDIO_RUNPOD_API_KEY":
       return process.env.STUDIO_RUNPOD_API_KEY?.trim() || undefined;

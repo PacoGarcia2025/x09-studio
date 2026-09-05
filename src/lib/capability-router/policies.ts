@@ -1,17 +1,16 @@
 import type { ExecutionPolicies } from "@/lib/capability-router/types";
 import { isCommercialMeshConfigured } from "@/lib/capability-router/providers/meshy-env";
 import { isRunpodOnDemandConfigured } from "@/lib/capability-router/providers/runpod-pod";
+import { runtimeEnv, runtimeEnvFlag } from "@/lib/env/runtime";
 
 export function getExecutionPolicies(): ExecutionPolicies {
   return {
-    generationEnabled:
-      process.env.STUDIO_AI_ENGINE_GENERATION_ENABLED?.trim() === "true",
+    generationEnabled: runtimeEnvFlag("STUDIO_AI_ENGINE_GENERATION_ENABLED"),
     paidApisAllowed:
-      process.env.STUDIO_ASSET_PAID_APIS?.trim() === "true" ||
-      isCommercialMeshConfigured(),
+      runtimeEnvFlag("STUDIO_ASSET_PAID_APIS") || isCommercialMeshConfigured(),
     gpuAvailable:
-      process.env.STUDIO_ASSET_GPU_AVAILABLE?.trim() === "true" ||
+      runtimeEnvFlag("STUDIO_ASSET_GPU_AVAILABLE") ||
       isRunpodOnDemandConfigured(),
-    internetAllowed: process.env.STUDIO_ASSET_INTERNET?.trim() !== "false",
+    internetAllowed: runtimeEnv("STUDIO_ASSET_INTERNET") !== "false",
   };
 }

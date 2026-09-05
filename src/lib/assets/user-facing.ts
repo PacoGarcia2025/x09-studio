@@ -7,6 +7,8 @@ export function sanitizeUserFacingCopy(text: string): string {
     .replace(/\bSTUDIO_RUNPOD_[A-Z0-9_]*\b/g, "GPU")
     .replace(/\bGPU\s+RunPod\b/gi, "GPU")
     .replace(/\bmeshy\b/gi, "geração comercial")
+    .replace(/\btrellis\b/gi, "GPU")
+    .replace(/\bhuggingface\b/gi, "GPU")
     .replace(/\brunpod\b/gi, "GPU")
     .replace(/\s{2,}/g, " ")
     .replace(/\s+([.,;:])/g, "$1")
