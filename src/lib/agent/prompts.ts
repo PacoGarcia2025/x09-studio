@@ -15,9 +15,10 @@ Schema:
   "acceptanceCriteria": string[]
 }
 
-Regras:
+Regras de escopo:
 - pt-BR
 - visualDirection DEVE citar uma cor de marca (ex.: "dark + accent laranja cinematográfico")
+- Se o pedido mencionar "sistema", "hamburgueria", "restaurante", "delivery", "e-commerce", "gestão", "pedidos", "crm" ou "plataforma", NUNCA classifique como landing estática de 1 página. O productType DEVE ser "saas", "dashboard", "marketplace" ou "other", com Páginas/Módulos de Cardápio/Produtos, Carrinho/Checkout, e Painel de Pedidos/Gestão.
 - Para apps com dados, inclua entities e authRequired quando fizer sentido
 - Landing simples pode ter entities: [] e authRequired: false
 - pages mínimo 1
@@ -41,6 +42,7 @@ indigo (padrão SaaS), cyan, emerald, rose, orange.
 - imobiliária / luxury → orange/amber
 - saúde / eco → emerald
 - moda / lifestyle → rose
+- hamburgueria / gastronomia → orange/amber
 - criativo → violet
 
 USE de verdade:
@@ -54,10 +56,24 @@ Hardcoded Tailwind de accent É PERMITIDO E OBRIGATÓRIO para personalidade.
 PROIBIDO apenas: purple-pink genérico de IA, loremflickr, templates 3 cards iguais sem rhythm.
 
 ═══════════════════════════════════════
+SISTEMAS INTERATIVOS & REGRAS DE QUALIDADE
+═══════════════════════════════════════
+1) SISTEMAS / DELIVERY / HAMBURGUERIA / E-COMMERCE:
+- OBRIGATÓRIO estado React real (useState) para Carrinho (cartItems, total, modal/drawer de sacola, botão "Adicionar R$ X").
+- OBRIGATÓRIO alternador de modo/aba (ex.: "Visão Cliente/Cardápio" vs "Painel de Pedidos/Gestão") para simular o sistema completo operando.
+- Botões funcionais nos cards de produto ("Adicionar ao Pedido", "Ver Detalhes").
+
+2) PROIBIÇÃO DE TEXTOS SINTÉTICOS E ALTS BIZARROS:
+- PROIBIDO usar palavras como "masculino", "feminino", "imagem de suporte", "suporte de marca", "Mesh 3D" ou "Objeto 3D" nos atributos alt, títulos ou descrições (ex.: NUNCA use "Hambúrguer masculino", NUNCA crie botão "Mesh 3D").
+- NUNCA invente botões de assets 3D/Kenney em sites de gastronomia ou comércio tradicional.
+- Use imagens Unsplash de alta qualidade adequadas ao setor (ex. gastronomia: https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=800&fm=webp&q=80, https://images.unsplash.com/photo-1586190848861-99aa4a171e90?w=800&fm=webp&q=80).
+- Textos DEVEM ser humanos, naturais, variados e atraentes em pt-BR.
+
+═══════════════════════════════════════
 PACOTES
 ═══════════════════════════════════════
 - framer-motion OBRIGATÓRIO (whileInView, stagger, useScroll/useTransform OU float infinito)
-- lucide-react (ícones válidos: Sparkles, Zap, Shield, Rocket, ArrowUpRight, Play, Check, Globe, Mail, Phone, MessageCircle, AtSign, MapPin, Home, Building2, Users, Star, TrendingUp, ArrowRight, Building, KeyRound, Bath, BedDouble, DollarSign, CalendarDays, Store, Car, BedDouble)
+- lucide-react (ícones válidos: Sparkles, Zap, Shield, Rocket, ArrowUpRight, Play, Check, Globe, Mail, Phone, MessageCircle, AtSign, MapPin, Home, Building2, Users, Star, TrendingUp, ArrowRight, Building, KeyRound, Bath, BedDouble, DollarSign, CalendarDays, Store, Car, BedDouble, ShoppingBag, ShoppingCart, Plus, Minus, Trash2, CheckCircle2, Clock)
 - PROIBIDO lucide inexistentes: CurrencyDollar (use DollarSign), BuildingStore (use Store), Instagram, Facebook, Twitter, Linkedin, WhatsApp, Youtube, TikTok
 - recharts quando fizer sentido
 - NUNCA importar tailwindcss
@@ -76,7 +92,7 @@ etc.
 - /lib/data.ts — mocks se houver dados
 - /supabase/migrations/*.sql — só se auth/CRUD
 
-Landing: Hero cinematográfico + bento + prova social + CTA final + footer rico.
+Landing/App: Hero cinematográfico + bento/produtos + prova social + CTA final + footer rico.
 Motion em toda seção importante.
 COPY pt-BR premium, sem lorem.
 Chat: 2–3 frases do conceito visual (cite a cor de marca); depois SOMENTE os blocos de código.`;
@@ -110,11 +126,12 @@ export function buildArtQa(): string {
   return (
     "\n\n[QA DE ARTE — FALHA = REFAZER]\n" +
     "1) pt-BR em todo o UI.\n" +
-    "2) PROIBIDO: site só preto/branco, loremflickr, grid 3 cards iguais, purple-pink genérico, ícones lucide inexistentes, tutorial sem código.\n" +
+    "2) PROIBIDO: site só preto/branco, loremflickr, grid 3 cards iguais, purple-pink genérico, ícones lucide inexistentes, tutorial sem código, alts artificiais ('masculino', 'feminino', 'suporte de marca'), botões bizarros ('Mesh 3D').\n" +
     "3) OBRIGATÓRIO: cor de marca (indigo/cyan/emerald/rose/orange), Hero com gradiente ou orbs coloridos, DESIGN_TOKENS + kit UI, motion, CTAs coloridos.\n" +
-    "4) Multi-arquivo com path= em cada bloco.\n" +
-    "5) /lib/data.ts com mocks se houver dados/auth.\n" +
-    "6) Pareça produto de R$30k — se parecer Canva/Wix/P&B genérico, falhou."
+    "4) SISTEMAS / DELIVERY / E-COMMERCE: OBRIGATÓRIO estado React real de carrinho + alternador de painel de gestão de pedidos.\n" +
+    "5) Multi-arquivo com path= em cada bloco.\n" +
+    "6) /lib/data.ts com mocks se houver dados/auth.\n" +
+    "7) Pareça produto de R$30k — se parecer Canva/Wix/P&B genérico, falhou."
   );
 }
 

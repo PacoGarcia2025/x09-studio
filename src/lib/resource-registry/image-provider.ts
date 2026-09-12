@@ -105,7 +105,7 @@ export function searchImage(
   );
 
   const ranked = [...resources]
-    .filter((resource) => resource.kind === "image" && !resource.userGalleryOnly)
+    .filter((resource) => resource.kind === "image" && !resource.userGalleryOnly && !resource.requiresUserConsent)
     .sort((a, b) => {
       const scoreA = textScore(a, input.query);
       const scoreB = textScore(b, input.query);
@@ -149,8 +149,8 @@ export function listImageResources(
   limit = 10,
   registry: ResourceRegistry = resourceRegistry,
 ): ImageRef[] {
-  return listResources(registry)
-    .filter((resource) => resource.kind === "image" && !resource.userGalleryOnly)
+  return listResources(registry, false)
+    .filter((resource) => resource.kind === "image" && !resource.userGalleryOnly && !resource.requiresUserConsent)
     .slice(0, limit)
     .map(compactResource);
 }

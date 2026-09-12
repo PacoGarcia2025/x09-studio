@@ -133,8 +133,8 @@ export function listIconResources(
   limit = 10,
   registry: ResourceRegistry = resourceRegistry,
 ): IconRef[] {
-  return listResources(registry)
-    .filter((resource) => resource.kind === "icon" && !resource.userGalleryOnly)
+  return listResources(registry, false)
+    .filter((resource) => resource.kind === "icon" && !resource.userGalleryOnly && !resource.requiresUserConsent)
     .slice(0, limit)
     .map(compactResource);
 }

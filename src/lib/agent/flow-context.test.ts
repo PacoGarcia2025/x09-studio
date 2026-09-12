@@ -88,4 +88,26 @@ describe("generation flow causal integration", () => {
 
     expect(providerSpy).not.toHaveBeenCalled();
   });
+
+  it("never includes private user gallery assets without explicit user request", () => {
+    const context = buildGenerationFlowContext({
+      prompt: "sistema completo para hamburgueria premium",
+    });
+
+    const hasPrivateGallery = context.selectedResources.some(
+      (r) => r.id === "user-gallery-private" || r.source === "user-gallery",
+    );
+    expect(hasPrivateGallery).toBe(false);
+  });
+
+  it("filters out game assets and 3d props for traditional business projects like hamburgueria", () => {
+    const context = buildGenerationFlowContext({
+      prompt: "sistema completo para hamburgueria premium",
+    });
+
+    const hasGameOr3dAsset = context.selectedResources.some(
+      (r) => r.kind === "game_asset" || r.kind === "3d" || r.id.includes("kenney") || r.id.includes("poly-haven"),
+    );
+    expect(hasGameOr3dAsset).toBe(false);
+  });
 });

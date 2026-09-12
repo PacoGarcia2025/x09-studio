@@ -11,9 +11,7 @@ function inferProductType(prompt: string, industry: string): Blueprint["productT
   const text = prompt.toLowerCase();
   let inferred: Blueprint["productType"] = "generic";
 
-  if (/(site|landing page|landing|home page|website|webpage|página inicial)/i.test(text)) {
-    inferred = "website";
-  } else if (/(sistema|software|app|aplicativo|dashboard|crm|gest[aã]o|gol|painel|plataforma)/i.test(text)) {
+  if (/(sistema|software|app|aplicativo|dashboard|crm|gest[aã]o|painel|plataforma|delivery|pedidos|loja|e-commerce)/i.test(text)) {
     inferred = "application";
   } else if (/(saas|subscription|assinatura|b2b)/i.test(text)) {
     inferred = "saas";
@@ -21,6 +19,8 @@ function inferProductType(prompt: string, industry: string): Blueprint["productT
     inferred = "portal";
   } else if (/(game|jogo|gaming|rpg)/i.test(text)) {
     inferred = "game";
+  } else if (/(site|landing page|landing|home page|website|webpage|página inicial)/i.test(text)) {
+    inferred = "website";
   }
 
   return inferred;

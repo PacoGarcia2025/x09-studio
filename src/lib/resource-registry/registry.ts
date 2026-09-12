@@ -520,8 +520,17 @@ export function getResource(resourceId: string, registry: ResourceRegistry = res
   return registry.resources.get(resourceId);
 }
 
-export function listResources(registry: ResourceRegistry = resourceRegistry): Resource[] {
-  return sortResources([...registry.resources.values()]);
+export function listResources(
+  registry: ResourceRegistry = resourceRegistry,
+  includeUserGallery = false,
+): Resource[] {
+  const allowed = [...registry.resources.values()].filter((resource) => {
+    if (resource.userGalleryOnly || resource.requiresUserConsent) {
+      return includeUserGallery;
+    }
+    return true;
+  });
+  return sortResources(allowed);
 }
 
 export function searchResources(
@@ -533,10 +542,6 @@ export function searchResources(
   const resources = [...registry.resources.values()].filter((resource) => {
     if (resource.userGalleryOnly || resource.requiresUserConsent) {
       if (!includeUserGallery) return false;
-    }
-
-    if (resource.userGalleryOnly || resource.requiresUserConsent) {
-      return matchesFilter(resource, filters);
     }
 
     return matchesFilter(resource, filters);

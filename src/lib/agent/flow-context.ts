@@ -99,6 +99,36 @@ function compactSelectedResource(resource: Record<string, unknown>): SelectedRes
   };
 }
 
+function isAllowedResource(resource: Record<string, unknown>, isGameOr3d = false): boolean {
+  const id = String(resource.id ?? "");
+  const kind = String(resource.kind ?? "");
+  const provider = String(resource.provider ?? "");
+  const source = String(resource.source ?? "");
+  const requiresUserConsent = Boolean(resource.requiresUserConsent ?? false);
+  const userGalleryOnly = Boolean(resource.userGalleryOnly ?? false);
+  const tags = Array.isArray(resource.tags) ? resource.tags.map(String).join(" ") : "";
+
+  if (userGalleryOnly || requiresUserConsent || source === "user-gallery" || provider === "user-gallery" || id === "user-gallery-private") {
+    return false;
+  }
+
+  if (!isGameOr3d) {
+    if (
+      kind === "game_asset" ||
+      kind === "3d" ||
+      id.includes("kenney") ||
+      id.includes("poly-haven") ||
+      provider.includes("kenney") ||
+      provider.includes("polyhaven") ||
+      tags.includes("game")
+    ) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
 export function buildGenerationFlowContext(input: FlowContextInput) {
   const prompt = input.prompt ?? "";
   const blueprint = resolveBlueprint(prompt, { hasExistingApp: Boolean(input.hasExistingApp) });
@@ -109,6 +139,7 @@ export function buildGenerationFlowContext(input: FlowContextInput) {
     constraints: blueprint.modules ?? blueprint.priorities ?? [],
   });
   const toolPlan = determineNeededResourceTools(prompt, blueprint);
+  const isGameOr3d = /game|jogo|gaming|rpg|3d|vray|render|three/i.test(prompt) || blueprint.productType === "game" || blueprint.industry === "game";
 
   const resourceSearches = [
     ...(toolPlan.component ? [searchComponentTool({ query: prompt, limit: 3 }, resourceRegistry)] : []),
@@ -118,18 +149,21 @@ export function buildGenerationFlowContext(input: FlowContextInput) {
   ];
 
   const toolResults = resourceSearches.flatMap((tool) => (tool.result.items as Record<string, unknown>[])) ?? [];
+  const allowedToolResults = toolResults.filter((item) => isAllowedResource(item, isGameOr3d));
+
   const selectedResources =
-    toolResults.length > 0
-      ? toolResults.slice(0, 6).map(compactSelectedResource)
-      : listResources(resourceRegistry)
+    allowedToolResults.length > 0
+      ? allowedToolResults.slice(0, 6).map(compactSelectedResource)
+      : listResources(resourceRegistry, false)
+          .filter((resource) => isAllowedResource(resource as unknown as Record<string, unknown>, isGameOr3d))
           .filter((resource) => resource.kind === "component" || resource.kind === "icon" || resource.kind === "motion" || resource.kind === "image")
           .slice(0, 6)
-          .map((resource) => compactSelectedResource(resource as Record<string, unknown>));
+          .map((resource) => compactSelectedResource(resource as unknown as Record<string, unknown>));
 
   const resourceDecision = evaluateResourceDecision({
     kind: selectedResources[0]?.kind === "icon" ? "icon" : "component",
     query: prompt,
-    resources: toolResults.map((resource) => ({
+    resources: allowedToolResults.map((resource) => ({
       id: String(resource.id ?? "resource"),
       kind: String(resource.kind ?? "component") as "component" | "icon" | "motion" | "image",
       name: String(resource.name ?? "resource"),

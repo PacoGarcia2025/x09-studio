@@ -134,8 +134,8 @@ export function listComponentResources(
   limit = 10,
   registry: ResourceRegistry = resourceRegistry,
 ): ComponentRef[] {
-  return listResources(registry)
-    .filter((resource) => resource.kind === "component" && !resource.userGalleryOnly)
+  return listResources(registry, false)
+    .filter((resource) => resource.kind === "component" && !resource.userGalleryOnly && !resource.requiresUserConsent)
     .slice(0, limit)
     .map(compactResource);
 }
