@@ -7,6 +7,8 @@ import {
   createGeminiViaOpenRouter,
 } from "./openrouter";
 import { createResilientFastProvider } from "./resilient";
+import { routeModelForTask } from "@/lib/model-router";
+import type { ModelRouteInput } from "@/lib/model-router/types";
 
 export type StudioLlmId =
   | "gemini-2.5-flash"
@@ -40,13 +42,73 @@ export function getLlmProvider(
  * Edit/premium/repair → Claude (aplica código de verdade).
  * Plan/fast → Gemini com fallback (OpenRouter / Groq).
  */
-export function getProviderForMode(mode: GenerationMode): LlmProvider {
+export function getProviderForMode(
+  mode: GenerationMode,
+  taskContext?: Partial<ModelRouteInput>,
+): LlmProvider {
   try {
+    const request = taskContext?.request ?? "";
+    const derived = taskContext
+      ? routeModelForTask({
+          request,
+          taskType: taskContext.taskType,
+          complexity: taskContext.complexity,
+          projectState: taskContext.projectState,
+          contextMetrics: taskContext.contextMetrics,
+          repairIssues: taskContext.repairIssues,
+          repairCycles: taskContext.repairCycles,
+          userModelPreference: taskContext.userModelPreference,
+          budget: taskContext.budget,
+        })
+      : null;
+
+    if (derived) {
+      const tier = derived.tier;
+
+      if (tier === "ECONOMIC") {
+        try {
+          return createGroqProvider();
+        } catch {
+          try {
+            return createGeminiViaOpenRouter();
+          } catch {
+            return createResilientFastProvider();
+          }
+        }
+      }
+
+      if (tier === "BALANCED") {
+        try {
+          return createGeminiViaOpenRouter();
+        } catch {
+          try {
+            return createGroqProvider();
+          } catch {
+            return createResilientFastProvider();
+          }
+        }
+      }
+
+      try {
+        return createClaudeViaOpenRouter();
+      } catch {
+        try {
+          return createGeminiViaOpenRouter();
+        } catch {
+          return createResilientFastProvider();
+        }
+      }
+    }
+
     switch (mode) {
       case "edit":
       case "premium":
       case "repair":
-        return createClaudeViaOpenRouter();
+        try {
+          return createClaudeViaOpenRouter();
+        } catch {
+          return createResilientFastProvider();
+        }
       case "plan":
         return createResilientFastProvider();
       case "fast":

@@ -1,4 +1,6 @@
 import "server-only";
+import type { RepairIssue, QualityGateStatus } from "@/lib/agent/schemas";
+import { evaluateVisualExperience } from "@/lib/pipeline/visual-intelligence";
 import { fileExists, readProjectFile } from "@/lib/projects/fs.server";
 import {
   findBrokenImports,
@@ -33,8 +35,96 @@ export type QualityReport = {
   issues: QualityIssue[];
 };
 
+export type UnifiedQualityGate = {
+  status: QualityGateStatus;
+  score: number;
+  issues: RepairIssue[];
+  summary: string;
+};
+
 function words(content: string): number {
   return (content.match(/[A-Za-zÀ-ÿ]{4,}/g) ?? []).length;
+}
+
+function makeRepairIssueFromQuality(issue: QualityIssue, source: RepairIssue["source"] = "quality"): RepairIssue {
+  return {
+    id: `quality-${issue.code}`,
+    category: "other",
+    severity: issue.severity === "error" ? "error" : "warning",
+    message: issue.message,
+    source,
+    suggestion: "Revisar a qualidade final do app antes de concluir.",
+    status: "open",
+  };
+}
+
+function issueFingerprint(issue: Pick<RepairIssue, "file" | "message" | "category">): string {
+  return `${issue.category ?? "other"}:${issue.file ?? "_"}:${issue.message}`.toLowerCase();
+}
+
+export function evaluateUnifiedQualityGate(input: {
+  qualityReport?: QualityReport;
+  repairIssues?: RepairIssue[];
+  repairCycles?: number;
+  maxRepairCycles?: number;
+}): UnifiedQualityGate {
+  const maxRepairCycles = input.maxRepairCycles ?? 3;
+  const qualityIssues = (input.qualityReport?.issues ?? []).map((issue) =>
+    makeRepairIssueFromQuality(issue),
+  );
+  const allIssues = [...(input.repairIssues ?? []), ...qualityIssues];
+  const serializableIssues = allIssues.map((issue) => ({
+    ...issue,
+    fingerprint: issue.fingerprint ?? issueFingerprint(issue),
+  }));
+  const errorIssues = serializableIssues.filter((issue) => issue.severity === "error");
+  const repeated = Object.values(
+    serializableIssues.reduce<Record<string, number>>((acc, issue) => {
+      const key = issue.fingerprint ?? issueFingerprint(issue);
+      acc[key] = (acc[key] ?? 0) + 1;
+      return acc;
+    }, {}),
+  ).some((count) => count > 1);
+
+  const cycles = input.repairCycles ?? 0;
+  if (input.qualityReport && input.qualityReport.ok && errorIssues.length === 0 && !repeated) {
+    return {
+      status: "PASS",
+      score: input.qualityReport.score,
+      issues: [],
+      summary: "Qualidade final aprovada.",
+    };
+  }
+
+  if (input.qualityReport && input.qualityReport.ok && errorIssues.length === 0 && cycles >= 0 && !repeated) {
+    return {
+      status: "IMPROVE",
+      score: input.qualityReport.score,
+      issues: serializableIssues,
+      summary: "Visual funcional e consistente, mas ainda precisa de direção premium e identidade mais forte.",
+    };
+  }
+
+  if (errorIssues.length > 0 && cycles < maxRepairCycles && !repeated) {
+    return {
+      status: "IMPROVE",
+      score: input.qualityReport?.score ?? 0,
+      issues: serializableIssues,
+      summary: `Qualidade insuficiente. Reparar os problemas reais detectados (${errorIssues.length} relevantes).`,
+    };
+  }
+
+  return {
+    status: "FAIL",
+    score: input.qualityReport?.score ?? 0,
+    issues: serializableIssues,
+    summary:
+      repeated
+        ? "Falta de progresso detectada: a mesma falha se repetiu; loop de repair interrompido."
+        : cycles >= maxRepairCycles
+          ? `Limite de ${maxRepairCycles} ciclos de repair atingido.`
+          : "Falha de qualidade detectada e não passou no gate mínimo.",
+  };
 }
 
 /** Critic da fase 1 — só HomePage premium, sem exigir Login/App. */
@@ -63,6 +153,23 @@ export async function critiqueHomePreview(
         severity: gate.severity,
       });
       score -= gate.penalty;
+    }
+
+    const visual = evaluateVisualExperience(home, briefPrompt ?? "", "premium");
+    if (visual.verdict === "FAIL") {
+      issues.push({
+        code: "visual_functional_only",
+        message: `Visual funcional apenas: ${visual.reasons.join(" ")}`,
+        severity: "error",
+      });
+      score -= 25;
+    } else if (visual.verdict === "IMPROVE") {
+      issues.push({
+        code: "visual_professional_only",
+        message: `Visual profissional, mas ainda sem WOW: ${visual.reasons.join(" ")}`,
+        severity: "warn",
+      });
+      score -= 10;
     }
 
     if (/Bem-vindo|Este app foi gerado pelo X09|Lorem ipsum|Meu App/i.test(home)) {

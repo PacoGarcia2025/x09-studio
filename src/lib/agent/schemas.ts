@@ -99,8 +99,15 @@ export const RepairIssueSchema = z.object({
   file: z.string().optional(),
   line: z.number().optional(),
   suggestion: z.string().optional(),
+  source: z.enum(["sandpack", "verify", "quality", "builder", "manual"]).optional(),
+  fingerprint: z.string().optional(),
+  status: z.enum(["open", "repaired", "ignored", "failed"]).default("open").optional(),
+  cycle: z.number().optional(),
 });
 export type RepairIssue = z.infer<typeof RepairIssueSchema>;
+
+export const QualityGateStatusSchema = z.enum(["PASS", "IMPROVE", "FAIL"]);
+export type QualityGateStatus = z.infer<typeof QualityGateStatusSchema>;
 
 export const StreamRequestSchema = z.object({
   messages: z

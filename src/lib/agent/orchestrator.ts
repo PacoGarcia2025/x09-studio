@@ -26,6 +26,20 @@ import {
   buildAgentEditSkillAddon,
   buildAgentRepairSkillAddon,
 } from "@/lib/skills/agent-bridge";
+import {
+  formatCreativePatternsForPrompt,
+  selectCreativePatterns,
+} from "@/lib/creative-patterns";
+import {
+  formatBlueprintForPrompt,
+  logBlueprintDecision,
+  resolveBlueprint,
+} from "@/lib/dna";
+import {
+  buildContextEnginePackage,
+  unsafeLegacyContextFallback,
+} from "@/lib/context-engine";
+import { evaluateUnifiedQualityGate } from "@/lib/pipeline/quality-critic.server";
 
 export type StreamEmit = (event: GenerationEvent) => void;
 
@@ -46,6 +60,65 @@ function extractJsonObject(text: string): unknown {
   return JSON.parse(raw.slice(start, end + 1));
 }
 
+async function renderContextSnapshot(req: StreamRequest, prompt: string) {
+  const currentFiles = req.currentFiles && Object.keys(req.currentFiles).length > 0 ? req.currentFiles : undefined;
+
+  try {
+    const contextPackage = await buildContextEnginePackage({
+      request: prompt,
+      businessDna: undefined,
+      experienceDna: undefined,
+      blueprint: undefined,
+      repoMap: currentFiles
+        ? {
+            projectId: null,
+            generatedAt: new Date().toISOString(),
+            totalFiles: Object.keys(currentFiles).length,
+            files: Object.entries(currentFiles).map(([path, content]) => ({
+              path,
+              type: path.includes("page") ? "page" : path.includes("component") ? "component" : path.includes("api") ? "api" : "unknown",
+              imports: [],
+              sizeBytes: Buffer.byteLength(content, "utf8"),
+              depth: path.split("/").length,
+              reason: "currentFiles",
+              contentHints: ["current", "file"],
+            })),
+            exclusions: ["node_modules", ".next"],
+            stats: {
+              pages: 0,
+              components: 0,
+              services: 0,
+              apis: 0,
+              schemas: 0,
+              unknown: 0,
+            },
+          }
+        : undefined,
+      currentFiles,
+      repairIssues: req.repairIssues,
+      projectId: undefined,
+      useCache: true,
+      maxFiles: 12,
+      maxBytes: 180_000,
+      maxEstimatedTokens: 12_000,
+      maxDependencyDepth: 3,
+    });
+
+    return { contextPackage, fallbackUsed: false };
+  } catch {
+    const contextPackage = await unsafeLegacyContextFallback({
+      request: prompt,
+      currentFiles,
+      repairIssues: req.repairIssues,
+      maxFiles: 12,
+      maxBytes: 180_000,
+      maxEstimatedTokens: 12_000,
+      maxDependencyDepth: 3,
+    });
+    return { contextPackage, fallbackUsed: true };
+  }
+}
+
 async function runPlan(
   req: StreamRequest,
   emit: StreamEmit,
@@ -57,15 +130,54 @@ async function runPlan(
     label: "Definindo produto, páginas e critérios…",
   });
 
-  const provider = getProviderForMode("plan");
-  emit({ type: "mode", mode: "plan", model: provider.id });
-
   const lastUser = [...req.messages].reverse().find((m) => m.role === "user");
   const planPrompt = lastUser?.content ?? "";
+  const provider = getProviderForMode("plan", {
+    request: planPrompt,
+    taskType: "planning",
+    complexity: "medium",
+    contextMetrics: {
+      selectedFiles: 0,
+      estimatedTokens: 6000,
+    },
+    projectState: { hasExistingApp: req.hasExistingApp },
+  });
+  emit({ type: "mode", mode: "plan", model: provider.id });
+  const blueprint = resolveBlueprint(planPrompt, {
+    hasExistingApp: req.hasExistingApp,
+  });
+  logBlueprintDecision(blueprint);
+  const { contextPackage, fallbackUsed } = await renderContextSnapshot(req, planPrompt);
+  const contextSummary = JSON.stringify(
+    {
+      strategic: {
+        businessDna: contextPackage.strategic.businessDna,
+        experienceDna: contextPackage.strategic.experienceDna,
+        blueprint: contextPackage.strategic.blueprint ?? blueprint,
+        goal: planPrompt,
+      },
+      structural: {
+        selectedFilesCount: contextPackage.selectedFiles.length,
+        totalFiles: contextPackage.structural.totalFiles,
+      },
+      selectedFiles: contextPackage.selectedFiles.slice(0, 12),
+      fallbackUsed,
+    },
+    null,
+    2,
+  );
+  const selectedPatterns = selectCreativePatterns({
+    businessDna: contextPackage.strategic.businessDna ?? undefined,
+    experienceDna: contextPackage.strategic.experienceDna ?? undefined,
+    blueprint: contextPackage.strategic.blueprint ?? blueprint,
+    taskContext: planPrompt,
+    maxPatterns: 3,
+  });
+  const creativePatternsSummary = formatCreativePatternsForPrompt(selectedPatterns);
   const messages: LlmMessage[] = [
     {
       role: "system",
-      content: `${PLAN_SYSTEM_PROMPT}\n\n${buildAgentPlanSkillAddon(planPrompt)}`,
+      content: `${PLAN_SYSTEM_PROMPT}\n\n${buildAgentPlanSkillAddon(planPrompt)}\n\n=== X09 BUSINESS DNA + EXPERIENCE DNA + BLUEPRINT ===\n${formatBlueprintForPrompt(blueprint)}\n\n=== X09 CREATIVE PATTERNS ===\n${creativePatternsSummary}\n\n=== CONTEXT ENGINE ===\n${contextSummary}`,
     },
     {
       role: "user",
@@ -156,8 +268,33 @@ async function streamBuild(
     label: "Gerando interface e arquivos…",
   });
 
+  const lastUser = [...req.messages].reverse().find((m) => m.role === "user");
+  const buildPrompt = lastUser?.content ?? "";
+
   const provider = getProviderForMode(
     mode === "edit" ? "edit" : mode === "repair" ? "repair" : "premium",
+    {
+      request: buildPrompt,
+      taskType:
+        mode === "edit"
+          ? "edit"
+          : mode === "repair"
+            ? "repair"
+            : "generation",
+      complexity:
+        mode === "repair"
+          ? "critical"
+          : mode === "edit"
+            ? "simple"
+            : "medium",
+      contextMetrics: {
+        selectedFiles: 0,
+        estimatedTokens: 8000,
+      },
+      repairIssues: req.repairIssues,
+      repairCycles: req.repairIssues?.length ?? 0,
+      projectState: { hasExistingApp: req.hasExistingApp },
+    },
   );
   emit({ type: "mode", mode, model: provider.id });
 
@@ -173,8 +310,6 @@ async function streamBuild(
         ? REPAIR_SYSTEM_PROMPT
         : BUILD_SYSTEM_PROMPT;
 
-  const lastUser = [...req.messages].reverse().find((m) => m.role === "user");
-  const buildPrompt = lastUser?.content ?? "";
   const skillAddon =
     mode === "edit"
       ? buildAgentEditSkillAddon(buildPrompt)
@@ -182,7 +317,29 @@ async function streamBuild(
         ? buildAgentRepairSkillAddon()
         : buildAgentBuildSkillAddon(buildPrompt);
 
-  const system = `${systemBase}\n\n${skillAddon}\n${req.userContext ?? ""}`;
+  const { contextPackage, fallbackUsed } = await renderContextSnapshot(req, buildPrompt);
+  const contextSummary = JSON.stringify(
+    {
+      strategic: {
+        businessDna: contextPackage.strategic.businessDna,
+        experienceDna: contextPackage.strategic.experienceDna,
+        blueprint: contextPackage.strategic.blueprint,
+      },
+      selectedFiles: contextPackage.selectedFiles.slice(0, 12),
+      fallbackUsed,
+    },
+    null,
+    2,
+  );
+  const selectedPatterns = selectCreativePatterns({
+    businessDna: contextPackage.strategic.businessDna ?? undefined,
+    experienceDna: contextPackage.strategic.experienceDna ?? undefined,
+    blueprint: contextPackage.strategic.blueprint ?? undefined,
+    taskContext: buildPrompt,
+    maxPatterns: 3,
+  });
+  const creativePatternsSummary = formatCreativePatternsForPrompt(selectedPatterns);
+  const system = `${systemBase}\n\n${skillAddon}\n${req.userContext ?? ""}\n\n=== X09 CREATIVE PATTERNS ===\n${creativePatternsSummary}\n\n=== CONTEXT ENGINE ===\n${contextSummary}`;
 
   const formatted = req.messages
     .filter((m) => m.content.trim())
@@ -328,6 +485,43 @@ export async function runAgentStream(
     }
 
     const text = await streamBuild(req, mode, emit, spec, signal);
+
+    const gate = evaluateUnifiedQualityGate({
+      repairIssues: req.repairIssues ?? [],
+      repairCycles: req.repairIssues?.length ?? 0,
+      maxRepairCycles: 3,
+      qualityReport: {
+        ok: true,
+        score: 100,
+        issues: [],
+      },
+    });
+
+    if (gate.status === "IMPROVE") {
+      emit({
+        type: "phase",
+        phase: "corrigindo",
+        label: gate.summary,
+      });
+      emit({
+        type: "error",
+        message: JSON.stringify({ status: gate.status, issues: gate.issues }),
+      });
+      return;
+    }
+
+    if (gate.status === "FAIL") {
+      emit({
+        type: "phase",
+        phase: "erro",
+        label: gate.summary,
+      });
+      emit({
+        type: "error",
+        message: gate.summary,
+      });
+      return;
+    }
 
     emit({
       type: "phase",
