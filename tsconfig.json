@@ -30,5 +30,5 @@
     "services/**/*.ts",
     ".next/types/**/*.ts"
   ],
-  "exclude": ["node_modules", "templates", ".data"]
+  "exclude": ["node_modules", "templates", ".data", "**/*.test.ts", "**/*.test.tsx"]
 }

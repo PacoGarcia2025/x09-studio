@@ -66,15 +66,36 @@ function determineNeededResourceTools(prompt: string, blueprint: { industry?: st
   };
 }
 
-function compactSelectedResource(resource: Record<string, unknown>) {
+export type SelectedResource = {
+  id: string;
+  kind: string;
+  name: string;
+  provider: string;
+  source: string;
+  qualityScore: number;
+  reference: {
+    kind: string;
+    resourceId: string;
+    location: string;
+  };
+};
+
+function compactSelectedResource(resource: Record<string, unknown>): SelectedResource {
+  const id = String(resource.id ?? "unknown");
+  const rawRef = typeof resource.reference === "object" && resource.reference !== null ? (resource.reference as Record<string, unknown>) : {};
+
   return {
-    id: resource.id ?? "unknown",
-    kind: resource.kind ?? "component",
-    name: resource.name ?? "resource",
-    provider: resource.provider ?? "unknown",
-    source: resource.source ?? "external",
-    qualityScore: resource.qualityScore ?? 0,
-    reference: resource.reference ?? { kind: "resource", resourceId: resource.id ?? "unknown", location: "resource-registry" },
+    id,
+    kind: String(resource.kind ?? "component"),
+    name: String(resource.name ?? "resource"),
+    provider: String(resource.provider ?? "unknown"),
+    source: String(resource.source ?? "external"),
+    qualityScore: typeof resource.qualityScore === "number" ? resource.qualityScore : Number(resource.qualityScore ?? 0),
+    reference: {
+      kind: String(rawRef.kind ?? "resource"),
+      resourceId: String(rawRef.resourceId ?? id),
+      location: String(rawRef.location ?? "resource-registry"),
+    },
   };
 }
 

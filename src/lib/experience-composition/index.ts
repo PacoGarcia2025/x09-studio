@@ -13,6 +13,12 @@ export type ExperienceCompositionInput = {
     name?: string;
     provider?: string;
     source?: string;
+    qualityScore?: number;
+    reference?: {
+      kind?: string;
+      resourceId?: string;
+      location?: string;
+    };
   }>;
   creativeDirection?: {
     heading?: string;
