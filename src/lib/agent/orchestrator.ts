@@ -39,6 +39,7 @@ import {
   buildContextEnginePackage,
   unsafeLegacyContextFallback,
 } from "@/lib/context-engine";
+import { buildGenerationFlowContext } from "@/lib/agent/flow-context";
 import { evaluateUnifiedQualityGate } from "@/lib/pipeline/quality-critic.server";
 
 export type StreamEmit = (event: GenerationEvent) => void;
@@ -147,6 +148,15 @@ async function runPlan(
     hasExistingApp: req.hasExistingApp,
   });
   logBlueprintDecision(blueprint);
+  const flowContext = buildGenerationFlowContext({
+    prompt: planPrompt,
+    hasExistingApp: req.hasExistingApp,
+    projectContext: {
+      goal: planPrompt,
+      segment: blueprint.industry,
+      requiresBrandAssets: /landing|imobili|premium|marca|hero/.test(planPrompt.toLowerCase()),
+    },
+  });
   const { contextPackage, fallbackUsed } = await renderContextSnapshot(req, planPrompt);
   const contextSummary = JSON.stringify(
     {
@@ -177,7 +187,7 @@ async function runPlan(
   const messages: LlmMessage[] = [
     {
       role: "system",
-      content: `${PLAN_SYSTEM_PROMPT}\n\n${buildAgentPlanSkillAddon(planPrompt)}\n\n=== X09 BUSINESS DNA + EXPERIENCE DNA + BLUEPRINT ===\n${formatBlueprintForPrompt(blueprint)}\n\n=== X09 CREATIVE PATTERNS ===\n${creativePatternsSummary}\n\n=== CONTEXT ENGINE ===\n${contextSummary}`,
+      content: `${PLAN_SYSTEM_PROMPT}\n\n${buildAgentPlanSkillAddon(planPrompt)}\n\n=== X09 PROJECT BRIEF ===\n${JSON.stringify(flowContext.projectBrief, null, 2)}\n\n=== X09 BUSINESS DNA + EXPERIENCE DNA + BLUEPRINT ===\n${formatBlueprintForPrompt(blueprint)}\n\n=== X09 RESOURCE DECISION ===\n${JSON.stringify(flowContext.resourceDecision, null, 2)}\n\n=== X09 CREATIVE DIRECTION ===\n${JSON.stringify(flowContext.creativeDirection, null, 2)}\n\n=== X09 EXPERIENCE COMPOSITION ===\n${JSON.stringify(flowContext.experienceComposition, null, 2)}\n\n=== X09 CREATIVE PATTERNS ===\n${creativePatternsSummary}\n\n=== CONTEXT ENGINE ===\n${contextSummary}`,
     },
     {
       role: "user",
@@ -339,7 +349,16 @@ async function streamBuild(
     maxPatterns: 3,
   });
   const creativePatternsSummary = formatCreativePatternsForPrompt(selectedPatterns);
-  const system = `${systemBase}\n\n${skillAddon}\n${req.userContext ?? ""}\n\n=== X09 CREATIVE PATTERNS ===\n${creativePatternsSummary}\n\n=== CONTEXT ENGINE ===\n${contextSummary}`;
+  const flowContext = buildGenerationFlowContext({
+    prompt: buildPrompt,
+    hasExistingApp: req.hasExistingApp,
+    projectContext: {
+      goal: buildPrompt,
+      segment: contextPackage.strategic.blueprint?.industry ?? undefined,
+      requiresBrandAssets: /landing|imobili|premium|marca|hero/.test(buildPrompt.toLowerCase()),
+    },
+  });
+  const system = `${systemBase}\n\n${skillAddon}\n${req.userContext ?? ""}\n\n=== X09 PROJECT BRIEF ===\n${JSON.stringify(flowContext.projectBrief, null, 2)}\n\n=== X09 BUSINESS DNA + EXPERIENCE DNA + BLUEPRINT ===\n${JSON.stringify({ businessDna: contextPackage.strategic.businessDna, experienceDna: contextPackage.strategic.experienceDna, blueprint: contextPackage.strategic.blueprint ?? flowContext.blueprint }, null, 2)}\n\n=== X09 RESOURCE DECISION ===\n${JSON.stringify(flowContext.resourceDecision, null, 2)}\n\n=== X09 CREATIVE DIRECTION ===\n${JSON.stringify(flowContext.creativeDirection, null, 2)}\n\n=== X09 EXPERIENCE COMPOSITION ===\n${JSON.stringify(flowContext.experienceComposition, null, 2)}\n\n=== X09 CREATIVE PATTERNS ===\n${creativePatternsSummary}\n\n=== CONTEXT ENGINE ===\n${contextSummary}`;
 
   const formatted = req.messages
     .filter((m) => m.content.trim())
