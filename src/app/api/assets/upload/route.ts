@@ -83,7 +83,7 @@ export async function POST(request: Request) {
       workspace_id: workspace.id,
       created_by: user.id,
       kind: classified.kind,
-      source: "chat-upload",
+      source: "upload",
       status: "ready",
       original_name: classified.originalName,
       storage_path: storagePath,
