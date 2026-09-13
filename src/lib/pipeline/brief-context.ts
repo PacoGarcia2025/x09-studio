@@ -1,3 +1,5 @@
+import { hasUserAssetConsent } from "@/lib/agent/flow-context";
+
 /** Contexto do brief do cliente para prompts de geração/edição. */
 
 const GENERIC_BRAND_RE =
@@ -45,7 +47,6 @@ export function usesDefaultPaletteDespiteBrief(
   brief: string,
   content: string,
 ): boolean {
-  const b = brief.toLowerCase();
   const askedCustomColor =
     /verde|oliva|olive|azul|blue|laranja|orange|vermelho|red|dourado|gold|marrom|brown|preto|black|bege|beige|terracota|emerald|teal|cyan|rose|amber|lime|indigo(?!go)/i.test(
       brief,
@@ -106,9 +107,14 @@ export function formatBuilderContext(input: {
     );
   }
 
+  // DENY BY DEFAULT: Se o brief for informado, a galeria só é injetada com consentimento explícito
   const library = input.libraryCatalog?.trim();
   if (library) {
-    parts.push(library);
+    const brief = input.briefPrompt?.trim();
+    const consent = brief ? hasUserAssetConsent(brief) : true;
+    if (consent) {
+      parts.push(library);
+    }
   }
 
   if (input.taskInstruction?.trim()) {

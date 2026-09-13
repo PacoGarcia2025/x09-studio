@@ -40,6 +40,7 @@ import {
   unsafeLegacyContextFallback,
 } from "@/lib/context-engine";
 import { buildGenerationFlowContext } from "@/lib/agent/flow-context";
+import { evaluateDiscoveryNeeds } from "@/lib/discovery-engine";
 import { evaluateUnifiedQualityGate } from "@/lib/pipeline/quality-critic.server";
 
 export type StreamEmit = (event: GenerationEvent) => void;
@@ -50,6 +51,25 @@ function mapRole(
   if (role === "ai" || role === "assistant") return "assistant";
   if (role === "system") return "system";
   return "user";
+}
+
+function mapBlueprintToAppSpecType(
+  blueprintType: "website" | "application" | "saas" | "portal" | "game" | "generic",
+): AppSpec["productType"] {
+  switch (blueprintType) {
+    case "saas":
+      return "saas";
+    case "application":
+      return "dashboard";
+    case "portal":
+      return "marketplace";
+    case "game":
+      return "other";
+    case "website":
+      return "landing";
+    default:
+      return "other";
+  }
 }
 
 function extractJsonObject(text: string): unknown {
@@ -187,7 +207,7 @@ async function runPlan(
   const messages: LlmMessage[] = [
     {
       role: "system",
-      content: `${PLAN_SYSTEM_PROMPT}\n\n${buildAgentPlanSkillAddon(planPrompt)}\n\n=== X09 PROJECT BRIEF ===\n${JSON.stringify(flowContext.projectBrief, null, 2)}\n\n=== X09 BUSINESS DNA + EXPERIENCE DNA + BLUEPRINT ===\n${formatBlueprintForPrompt(blueprint)}\n\n=== X09 RESOURCE DECISION ===\n${JSON.stringify(flowContext.resourceDecision, null, 2)}\n\n=== X09 CREATIVE DIRECTION ===\n${JSON.stringify(flowContext.creativeDirection, null, 2)}\n\n=== X09 EXPERIENCE COMPOSITION ===\n${JSON.stringify(flowContext.experienceComposition, null, 2)}\n\n=== X09 CREATIVE PATTERNS ===\n${creativePatternsSummary}\n\n=== CONTEXT ENGINE ===\n${contextSummary}`,
+      content: `${PLAN_SYSTEM_PROMPT}\n\n${buildAgentPlanSkillAddon(planPrompt)}\n\n=== X09 GENERATION CONTRACT (REQUISITOS ESTRUTURAIS INDISCUTÍVEIS) ===\n${JSON.stringify(flowContext.contract, null, 2)}\n\n=== X09 PROJECT BRIEF ===\n${JSON.stringify(flowContext.projectBrief, null, 2)}\n\n=== X09 BUSINESS DNA + EXPERIENCE DNA + BLUEPRINT ===\n${formatBlueprintForPrompt(blueprint)}\n\n=== X09 RESOURCE DECISION ===\n${JSON.stringify(flowContext.resourceDecision, null, 2)}\n\n=== X09 CREATIVE DIRECTION ===\n${JSON.stringify(flowContext.creativeDirection, null, 2)}\n\n=== X09 EXPERIENCE COMPOSITION ===\n${JSON.stringify(flowContext.experienceComposition, null, 2)}\n\n=== X09 CREATIVE PATTERNS ===\n${creativePatternsSummary}\n\n=== CONTEXT ENGINE ===\n${contextSummary}`,
     },
     {
       role: "user",
@@ -215,6 +235,51 @@ async function runPlan(
   }
 
   const parsed = AppSpecSchema.parse(extractJsonObject(result.text));
+
+  // Contract Authority Enforcement: LLM cannot collapse an application/saas/portal/dashboard into landing
+  if (
+    flowContext.contract.blueprint.productType !== "website" &&
+    flowContext.contract.blueprint.productType !== "generic"
+  ) {
+    parsed.productType = mapBlueprintToAppSpecType(flowContext.contract.blueprint.productType);
+  }
+
+  // Merge required pages from Blueprint into AppSpec if missing
+  const pageIds = new Set(parsed.pages.map((p) => p.id));
+  for (const reqPage of flowContext.contract.blueprint.requiredPages) {
+    if (!pageIds.has(reqPage.id)) {
+      parsed.pages.push({
+        id: reqPage.id,
+        title: reqPage.title,
+        path: reqPage.route,
+        purpose: reqPage.purpose,
+        sections: ["header", reqPage.id, "cta", "footer"],
+      });
+      pageIds.add(reqPage.id);
+    }
+  }
+
+  // Merge required entities from Blueprint into AppSpec if missing
+  const entityNames = new Set(parsed.entities.map((e) => e.name.toLowerCase()));
+  for (const reqEntity of flowContext.contract.blueprint.requiredEntities) {
+    if (!entityNames.has(reqEntity.toLowerCase())) {
+      parsed.entities.push({
+        name: reqEntity,
+        fields: [
+          { name: "id", type: "string", required: true },
+          { name: "name", type: "string", required: true },
+          { name: "status", type: "string", required: true },
+        ],
+        operations: ["list", "create", "update", "delete", "read"],
+      });
+      entityNames.add(reqEntity.toLowerCase());
+    }
+  }
+
+  if (flowContext.contract.blueprint.authRequired) {
+    parsed.authRequired = true;
+  }
+
   emit({ type: "spec", spec: parsed });
   return parsed;
 }
@@ -358,7 +423,7 @@ async function streamBuild(
       requiresBrandAssets: /landing|imobili|premium|marca|hero/.test(buildPrompt.toLowerCase()),
     },
   });
-  const system = `${systemBase}\n\n${skillAddon}\n${req.userContext ?? ""}\n\n=== X09 PROJECT BRIEF ===\n${JSON.stringify(flowContext.projectBrief, null, 2)}\n\n=== X09 BUSINESS DNA + EXPERIENCE DNA + BLUEPRINT ===\n${JSON.stringify({ businessDna: contextPackage.strategic.businessDna, experienceDna: contextPackage.strategic.experienceDna, blueprint: contextPackage.strategic.blueprint ?? flowContext.blueprint }, null, 2)}\n\n=== X09 RESOURCE DECISION ===\n${JSON.stringify(flowContext.resourceDecision, null, 2)}\n\n=== X09 CREATIVE DIRECTION ===\n${JSON.stringify(flowContext.creativeDirection, null, 2)}\n\n=== X09 EXPERIENCE COMPOSITION ===\n${JSON.stringify(flowContext.experienceComposition, null, 2)}\n\n=== X09 CREATIVE PATTERNS ===\n${creativePatternsSummary}\n\n=== CONTEXT ENGINE ===\n${contextSummary}`;
+  const system = `${systemBase}\n\n${skillAddon}\n${req.userContext ?? ""}\n\n=== X09 GENERATION CONTRACT (CONTRATO ESTRUTURAL OBRIGATÓRIO) ===\n${JSON.stringify(flowContext.contract, null, 2)}\n\n=== X09 PROJECT BRIEF ===\n${JSON.stringify(flowContext.projectBrief, null, 2)}\n\n=== X09 BUSINESS DNA + EXPERIENCE DNA + BLUEPRINT ===\n${JSON.stringify({ businessDna: contextPackage.strategic.businessDna, experienceDna: contextPackage.strategic.experienceDna, blueprint: contextPackage.strategic.blueprint ?? flowContext.blueprint }, null, 2)}\n\n=== X09 RESOURCE DECISION ===\n${JSON.stringify(flowContext.resourceDecision, null, 2)}\n\n=== X09 CREATIVE DIRECTION ===\n${JSON.stringify(flowContext.creativeDirection, null, 2)}\n\n=== X09 EXPERIENCE COMPOSITION ===\n${JSON.stringify(flowContext.experienceComposition, null, 2)}\n\n=== X09 CREATIVE PATTERNS ===\n${creativePatternsSummary}\n\n=== CONTEXT ENGINE ===\n${contextSummary}`;
 
   const formatted = req.messages
     .filter((m) => m.content.trim())
@@ -464,6 +529,25 @@ export async function runAgentStream(
           preference: req.preference,
           hasExistingApp: req.hasExistingApp,
         });
+
+  const discovery = evaluateDiscoveryNeeds({ query: prompt });
+  if (
+    !discovery.isSufficient &&
+    !req.hasExistingApp &&
+    mode !== "edit" &&
+    mode !== "repair" &&
+    req.phase !== "repair"
+  ) {
+    emit({
+      type: "phase",
+      phase: "planejando",
+      label: "Discovery Engine — solicitando informações essenciais…",
+    });
+    const questionText = `Para criar o aplicativo exato para sua marca, por favor informe alguns detalhes essenciais:\n\n${discovery.questions.map((q, i) => `${i + 1}. ${q}`).join("\n")}`;
+    emit({ type: "delta", text: questionText });
+    emit({ type: "done", text: questionText, mode: "plan" });
+    return;
+  }
 
   try {
     let spec = req.appSpec;

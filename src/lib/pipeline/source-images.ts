@@ -1,3 +1,4 @@
+import { stockImagesForBrief } from "@/lib/pipeline/visual-tweaks";
 import { optimizeUnsplashUrlsInSource } from "@/lib/publish/seo-meta";
 
 /** Fotos luxury imobiliárias (Unsplash, uso em preview/publish). */
@@ -50,10 +51,10 @@ export function hasBrokenImageSources(code: string): boolean {
 /**
  * Substitui src locais/placeholder por URLs Unsplash reais e otimiza CDN.
  */
-export function fixBrokenImagesInSource(code: string): string {
+export function fixBrokenImagesInSource(code: string, brief?: string | null): string {
   let idx = 0;
-  const nextUrl = () =>
-    LUXURY_PROPERTY_IMAGES[idx++ % LUXURY_PROPERTY_IMAGES.length]!;
+  const stock = stockImagesForBrief(brief ?? code);
+  const nextUrl = () => stock[idx++ % stock.length]!;
 
   let out = code.replace(
     /<img\b([^>]*?)\ssrc=(["'])([^"']+)\2([^>]*)>/gi,

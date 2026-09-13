@@ -66,6 +66,45 @@ function determineNeededResourceTools(prompt: string, blueprint: { industry?: st
   };
 }
 
+export function hasUserAssetConsent(prompt: string): boolean {
+  const text = prompt.toLowerCase();
+  return /(minha|meu|meus|minhas)\s*(foto|imagem|galeria|logo|marca|biblioteca|arquivo|pasta)|usar\s*(a\s*)?(minha\s*)?(galeria|foto|imagem|biblioteca|logo)|(da|na)\s*galeria|(da|na)\s*biblioteca|\/library\//i.test(
+    text,
+  );
+}
+
+export type GenerationContract = {
+  intent: {
+    rawPrompt: string;
+    isSystemOrApp: boolean;
+    hasExplicitUserAssetConsent: boolean;
+  };
+  dna: {
+    industry: string;
+    experience: string;
+    visualTone: string;
+    palette: string[];
+  };
+  blueprint: {
+    productType: "website" | "application" | "saas" | "portal" | "game" | "generic";
+    requiredModules: string[];
+    requiredPages: Array<{ id: string; title: string; route: string; purpose: string }>;
+    requiredEntities: string[];
+    technicalStack: string[];
+    authRequired: boolean;
+  };
+  resources: {
+    selectedResources: SelectedResource[];
+    userAssetPolicy: "DENY_BY_DEFAULT" | "EXPLICIT_USER_CONSENT_GRANTED";
+    allowedKinds: string[];
+  };
+  composition: {
+    summary: string;
+    patterns: string[];
+    sections: Array<{ id: string; label: string; visualTone: string; purpose: string }>;
+  };
+};
+
 export type SelectedResource = {
   id: string;
   kind: string;
@@ -200,7 +239,9 @@ export function buildGenerationFlowContext(input: FlowContextInput) {
       experience: blueprint.experience,
     },
     patterns: [
-      blueprint.experience === "premium" ? "hero-cinematic" : "cards-bento",
+      blueprint.experience === "premium" || blueprint.experience === "cinematic" || /cinematic|cinema/i.test(prompt)
+        ? "hero-cinematic"
+        : "cards-bento",
       "product-showcase",
     ],
   });
@@ -220,6 +261,44 @@ export function buildGenerationFlowContext(input: FlowContextInput) {
     creativeDirection,
   });
 
+  const userAssetConsent = hasUserAssetConsent(prompt);
+
+  const contract: GenerationContract = {
+    intent: {
+      rawPrompt: prompt,
+      isSystemOrApp:
+        /sistema|app|software|plataforma|dashboard|crm|delivery|hamburgueria|restaurante/i.test(prompt) ||
+        blueprint.productType === "application" ||
+        blueprint.productType === "saas" ||
+        blueprint.productType === "portal",
+      hasExplicitUserAssetConsent: userAssetConsent,
+    },
+    dna: {
+      industry: blueprint.industry,
+      experience: blueprint.experience,
+      visualTone: experienceDna.visual.tone,
+      palette: experienceDna.visual.palette,
+    },
+    blueprint: {
+      productType: blueprint.productType,
+      requiredModules: blueprint.modules ?? [],
+      requiredPages: blueprint.pages ?? [],
+      requiredEntities: blueprint.entities ?? [],
+      technicalStack: blueprint.technical.stack,
+      authRequired: blueprint.technical.authRequired,
+    },
+    resources: {
+      selectedResources,
+      userAssetPolicy: userAssetConsent ? "EXPLICIT_USER_CONSENT_GRANTED" : "DENY_BY_DEFAULT",
+      allowedKinds: [...new Set(selectedResources.map((r) => r.kind))],
+    },
+    composition: {
+      summary: experienceComposition.summary,
+      patterns: [creativeDirection.motion.includes("cinematic") ? "hero-cinematic" : "cards-bento"],
+      sections: experienceComposition.sections,
+    },
+  };
+
   return {
     projectBrief: {
       summary: discovered.ranked[0]?.reason ?? prompt,
@@ -236,5 +315,6 @@ export function buildGenerationFlowContext(input: FlowContextInput) {
     selectedResources,
     creativeDirection,
     experienceComposition,
+    contract,
   };
 }

@@ -31,6 +31,16 @@ function derivePages(productType: Blueprint["productType"], industry: string): B
     { id: "home", title: "Home", route: "/", purpose: "Apresentação principal e CTA" },
   ];
 
+  if (industry === "hamburgueria" || industry === "restaurante") {
+    return [
+      ...base,
+      { id: "cardapio", title: "Cardápio", route: "/cardapio", purpose: "Produtos e categorias" },
+      { id: "pedidos", title: "Pedidos", route: "/pedidos", purpose: "Gestão de pedidos e entregas" },
+      { id: "clientes", title: "Clientes", route: "/clientes", purpose: "Registro e recorrência" },
+      { id: "dashboard", title: "Painel Admin", route: "/dashboard", purpose: "Gestão do restaurante" },
+    ];
+  }
+
   if (productType === "website") {
     return [
       ...base,
@@ -46,15 +56,6 @@ function derivePages(productType: Blueprint["productType"], industry: string): B
       { id: "dashboard", title: "Dashboard", route: "/dashboard", purpose: "Visão geral e operação" },
       { id: "clientes", title: "Clientes", route: "/clientes", purpose: "Gestão de clientes e leads" },
       { id: "relatorios", title: "Relatórios", route: "/relatorios", purpose: "Indicadores e visão executiva" },
-    ];
-  }
-
-  if (industry === "hamburgueria" || industry === "restaurante") {
-    return [
-      ...base,
-      { id: "cardapio", title: "Cardápio", route: "/cardapio", purpose: "Produtos e categorias" },
-      { id: "pedidos", title: "Pedidos", route: "/pedidos", purpose: "Gestão de pedidos e entregas" },
-      { id: "clientes", title: "Clientes", route: "/clientes", purpose: "Registro e recorrência" },
     ];
   }
 

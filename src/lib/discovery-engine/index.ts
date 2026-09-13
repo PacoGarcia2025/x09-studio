@@ -10,6 +10,45 @@ export type DiscoveryEngineInput = {
   constraints?: string[];
 };
 
+export type DiscoveryEvaluation = {
+  isSufficient: boolean;
+  missingFields: string[];
+  questions: string[];
+  prompt: string;
+};
+
+export function evaluateDiscoveryNeeds(input: DiscoveryEngineInput): DiscoveryEvaluation {
+  const query = input.query.trim();
+  const lower = query.toLowerCase();
+
+  const containsDetailedScope =
+    /cardapio|cardápio|pedidos|clientes|entrega|admin|painel|dashboard|com|completo|sistema/i.test(lower) &&
+    query.length >= 35;
+
+  const isVagueShort = query.length < 35 && !containsDetailedScope;
+  const isGenericPrompt = /^(crie|faça|monte|gere)\s+(um|uma)?\s+(site|app|sistema|landing)(\s+para\s+uma?\s+\w+)?\.?$/i.test(query);
+
+  if ((isVagueShort || isGenericPrompt) && !containsDetailedScope) {
+    return {
+      isSufficient: false,
+      missingFields: ["nome_marca", "funcionalidades_especificas", "localizacao_contato"],
+      questions: [
+        "Qual é o nome oficial da sua empresa ou projeto?",
+        "Quais módulos ou funcionalidades principais você precisa (ex.: cardápio digital, pedidos, painel admin)?",
+        "Qual a sua cidade ou telefone de contato para exibição no sistema?",
+      ],
+      prompt: query,
+    };
+  }
+
+  return {
+    isSufficient: true,
+    missingFields: [],
+    questions: [],
+    prompt: query,
+  };
+}
+
 export function discoverProjectHints(input: DiscoveryEngineInput) {
   const query = input.query.toLowerCase();
   const segment = (input.segment ?? "geral").toLowerCase();

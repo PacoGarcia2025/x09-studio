@@ -13,14 +13,32 @@ export const GAME_STOCK_IMAGES = [
   "https://images.unsplash.com/photo-1593305841991-05c297ba4575?w=1200&fm=webp&q=80",
 ] as const;
 
+export const BURGER_FOOD_IMAGES = [
+  "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=1200&fm=webp&q=80",
+  "https://images.unsplash.com/photo-1586190848861-99aa4a171e90?w=1200&fm=webp&q=80",
+  "https://images.unsplash.com/photo-1550547660-d9450f859349?w=1200&fm=webp&q=80",
+  "https://images.unsplash.com/photo-1571091718767-18b5b1457add?w=1200&fm=webp&q=80",
+  "https://images.unsplash.com/photo-1551782450-a2132b4ba21d?w=1200&fm=webp&q=80",
+] as const;
+
+export const GENERAL_PRODUCT_IMAGES = [
+  "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=1200&fm=webp&q=80",
+  "https://images.unsplash.com/photo-1551836022-d5d88e9218df?w=1200&fm=webp&q=80",
+  "https://images.unsplash.com/photo-1522542550221-31fd19575a2d?w=1200&fm=webp&q=80",
+] as const;
+
 export function stockImagesForBrief(brief?: string | null): readonly string[] {
   const t = brief?.toLowerCase() ?? "";
-  if (
-    /game|jogo|gamer|esport|console|xbox|playstation|steam|x09/i.test(t)
-  ) {
+  if (/game|jogo|gamer|esport|console|xbox|playstation|steam|x09/i.test(t)) {
     return GAME_STOCK_IMAGES;
   }
-  return LUXURY_PROPERTY_IMAGES;
+  if (/burger|hamburguer|hamburgueria|cardapio|cardápio|lanche|restaurante|food|comida|gastronomia/i.test(t)) {
+    return BURGER_FOOD_IMAGES;
+  }
+  if (/imovel|imóvel|imobiliaria|imobiliária|property|apartamento|casa|luxury|real estate/i.test(t)) {
+    return LUXURY_PROPERTY_IMAGES;
+  }
+  return GENERAL_PRODUCT_IMAGES;
 }
 
 export function isImageFixMessage(message: string): boolean {

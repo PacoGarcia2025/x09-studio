@@ -1,3 +1,4 @@
+import { hasUserAssetConsent } from "@/lib/agent/flow-context";
 import type { LlmProvider } from "@/lib/llm/types";
 import { needsAuthPanel } from "@/lib/pipeline/build-phases";
 import { ensureImobiliaria360Tasks } from "@/lib/pipeline/planner-imobiliaria";
@@ -94,9 +95,10 @@ export async function runPlanner(
     .filter(Boolean)
     .join("\n");
 
+  const consent = hasUserAssetConsent(prompt);
   const userContent = [
     contextLines || null,
-    input.libraryCatalog?.trim() || null,
+    consent ? (input.libraryCatalog?.trim() || null) : null,
     "Pedido do usuário:",
     prompt,
   ]
