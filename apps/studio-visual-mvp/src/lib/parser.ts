@@ -100,6 +100,14 @@ function extractPathFromFirstLine(code: string): string | null {
     return commentPath[1].replace(/\*\/$/, "");
   }
 
+  // Bare "path=/App.tsx" sem marcador de comentário (a IA às vezes esquece o comentário)
+  const barePathAttr = firstLine.match(
+    /^\s*(?:path|file)\s*=\s*(?:"([^"]+)"|'([^']+)'|(\S+))\s*$/i,
+  );
+  if (barePathAttr) {
+    return barePathAttr[1] ?? barePathAttr[2] ?? barePathAttr[3] ?? null;
+  }
+
   // // App.tsx  ou  // /components/Button.tsx
   const fileComment = firstLine.match(
     /^\s*(?:\/\/|\/\*)\s*(\/?[\w./-]+\.\w+)\s*(?:\*\/)?\s*$/,
@@ -127,7 +135,9 @@ function stripLeadingPathComment(code: string): string {
   const first = lines[0] ?? "";
   if (
     /^\s*(?:\/\/|\/\*|#)\s*(?:path|file)\s*[:=]/i.test(first) ||
-    /^\s*(?:\/\/|\/\*)\s*\/?[\w./-]+\.\w+\s*(?:\*\/)?\s*$/.test(first)
+    /^\s*(?:\/\/|\/\*)\s*\/?[\w./-]+\.\w+\s*(?:\*\/)?\s*$/.test(first) ||
+    // Bare "path=/App.tsx" sem marcador de comentário (a IA às vezes esquece o comentário)
+    /^\s*(?:path|file)\s*=\s*(?:"[^"]+"|'[^']+'|\S+)\s*$/i.test(first)
   ) {
     return lines.slice(1).join("\n");
   }

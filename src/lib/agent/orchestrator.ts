@@ -550,7 +550,11 @@ export async function runAgentStream(
       phase: "planejando",
       label: "Discovery Engine — solicitando informações essenciais…",
     });
-    const questionText = `Para criar o aplicativo exato para sua marca, por favor informe alguns detalhes essenciais:\n\n${discovery.questions.map((q, i) => `${i + 1}. ${q}`).join("\n")}`;
+    // Uma pergunta por vez (não a lista inteira) — mais natural e evita sobrecarregar o usuário.
+    const nextQuestion = discovery.questions[0];
+    const questionText = nextQuestion
+      ? `Antes de gerar, preciso de mais uma informação: ${nextQuestion}`
+      : "Para criar o aplicativo exato para sua marca, me conte mais detalhes essenciais.";
     emit({ type: "delta", text: questionText });
     emit({ type: "done", text: questionText, mode: "plan" });
     return;
