@@ -307,11 +307,14 @@ export const useStudioStore = create<StudioState>((set, get) => ({
             ),
           }));
         },
-        (finalText) => {
+        (finalText, mode) => {
           const { nextFiles, paths } = applyParsedFiles(get().files, finalText);
           const generatedVersionId = crypto.randomUUID();
           const proseBase = stripCodeFencesForChat(finalText);
-          const noCodeApplied = paths.length === 0;
+          // "plan" = Discovery Engine pedindo mais informações — é texto puro por design, não falha.
+          const isDiscoveryQuestion = mode === "plan" && paths.length === 0;
+          const noCodeApplied = paths.length === 0 && !isDiscoveryQuestion;
+          const noChange = noCodeApplied || isDiscoveryQuestion;
           const prose = noCodeApplied
             ? "Não consegui aplicar a alteração no código (resposta sem bloco path=). Tente de novo — ex.: \"mude o fundo da hero para degradê preto e laranja\"."
             : proseBase ||
@@ -323,15 +326,21 @@ export const useStudioStore = create<StudioState>((set, get) => ({
               ? "/App.tsx"
               : paths[paths.length - 1] ?? state.activeFile,
             isGenerating: false,
-            agentPhase: noCodeApplied ? "erro" : "verificando",
+            agentPhase: noCodeApplied
+              ? "erro"
+              : isDiscoveryQuestion
+                ? "concluido"
+                : "verificando",
             agentPhaseLabel: noCodeApplied
               ? "Edição sem código — nada mudou no Preview"
-              : "Verificando Preview…",
+              : isDiscoveryQuestion
+                ? "Aguardando mais informações"
+                : "Verificando Preview…",
             abortController: null,
             messages: state.messages.map((message) =>
               message.id === aiMessageId ? { ...message, content: prose } : message,
             ),
-            versions: noCodeApplied
+            versions: noChange
               ? state.versions
               : [
                   ...state.versions,
@@ -342,10 +351,10 @@ export const useStudioStore = create<StudioState>((set, get) => ({
                     files: { ...nextFiles },
                   },
                 ],
-            activeVersionId: noCodeApplied
+            activeVersionId: noChange
               ? state.activeVersionId
               : generatedVersionId,
-            lastStableFiles: noCodeApplied
+            lastStableFiles: noChange
               ? state.lastStableFiles
               : { ...nextFiles },
             metrics: {

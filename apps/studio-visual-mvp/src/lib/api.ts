@@ -116,7 +116,7 @@ async function getAccessToken(): Promise<string | null> {
  */
 export async function streamAIResponse(
   onChunk: (text: string) => void,
-  onFinish: (text: string) => void,
+  onFinish: (text: string, mode: ResolvedMode) => void,
   messages: ApiChatMessage[],
   route: RouteContext,
 ): Promise<ResolvedMode> {
@@ -125,7 +125,7 @@ export async function streamAIResponse(
     const errorText =
       "Faça login para usar a geração com IA (sessão necessária no BFF).";
     onChunk(errorText);
-    onFinish(errorText);
+    onFinish(errorText, "fast");
     route.onEvent?.({ type: "error", message: errorText });
     return "fast";
   }
@@ -173,7 +173,7 @@ export async function streamAIResponse(
         }
       }
       onChunk(message);
-      onFinish(message);
+      onFinish(message, resolvedMode);
       route.onEvent?.({ type: "error", message });
       return resolvedMode;
     }
@@ -181,7 +181,7 @@ export async function streamAIResponse(
     if (!response.body) {
       const message = "A API não retornou stream.";
       onChunk(message);
-      onFinish(message);
+      onFinish(message, resolvedMode);
       return resolvedMode;
     }
 
@@ -228,13 +228,13 @@ export async function streamAIResponse(
       }
     }
 
-    onFinish(accumulated);
+    onFinish(accumulated, resolvedMode);
     return resolvedMode;
   } catch (error) {
     if (error instanceof DOMException && error.name === "AbortError") {
       const message = "Geração cancelada.";
       onChunk(accumulated || message);
-      onFinish(accumulated || message);
+      onFinish(accumulated || message, resolvedMode);
       return resolvedMode;
     }
     const message =
@@ -242,7 +242,7 @@ export async function streamAIResponse(
         ? `Falha ao conectar no BFF: ${error.message}`
         : "Falha ao conectar no BFF.";
     onChunk(accumulated || message);
-    onFinish(accumulated || message);
+    onFinish(accumulated || message, resolvedMode);
     route.onEvent?.({ type: "error", message });
     return resolvedMode;
   }
