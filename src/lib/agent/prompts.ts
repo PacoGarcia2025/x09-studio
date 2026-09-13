@@ -63,7 +63,16 @@ SISTEMAS INTERATIVOS & REGRAS DE QUALIDADE
 - OBRIGATÓRIO alternador de modo/aba (ex.: "Visão Cliente/Cardápio" vs "Painel de Pedidos/Gestão") para simular o sistema completo operando.
 - Botões funcionais nos cards de produto ("Adicionar ao Pedido", "Ver Detalhes").
 
-2) PROIBIÇÃO DE TEXTOS SINTÉTICOS E ALTS BIZARROS:
+2) RIQUEZA VISUAL E COMPONENTES OBRIGATÓRIOS NA TELA (NUNCA ENTREGUE SITE POBRE OU APENAS 1 LISTA SIMPLES):
+- OBRIGATÓRIO Galeria de Imagens/Fotos interativa do ambiente/produtos (com grid, lightbox ou slider de fotos reais Unsplash).
+- OBRIGATÓRIO Seção de Depoimentos / Prova Social / Avaliações (com nota 5 estrelas, fotos de avatares/clientes e reviews em cards com hover).
+- OBRIGATÓRIO Ferramenta Interativa / Simulador por Setor:
+  - Gastronomia/Hamburgueria: Simulador de Avaliação do Pedido / Calculadora de Taxa de Entrega por Bairro ou Criador de Blend Customizado.
+  - Imobiliária: Simulador de Financiamento / Calculadora de Parcelas.
+  - Saúde/Pet: Agendador de Horário Interativo / Calculadora de Plano.
+  - Serviços/SaaS: Calculadora de ROI / Diagnóstico Gratuito.
+
+3) PROIBIÇÃO DE TEXTOS SINTÉTICOS E ALTS BIZARROS:
 - PROIBIDO usar palavras como "masculino", "feminino", "imagem de suporte", "suporte de marca", "Mesh 3D" ou "Objeto 3D" nos atributos alt, títulos ou descrições (ex.: NUNCA use "Hambúrguer masculino", NUNCA crie botão "Mesh 3D").
 - NUNCA invente botões de assets 3D/Kenney em sites de gastronomia ou comércio tradicional.
 - Use imagens Unsplash de alta qualidade adequadas ao setor (ex. gastronomia: https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=800&fm=webp&q=80, https://images.unsplash.com/photo-1586190848861-99aa4a171e90?w=800&fm=webp&q=80).

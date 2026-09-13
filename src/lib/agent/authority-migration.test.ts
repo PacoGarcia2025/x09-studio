@@ -12,7 +12,7 @@ describe("Architectural Authority Migration (Fases 1-10)", () => {
 
     expect(evaluation.isSufficient).toBe(false);
     expect(evaluation.questions.length).toBeGreaterThan(0);
-    expect(evaluation.questions[0]).toContain("nome");
+    expect(evaluation.questions[0]).toContain("WhatsApp");
   });
 
   it("TESTE 2: Pedido de sistema completo obriga productType a NÃO ser landing", () => {

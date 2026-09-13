@@ -21,22 +21,62 @@ export function evaluateDiscoveryNeeds(input: DiscoveryEngineInput): DiscoveryEv
   const query = input.query.trim();
   const lower = query.toLowerCase();
 
-  const containsDetailedScope =
-    /cardapio|cardápio|pedidos|clientes|entrega|admin|painel|dashboard|com|completo|sistema/i.test(lower) &&
-    query.length >= 35;
+  // Verifica se o prompt possui os dados essenciais reais de negócio (contato/rede social, endereço/cidade, logomarca/assets)
+  const hasRealContactData =
+    /\(?(?:[1-9]{2})\)?\s*(?:9\d{4}|\d{4})[-.\s]?\d{4}|whatsapp|contato@|instagram|@[\w.-]+|rua|avenida|bairro|cep|cidade/i.test(
+      query,
+    );
+  const hasAssetInstructions = /logo|logotipo|minha foto|minhas fotos|usar imagem|galeria própria|fotos do produto/i.test(
+    query,
+  );
+  const hasExplicitSkip = /pode usar mock|dados ficticios|dados de exemplo|dados de teste|sem perguntas|gerar direto/i.test(
+    query,
+  );
 
-  const isVagueShort = query.length < 35 && !containsDetailedScope;
-  const isGenericPrompt = /^(crie|faça|monte|gere)\s+(um|uma)?\s+(site|app|sistema|landing)(\s+para\s+uma?\s+\w+)?\.?$/i.test(query);
+  const missingFields: string[] = [];
+  const questions: string[] = [];
 
-  if ((isVagueShort || isGenericPrompt) && !containsDetailedScope) {
+  if (!hasRealContactData && !hasExplicitSkip) {
+    missingFields.push("contato_localizacao");
+    questions.push(
+      "Qual é o WhatsApp/telefone, e-mail, endereço ou cidade da empresa para exibição no sistema?",
+    );
+  }
+
+  if (!hasAssetInstructions && !hasExplicitSkip) {
+    missingFields.push("logo_imagens");
+    questions.push(
+      "Você possui logotipo próprio ou fotos reais dos seus produtos que deseja incluir, ou podemos usar imagens profissionais de stock do setor?",
+    );
+  }
+
+  if (
+    !/instagram|facebook|social|rede social/i.test(lower) &&
+    !hasExplicitSkip &&
+    query.length < 150
+  ) {
+    missingFields.push("redes_sociais");
+    questions.push(
+      "Possui perfil no Instagram ou outras redes sociais que deseja exibir no cabeçalho ou rodapé?",
+    );
+  }
+
+  if (
+    !/desconto|promoção|promocao|oferta|destaque/i.test(lower) &&
+    !hasExplicitSkip &&
+    query.length < 150
+  ) {
+    missingFields.push("promocoes_destaque");
+    questions.push(
+      "Existe alguma promoção especial, combo ou oferta de boas-vindas que você gostaria de destacar na tela inicial?",
+    );
+  }
+
+  if (missingFields.length > 0 && !hasExplicitSkip) {
     return {
       isSufficient: false,
-      missingFields: ["nome_marca", "funcionalidades_especificas", "localizacao_contato"],
-      questions: [
-        "Qual é o nome oficial da sua empresa ou projeto?",
-        "Quais módulos ou funcionalidades principais você precisa (ex.: cardápio digital, pedidos, painel admin)?",
-        "Qual a sua cidade ou telefone de contato para exibição no sistema?",
-      ],
+      missingFields,
+      questions,
       prompt: query,
     };
   }
