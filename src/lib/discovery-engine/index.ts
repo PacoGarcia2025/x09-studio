@@ -21,14 +21,17 @@ export function evaluateDiscoveryNeeds(input: DiscoveryEngineInput): DiscoveryEv
   const query = input.query.trim();
   const lower = query.toLowerCase();
 
-  // Verifica se o prompt possui os dados essenciais reais de negócio (contato/rede social, endereço/cidade, logomarca/assets)
+  // Verifica se o prompt possui os dados essenciais reais de negócio (contato/rede social, endereço/cidade, logomarca/assets).
+  // Exige sinais fortes (número, @handle, e-mail) — palavras genéricas como "cidade"/"bairro"/"foto"
+  // sozinhas não provam que o dado real foi informado (evita falso positivo que pula o Discovery).
   const hasRealContactData =
-    /\(?(?:[1-9]{2})\)?\s*(?:9\d{4}|\d{4})[-.\s]?\d{4}|whatsapp|contato@|instagram|@[\w.-]+|rua|avenida|bairro|cep|cidade/i.test(
+    /\(?(?:[1-9]{2})\)?\s*(?:9\d{4}|\d{4})[-.\s]?\d{4}|whatsapp\s*[:\-]?\s*\(?\d|contato@\S|instagram\s*[:\-@]|@[\w.]+|\b(?:rua|avenida|av\.?|bairro)\b\s+[\wçãáéíóúâêô]+.*\d|\bcep\b\s*\d/i.test(
       query,
     );
-  const hasAssetInstructions = /logo|logotipo|minha foto|minhas fotos|usar imagem|galeria própria|fotos do produto/i.test(
-    query,
-  );
+  const hasAssetInstructions =
+    /\b(?:minha|minhas|meu|meus|nossa|nossas|nosso|nossos)\b\s+\w*\s*(?:logo|logotipo|foto|fotos|imagem|imagens)|galeria própria|anexei|em anexo/i.test(
+      query,
+    );
   const hasExplicitSkip = /pode usar mock|dados ficticios|dados de exemplo|dados de teste|sem perguntas|gerar direto/i.test(
     query,
   );
