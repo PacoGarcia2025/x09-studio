@@ -49,8 +49,10 @@ pm2 start ecosystem.config.cjs --update-env
 # --- Visual MVP (UI Lovable) ---
 cd "$APP_DIR/apps/studio-visual-mvp"
 # Deriva VITE_SUPABASE_* do .env/.env.local raiz (mesmo projeto Supabase do Next/BFF).
-SUPA_URL=$(grep -h '^NEXT_PUBLIC_SUPABASE_URL=' "$APP_DIR/.env" "$APP_DIR/.env.local" 2>/dev/null | tail -1 | cut -d= -f2-)
-SUPA_KEY=$(grep -hE '^NEXT_PUBLIC_SUPABASE_(PUBLISHABLE_KEY|ANON_KEY)=' "$APP_DIR/.env" "$APP_DIR/.env.local" 2>/dev/null | tail -1 | cut -d= -f2-)
+# "|| true" evita que set -e/pipefail derrube o deploy quando só um dos dois arquivos existe
+# (grep sai com erro por causa do arquivo ausente, mesmo achando o valor no outro).
+SUPA_URL=$(grep -h '^NEXT_PUBLIC_SUPABASE_URL=' "$APP_DIR/.env" "$APP_DIR/.env.local" 2>/dev/null | tail -1 | cut -d= -f2- || true)
+SUPA_KEY=$(grep -hE '^NEXT_PUBLIC_SUPABASE_(PUBLISHABLE_KEY|ANON_KEY)=' "$APP_DIR/.env" "$APP_DIR/.env.local" 2>/dev/null | tail -1 | cut -d= -f2- || true)
 if [ -z "$SUPA_URL" ] || [ -z "$SUPA_KEY" ]; then
   echo "AVISO: NEXT_PUBLIC_SUPABASE_URL/PUBLISHABLE_KEY não encontrados no .env raiz — login no Visual MVP vai falhar (Failed to fetch)."
 else
