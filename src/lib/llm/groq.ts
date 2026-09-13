@@ -1,7 +1,8 @@
 import { createOpenAICompatibleProvider } from "./openai-compatible";
 import type { LlmProvider } from "./types";
 
-const GROQ_MODEL = "llama-3.3-70b-versatile";
+// Groq descontinua modelos com frequência; permite trocar sem novo deploy.
+const GROQ_MODEL = process.env.GROQ_MODEL_ID?.trim() || "llama-3.3-70b-versatile";
 
 function requireGroqKey(): string {
   const key = process.env.GROQ_API_KEY;
