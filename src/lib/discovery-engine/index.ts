@@ -29,12 +29,14 @@ export function evaluateDiscoveryNeeds(input: DiscoveryEngineInput): DiscoveryEv
       query,
     );
   const hasAssetInstructions =
-    /\b(?:minha|minhas|meu|meus|nossa|nossas|nosso|nossos)\b\s+\w*\s*(?:logo|logotipo|foto|fotos|imagem|imagens)|galeria própria|anexei|em anexo/i.test(
+    /\b(?:minha|minhas|meu|meus|nossa|nossas|nosso|nossos)\b\s+\w*\s*(?:logo|logotipo|foto|fotos|imagem|imagens)|galeria própria|anexei|em anexo|(?:tenho|não tenho|nao tenho|sem)\s+\w*\s*(?:logo|logotipo|foto|fotos|imagem|imagens)|imagens?\s+(?:de refer[eê]ncia|profissionais|de stock)|\bstock\b/i.test(
       query,
     );
-  const hasExplicitSkip = /pode usar mock|dados ficticios|dados de exemplo|dados de teste|sem perguntas|gerar direto/i.test(
-    query,
-  );
+  // Frases de "decida por mim" também encerram o Discovery — usuário já delegou a escolha.
+  const hasExplicitSkip =
+    /pode usar mock|dados ficticios|dados de exemplo|dados de teste|sem perguntas|gerar direto|do seu jeito|voc[eê] decide|fique [aà] vontade|sem prefer[eê]ncia|surpreenda|n[aã]o sei|tanto faz|como (?:voc[eê]|vc) achar melhor/i.test(
+      query,
+    );
 
   const missingFields: string[] = [];
   const questions: string[] = [];

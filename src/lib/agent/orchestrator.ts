@@ -521,6 +521,13 @@ export async function runAgentStream(
 ): Promise<void> {
   const lastUser = [...req.messages].reverse().find((m) => m.role === "user");
   const prompt = lastUser?.content ?? "";
+  // Junta todas as respostas do usuário: evaluateDiscoveryNeeds só olha a ÚLTIMA mensagem,
+  // e uma resposta pontual ("não tenho logo") não repete os dados já dados antes — sem isso
+  // o Discovery reperguntava tudo de novo a cada turno (loop infinito de perguntas).
+  const discoveryQuery = req.messages
+    .filter((m) => m.role === "user")
+    .map((m) => m.content)
+    .join("\n");
 
   const mode =
     req.phase === "repair"
@@ -530,7 +537,7 @@ export async function runAgentStream(
           hasExistingApp: req.hasExistingApp,
         });
 
-  const discovery = evaluateDiscoveryNeeds({ query: prompt });
+  const discovery = evaluateDiscoveryNeeds({ query: discoveryQuery });
   if (
     !discovery.isSufficient &&
     !req.hasExistingApp &&
