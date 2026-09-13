@@ -3,6 +3,10 @@
 # Uso: bash deploy/deploy.sh
 set -euo pipefail
 
+# Tudo dentro de main(): o bash precisa terminar de parsear a função inteira
+# antes de rodar qualquer linha dela, então o `git pull` (que reescreve este
+# próprio arquivo) não corrompe/trunca a execução em andamento.
+main() {
 APP_DIR="${APP_DIR:-/opt/x09-studio}"
 cd "$APP_DIR"
 
@@ -57,6 +61,7 @@ if [ -z "$SUPA_URL" ] || [ -z "$SUPA_KEY" ]; then
   echo "AVISO: NEXT_PUBLIC_SUPABASE_URL/PUBLISHABLE_KEY não encontrados no .env raiz — login no Visual MVP vai falhar (Failed to fetch)."
 else
   printf 'VITE_SUPABASE_URL=%s\nVITE_SUPABASE_ANON_KEY=%s\n' "$SUPA_URL" "$SUPA_KEY" > .env.production.local
+  echo "OK: .env.production.local gerado (VITE_SUPABASE_URL=$SUPA_URL)"
 fi
 npm ci
 npm run build
@@ -92,3 +97,6 @@ echo "Se o SSL wildcard ainda não existir, o Studio copia /sites/{slug} (funcio
 echo "Se a UI ainda estiver antiga no domínio, aplique o nginx:"
 echo "  sudo cp deploy/nginx-studio.conf /etc/nginx/sites-available/x09-studio"
 echo "  sudo nginx -t && sudo systemctl reload nginx"
+}
+
+main "$@"
