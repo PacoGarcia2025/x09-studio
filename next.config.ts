@@ -14,9 +14,7 @@ const nextConfig: NextConfig = {
     serverActions: {
       bodySizeLimit: "25mb",
     },
-    proxyClientMaxBodySize: "25mb",
-    middlewareClientMaxBodySize: "25mb",
-  } as NextConfig["experimental"],
+  },
   async redirects() {
     return [{ source: "/3d", destination: "/assets", permanent: false }];
   },
