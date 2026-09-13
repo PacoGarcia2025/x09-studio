@@ -48,6 +48,14 @@ pm2 start ecosystem.config.cjs --update-env
 
 # --- Visual MVP (UI Lovable) ---
 cd "$APP_DIR/apps/studio-visual-mvp"
+# Deriva VITE_SUPABASE_* do .env/.env.local raiz (mesmo projeto Supabase do Next/BFF).
+SUPA_URL=$(grep -h '^NEXT_PUBLIC_SUPABASE_URL=' "$APP_DIR/.env" "$APP_DIR/.env.local" 2>/dev/null | tail -1 | cut -d= -f2-)
+SUPA_KEY=$(grep -hE '^NEXT_PUBLIC_SUPABASE_(PUBLISHABLE_KEY|ANON_KEY)=' "$APP_DIR/.env" "$APP_DIR/.env.local" 2>/dev/null | tail -1 | cut -d= -f2-)
+if [ -z "$SUPA_URL" ] || [ -z "$SUPA_KEY" ]; then
+  echo "AVISO: NEXT_PUBLIC_SUPABASE_URL/PUBLISHABLE_KEY não encontrados no .env raiz — login no Visual MVP vai falhar (Failed to fetch)."
+else
+  printf 'VITE_SUPABASE_URL=%s\nVITE_SUPABASE_ANON_KEY=%s\n' "$SUPA_URL" "$SUPA_KEY" > .env.production.local
+fi
 npm ci
 npm run build
 if pm2 describe x09-mvp >/dev/null 2>&1; then
