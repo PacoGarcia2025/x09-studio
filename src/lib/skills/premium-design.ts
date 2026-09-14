@@ -27,6 +27,14 @@ BARRA DE QUALIDADE:
 - Cards de serviços/benefícios: CADA card com foto correspondente ao tema (Unsplash), não só ícone.
 - Copy: persuasiva, específica do negócio, números e provas quando possível.
 - Cor de marca: use a cor do brief do cliente. PROIBIDO aesthetic "template de IA" (roxo/rosa genérico sem brief), lorem, "Sua Empresa", página chapada, hero só com retângulo colorido.
+
+EFEITO "UAU" OBRIGATÓRIO (o visitante precisa pensar "como ele fez isso?"):
+- Scroll-reveal: TODA seção usa \`whileInView={{ opacity: 1, y: 0 }} initial={{ opacity: 0, y: 40 }} viewport={{ once: true }}\` — nada aparece estático na tela toda de uma vez.
+- Cards com tilt 3D: \`whileHover={{ rotateX: -6, rotateY: 6, scale: 1.03 }}\` + \`style={{ transformStyle: "preserve-3d" }}\` nos cards de destaque/produto.
+- Hero com profundidade em camadas: elementos com parallax leve (\`useScroll\`/\`useTransform\` do framer-motion, ou pelo menos orbs/blur com posições diferentes por camada) — nunca uma imagem estática única.
+- Botões CTA com glow pulsante: \`whileHover={{ scale: 1.05 }}\` + \`boxShadow\` animado ou \`animate={{ boxShadow: [...] }}\` com a cor da marca.
+- Pelo menos UM micro-detalhe surpresa: contador animado (números subindo ao entrar na tela), cursor customizado na hero, gradiente que se move (\`background-position\` animado), ou marquee/scroll infinito de logos/depoimentos.
+- Isso é o que diferencia "template genérico" de "uau, como ele fez isso" — não pule esta seção mesmo sob pressão de token/tempo.
 `.trim();
 
 export const STACK_RULES = `
@@ -60,12 +68,27 @@ export function lacksCinematicQuality(home: string): string[] {
     /backdrop-blur|blur-\[|gradient|from-zinc|via-|mesh|opacity-\d+/i.test(
       trimmed,
     );
+  const hasScrollReveal = /whileInView/.test(trimmed);
+  const hasInteractiveHover =
+    /whileHover|onHoverStart|rotateX|rotateY|useScroll|useTransform/.test(
+      trimmed,
+    );
 
   if (!hasMotion) {
     issues.push("Sem framer-motion — premium exige animações sutis");
   }
   if (!hasDepth) {
     issues.push("Sem profundidade visual (gradientes/glass/blur/orbs)");
+  }
+  if (!hasScrollReveal) {
+    issues.push(
+      "Sem scroll-reveal (whileInView) — seções aparecem estáticas, sem efeito \"uau\"",
+    );
+  }
+  if (!hasInteractiveHover) {
+    issues.push(
+      "Sem interação de destaque (whileHover/tilt/parallax) — falta o efeito \"como ele fez isso?\"",
+    );
   }
 
   const genericAiSlop =
