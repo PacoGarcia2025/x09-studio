@@ -269,16 +269,20 @@ export async function generateTaskPayload(
       const isLogin = /pages\/LoginPage\.tsx?$/i.test(normalizedPath);
       const isDashboard = /pages\/DashboardPage\.tsx?$/i.test(normalizedPath);
 
-      if (isHome && isWeakHomePage(content, skillPrompt)) {
-        const retryUser = [
-          base,
-          "REJEITADO: abaixo do padrão premium (R$20k). Reescreva HomePage COMPLETA: framer-motion, 5+ seções, copy real do brief, CTAs com cor de marca.",
-          `Falhas detectadas: ${lacksPremiumQuality(content, skillPrompt).join("; ") || "conteúdo raso"}`,
-          'Retorne JSON {"content":"..."} com HomePage.tsx completo.',
-        ].join("\n\n");
-        content = filePayloadSchema.parse(
-          await completeJson(provider, skills.homePageSystem, retryUser, 16384),
-        ).content;
+      if (isHome) {
+        // Antes só tentava reescrever 1x e aceitava mesmo se ainda fraco — agora repete
+        // até passar na barra de qualidade ou esgotar as tentativas.
+        for (let attempt = 0; attempt < 2 && isWeakHomePage(content, skillPrompt); attempt += 1) {
+          const retryUser = [
+            base,
+            "REJEITADO: abaixo do padrão premium (R$20k). Reescreva HomePage COMPLETA: framer-motion, scroll-reveal (whileInView), tilt 3D no hover, 5+ seções, copy real do brief, CTAs com cor de marca.",
+            `Falhas detectadas: ${lacksPremiumQuality(content, skillPrompt).join("; ") || "conteúdo raso"}`,
+            'Retorne JSON {"content":"..."} com HomePage.tsx completo.',
+          ].join("\n\n");
+          content = filePayloadSchema.parse(
+            await completeJson(provider, skills.homePageSystem, retryUser, 16384),
+          ).content;
+        }
       }
 
       if (isLogin && isWeakLoginPage(content)) {
