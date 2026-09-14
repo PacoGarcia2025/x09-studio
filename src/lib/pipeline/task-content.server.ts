@@ -17,6 +17,7 @@ import {
   hasBrokenImageSources,
   isScaffoldPlaceholderHome,
 } from "@/lib/pipeline/source-images";
+import { searchUnsplashImages } from "@/lib/pipeline/unsplash.server";
 
 const filePayloadSchema = z.object({
   content: z.string().min(1).max(120_000),
@@ -236,7 +237,14 @@ export async function generateTaskPayload(
       .filter(Boolean)
       .join("\n"),
   });
-  const base = [baseRaw, buildX09CreativeContext(context.briefPrompt)]
+  const realStockImages = await searchUnsplashImages(
+    context.briefPrompt ?? task.instruction,
+  );
+  const imageCatalogPrompt =
+    realStockImages.length > 0
+      ? `FOTOS REAIS do tema do negócio (Unsplash, já buscadas — USE ESTAS URLs, não invente outras):\n${realStockImages.map((u) => `- ${u}`).join("\n")}`
+      : "";
+  const base = [baseRaw, buildX09CreativeContext(context.briefPrompt), imageCatalogPrompt]
     .filter(Boolean)
     .join("\n\n");
 
@@ -329,7 +337,7 @@ export async function generateTaskPayload(
         }
 
         if (hasBrokenImageSources(content)) {
-          content = fixBrokenImagesInSource(content);
+          content = fixBrokenImagesInSource(content, context.briefPrompt, realStockImages);
         }
       }
 

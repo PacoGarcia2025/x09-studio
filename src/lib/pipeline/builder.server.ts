@@ -130,10 +130,14 @@ async function upsertEnv(
   return `env ${key} atualizado em ${envPath}`;
 }
 
-function polishGeneratedSource(path: string, content: string): string {
+function polishGeneratedSource(
+  path: string,
+  content: string,
+  briefPrompt?: string | null,
+): string {
   const normalized = path.replace(/\\/g, "/");
   if (!/\.(tsx|ts|jsx|js)$/.test(normalized)) return content;
-  let next = fixBrokenImagesInSource(content);
+  let next = fixBrokenImagesInSource(content, briefPrompt);
   if (/\.tsx$/i.test(normalized)) {
     next = repairKnownRuntimeImportsInSource(
       repairInvalidLucideImportsInSource(next),
@@ -177,7 +181,11 @@ export async function applyBuilderTask(
   switch (payload.kind) {
     case "file": {
       if (!task.path) throw new Error("path obrigatório");
-      const polished = polishGeneratedSource(task.path, payload.content);
+      const polished = polishGeneratedSource(
+        task.path,
+        payload.content,
+        options?.briefPrompt,
+      );
       await writeProjectFile(projectId, task.path, polished);
 
       let log = `${task.type} → ${task.path} (${polished.length} chars)`;

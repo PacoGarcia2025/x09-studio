@@ -50,10 +50,17 @@ export function hasBrokenImageSources(code: string): boolean {
 
 /**
  * Substitui src locais/placeholder por URLs Unsplash reais e otimiza CDN.
+ * `realStock` (busca real via Unsplash API, se configurada) tem prioridade sobre os
+ * conjuntos fixos por tema — mais relevante ao negócio real do usuário.
  */
-export function fixBrokenImagesInSource(code: string, brief?: string | null): string {
+export function fixBrokenImagesInSource(
+  code: string,
+  brief?: string | null,
+  realStock?: readonly string[],
+): string {
   let idx = 0;
-  const stock = stockImagesForBrief(brief ?? code);
+  const stock =
+    realStock && realStock.length > 0 ? realStock : stockImagesForBrief(brief ?? code);
   const nextUrl = () => stock[idx++ % stock.length]!;
 
   let out = code.replace(

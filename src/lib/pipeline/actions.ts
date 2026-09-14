@@ -124,7 +124,7 @@ export async function generatePlanAction(
     const provider = getLlmProvider("resilient-fast");
     let libraryCatalog: string | null = null;
     try {
-      await ensureProjectScaffold(projectId, { briefPrompt: trimmed });
+      await ensureProjectScaffold(projectId, { briefPrompt: discoveryQuery });
       const items = await syncWorkspaceLibraryIntoProject({
         projectId,
         workspaceId: gate.project.workspace_id,
@@ -135,7 +135,10 @@ export async function generatePlanAction(
       libraryCatalog = null;
     }
     const result = await runPlanner(provider, {
-      prompt: trimmed,
+      // Usa a conversa completa do Discovery (não só a última resposta) — senão o Planner
+      // perde o contexto do negócio dado nas rodadas anteriores (ex.: só vê "cidade X" e
+      // esquece que o pedido original era uma loja de sabonetes artesanais).
+      prompt: discoveryQuery,
       projectName: gate.project.name,
       projectSlug: gate.project.slug,
       libraryCatalog,
@@ -145,7 +148,7 @@ export async function generatePlanAction(
       .from("plans")
       .insert({
         project_id: projectId,
-        prompt: trimmed,
+        prompt: discoveryQuery,
         plan_json: result.plan,
         model: result.model,
         status: "ready",
@@ -186,7 +189,7 @@ export async function generatePlanAction(
     // Guarda o prompt no projeto para reabrir o chat sem digitar de novo.
     const briefUpdate = await gate.supabase
       .from("projects")
-      .update({ brief_prompt: trimmed, status: "generating" })
+      .update({ brief_prompt: discoveryQuery, status: "generating" })
       .eq("id", projectId);
 
     if (briefUpdate.error && /brief_prompt/i.test(briefUpdate.error.message)) {
