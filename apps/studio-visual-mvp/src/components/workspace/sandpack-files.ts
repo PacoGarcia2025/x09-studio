@@ -153,8 +153,24 @@ export function sanitizeSandpackCode(code: string): string {
       "",
     );
 
+  next = rewriteAbsoluteUiImports(next);
   next = rewriteBrokenLucideIcons(next);
   return next.replace(/\n{3,}/g, "\n\n");
+}
+
+function rewriteAbsoluteUiImports(code: string): string {
+  return code.replace(
+    /import\s+([^'"\n]+?)\s+from\s+['"]((?:@\/|\/)?components\/(?:shadcn|ui)\/)([^'"\n]+)['"]/g,
+    (_, spec: string, _prefix: string, target: string) => {
+      const file = target.replace(/\.[jt]sx?$/i, "");
+      const normalized = file
+        .split("/")
+        .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+        .join("");
+      const fallback = normalized.replace(/^([A-Z])/, (m) => m.toUpperCase());
+      return `import ${spec} from "/components/ui/${fallback}";`;
+    },
+  );
 }
 
 function rewriteBrokenLucideIcons(code: string): string {

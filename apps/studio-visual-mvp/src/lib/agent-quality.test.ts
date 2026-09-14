@@ -36,6 +36,13 @@ describe("sanitizeSandpackCode", () => {
     const code = `import 'tailwindcss';\nexport const x = 1;`;
     expect(sanitizeSandpackCode(code)).not.toContain("tailwindcss");
   });
+
+  it("re-escreve imports absolutos do shadcn para o kit do preview", () => {
+    const code = `import { Card } from "@/components/shadcn/card";\nexport default function App(){ return <Card />; }`;
+    const next = sanitizeSandpackCode(code);
+    expect(next).toContain('from "/components/ui/Card"');
+    expect(next).not.toContain("@/components/shadcn/card");
+  });
 });
 
 describe("resolveGenerationMode", () => {
