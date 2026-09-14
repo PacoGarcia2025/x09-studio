@@ -2,6 +2,7 @@ import type { LlmProvider } from "./types";
 import type { GenerationMode } from "./types";
 import { createGeminiFlashProvider } from "./gemini";
 import { createGroqProvider } from "./groq";
+import { createOpenAIProvider } from "./openai";
 import {
   createClaudeViaOpenRouter,
   createGeminiViaOpenRouter,
@@ -15,6 +16,7 @@ export type StudioLlmId =
   | "gemini-openrouter"
   | "claude-sonnet"
   | "groq-llama"
+  | "openai-gpt-4.1-mini"
   | "resilient-fast";
 
 export function getLlmProvider(
@@ -31,6 +33,8 @@ export function getLlmProvider(
       return createClaudeViaOpenRouter();
     case "groq-llama":
       return createGroqProvider();
+    case "openai-gpt-4.1-mini":
+      return createOpenAIProvider("gpt-4.1-mini");
     default: {
       const _exhaustive: never = id;
       throw new Error(`LLM provider não suportado: ${_exhaustive}`);

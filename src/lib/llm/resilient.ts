@@ -115,9 +115,20 @@ function withOpenRouterKey<T>(fn: (key: string) => T): T | null {
  */
 export function listFastProviders(): LlmProvider[] {
   const list: LlmProvider[] = [];
+  const preferred = (process.env.STUDIO_LLM_PREFER ?? "").toLowerCase();
   const skipGoogle =
     process.env.STUDIO_LLM_SKIP_GEMINI === "1" ||
-    process.env.STUDIO_LLM_PREFER === "openrouter";
+    preferred === "openrouter";
+
+  if (preferred === "openai") {
+    if (readEnvKey("OPENAI_API_KEY")) {
+      try {
+        pushUnique(list, createOpenAIProvider("gpt-4.1-mini"));
+      } catch {
+        // ignore
+      }
+    }
+  }
 
   // 1) Groq
   if (readEnvKey("GROQ_API_KEY")) {
