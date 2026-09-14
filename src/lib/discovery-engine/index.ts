@@ -24,8 +24,15 @@ export function evaluateDiscoveryNeeds(input: DiscoveryEngineInput): DiscoveryEv
   // Verifica se o prompt possui os dados essenciais reais de negócio (contato/rede social, endereço/cidade, logomarca/assets).
   // Exige sinais fortes (número, @handle, e-mail) — palavras genéricas como "cidade"/"bairro"/"foto"
   // sozinhas não provam que o dado real foi informado (evita falso positivo que pula o Discovery).
-  const hasRealContactData =
-    /\(?(?:[1-9]{2})\)?\s*(?:9\d{4}|\d{4})[-.\s]?\d{4}|whatsapp\s*[:\-]?\s*\(?\d|contato@\S|instagram\s*[:\-@]|@[\w.]+|\b(?:rua|avenida|av\.?|bairro)\b\s+[\wçãáéíóúâêô]+.*\d|\bcep\b\s*\d/i.test(
+  // Cada dado de contato é checado e perguntado SEPARADAMENTE (não uma pergunta com 4 opções
+  // de uma vez) — mais fácil do usuário responder um de cada vez.
+  const hasWhatsapp =
+    /\(?(?:[1-9]{2})\)?\s*(?:9\d{4}|\d{4})[-.\s]?\d{4}|whatsapp\s*[:\-]?\s*\(?\d/i.test(
+      query,
+    );
+  const hasEmail = /[\w.+-]+@[\w-]+\.[a-z]{2,}/i.test(query);
+  const hasAddress =
+    /\b(?:rua|avenida|av\.?|bairro)\b\s+[\wçãáéíóúâêô]+.*\d|\bcep\b\s*\d|\bcidade\s+de\b/i.test(
       query,
     );
   const hasAssetInstructions =
@@ -41,11 +48,19 @@ export function evaluateDiscoveryNeeds(input: DiscoveryEngineInput): DiscoveryEv
   const missingFields: string[] = [];
   const questions: string[] = [];
 
-  if (!hasRealContactData && !hasExplicitSkip) {
-    missingFields.push("contato_localizacao");
-    questions.push(
-      "Qual é o WhatsApp/telefone, e-mail, endereço ou cidade da empresa para exibição no sistema?",
-    );
+  if (!hasWhatsapp && !hasExplicitSkip) {
+    missingFields.push("whatsapp");
+    questions.push("Qual é o WhatsApp (ou telefone) da empresa para exibir no site?");
+  }
+
+  if (!hasEmail && !hasExplicitSkip) {
+    missingFields.push("email");
+    questions.push("Qual é o e-mail de contato da empresa?");
+  }
+
+  if (!hasAddress && !hasExplicitSkip) {
+    missingFields.push("endereco");
+    questions.push("Qual é o endereço ou a cidade da empresa?");
   }
 
   if (!hasAssetInstructions && !hasExplicitSkip) {

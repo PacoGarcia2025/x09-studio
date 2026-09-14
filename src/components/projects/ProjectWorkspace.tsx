@@ -611,7 +611,15 @@ export function ProjectWorkspace({
           setBusy(false);
           setIsGenerating(false);
           setChatLog((prev) => [
-            ...stripBuildingMessages(prev),
+            // Remove a saudação genérica de bootstrap ("Entendi seu pedido...") pra não
+            // duplicar mensagem junto com a pergunta real do Discovery.
+            ...stripBuildingMessages(prev).filter(
+              (m) =>
+                !(
+                  m.kind === "ai" &&
+                  m.text === "Entendi seu pedido. Estou preparando a estrutura do app…"
+                ),
+            ),
             { kind: "ai", text: question },
           ]);
         }}

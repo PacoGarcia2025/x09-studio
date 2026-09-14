@@ -325,11 +325,13 @@ export async function chatProjectAction(
   try {
     const provider = getLlmProvider("resilient-fast");
     const latest = await getLatestPlan(projectId);
+    // "generating" sozinho (sem plano) só significa que o projeto foi criado e ainda não
+    // passou pelo Discovery/Planner — não conta como "já tem app" (senão o Discovery nunca
+    // roda a partir da 2ª mensagem, porque createProjectFromPrompt já marca "generating" cedo).
     const hasExistingApp =
       Boolean(latest) ||
       gate.project.status === "ready" ||
-      gate.project.status === "published" ||
-      gate.project.status === "generating";
+      gate.project.status === "published";
 
     if (!hasExistingApp) {
       const discoveryQuery = [...(priorUserMessages ?? []), trimmed].join("\n");
