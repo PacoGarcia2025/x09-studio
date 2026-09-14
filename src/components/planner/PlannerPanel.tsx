@@ -42,6 +42,10 @@ export function PlannerPanel({
         setError(result.error);
         return;
       }
+      if (result.intent === "discovery") {
+        setError(`Discovery Engine: ${result.question}`);
+        return;
+      }
 
       setPlan(result.plan);
       router.refresh();

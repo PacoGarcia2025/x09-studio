@@ -451,6 +451,9 @@ export function ProjectWorkspace({
       if (busy || planning) return;
       setBusy(true);
       setPlanning(true);
+      const priorUserMessages = chatLog
+        .filter((m): m is Extract<ChatItem, { kind: "user" }> => m.kind === "user")
+        .map((m) => m.text);
       setChatLog((prev) => [
         ...prev,
         { kind: "user", text: value },
@@ -458,7 +461,7 @@ export function ProjectWorkspace({
       ]);
       setPrompt("");
 
-      const result = await chatProjectAction(project.id, value);
+      const result = await chatProjectAction(project.id, value, priorUserMessages);
       setPlanning(false);
 
       if (!result.ok) {
@@ -484,6 +487,16 @@ export function ProjectWorkspace({
         setChatLog((prev) => [
           ...stripBuildingMessages(prev),
           { kind: "ai", text: result.answer },
+        ]);
+        return;
+      }
+
+      if (result.intent === "discovery") {
+        setBusy(false);
+        setIsGenerating(false);
+        setChatLog((prev) => [
+          ...stripBuildingMessages(prev),
+          { kind: "ai", text: result.question },
         ]);
         return;
       }
@@ -542,7 +555,7 @@ export function ProjectWorkspace({
       setIsGenerating(false);
       presentPlanForApproval(result);
     },
-    [busy, planning, presentPlanForApproval, project.id, router],
+    [busy, planning, chatLog, presentPlanForApproval, project.id, router],
   );
 
   function openPublishPanel() {
@@ -593,6 +606,14 @@ export function ProjectWorkspace({
             setBuildEnabled(true);
             setChatLog((prev) => appendBuildingBubble(prev));
           }
+        }}
+        onDiscovery={(question) => {
+          setBusy(false);
+          setIsGenerating(false);
+          setChatLog((prev) => [
+            ...stripBuildingMessages(prev),
+            { kind: "ai", text: question },
+          ]);
         }}
         onError={(message) => {
           setBusy(false);

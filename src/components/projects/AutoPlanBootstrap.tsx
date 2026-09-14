@@ -16,6 +16,7 @@ export function AutoPlanBootstrap({
   hasPlan,
   onStarted,
   onReady,
+  onDiscovery,
   onError,
 }: {
   projectId: string;
@@ -28,6 +29,7 @@ export function AutoPlanBootstrap({
     plan: StudioPlan;
     model: string;
   }) => void;
+  onDiscovery?: (question: string) => void;
   onError?: (message: string) => void;
 }) {
   const router = useRouter();
@@ -44,6 +46,10 @@ export function AutoPlanBootstrap({
         onError?.(result.error);
         return;
       }
+      if (result.intent === "discovery") {
+        onDiscovery?.(result.question);
+        return;
+      }
       onReady?.({
         planId: result.planId,
         plan: result.plan,
@@ -51,7 +57,7 @@ export function AutoPlanBootstrap({
       });
       router.refresh();
     })();
-  }, [enabled, hasPlan, onError, onReady, onStarted, projectId, prompt, router]);
+  }, [enabled, hasPlan, onDiscovery, onError, onReady, onStarted, projectId, prompt, router]);
 
   return null;
 }

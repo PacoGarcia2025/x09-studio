@@ -3,6 +3,7 @@
 import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { debitStudioCredits } from "@/lib/billing/credits.server";
+import { evaluateDiscoveryNeeds } from "@/lib/discovery-engine";
 import { PublicError } from "@/lib/http/errors";
 import { formatLlmUserError } from "@/lib/llm/resilient";
 import { getLlmProvider } from "@/lib/llm/provider";
@@ -19,10 +20,12 @@ import type { BillableMode } from "@/lib/billing/credits";
 export type GeneratePlanResult =
   | {
       ok: true;
+      intent: "create";
       planId: string;
       plan: StudioPlan;
       model: string;
     }
+  | { ok: true; intent: "discovery"; question: string }
   | { ok: false; error: string };
 
 async function assertProjectOwner(projectId: string) {
@@ -80,6 +83,7 @@ function billingErrorResult(err: unknown): { ok: false; error: string } | null {
 export async function generatePlanAction(
   projectId: string,
   prompt: string,
+  priorUserMessages?: string[],
 ): Promise<GeneratePlanResult> {
   const gate = await assertProjectOwner(projectId);
   if (gate.error || !gate.project || !gate.user) {
@@ -89,6 +93,19 @@ export async function generatePlanAction(
   const trimmed = prompt.trim();
   if (trimmed.length < 3) {
     return { ok: false, error: "Escreva um prompt com pelo menos 3 caracteres." };
+  }
+
+  // Discovery Engine (X09 Core) decide se falta informação essencial ANTES de cobrar
+  // créditos e planejar — olha toda a conversa, não só a última mensagem.
+  const discoveryQuery = [...(priorUserMessages ?? []), trimmed].join("\n");
+  const discovery = evaluateDiscoveryNeeds({ query: discoveryQuery });
+  if (!discovery.isSufficient) {
+    return {
+      ok: true,
+      intent: "discovery",
+      question:
+        discovery.questions[0] ?? "Me conte mais sobre o seu negócio para eu montar o projeto certo.",
+    };
   }
 
   try {
@@ -180,6 +197,7 @@ export async function generatePlanAction(
 
     return {
       ok: true,
+      intent: "create",
       planId: planRow.id,
       plan: result.plan,
       model: result.model,
@@ -279,6 +297,11 @@ export type ChatTurnResult =
       answer: string;
       model: string;
     }
+  | {
+      ok: true;
+      intent: "discovery";
+      question: string;
+    }
   | { ok: false; error: string };
 
 /**
@@ -287,6 +310,7 @@ export type ChatTurnResult =
 export async function chatProjectAction(
   projectId: string,
   message: string,
+  priorUserMessages?: string[],
 ): Promise<ChatTurnResult> {
   const gate = await assertProjectOwner(projectId);
   if (gate.error || !gate.project || !gate.user) {
@@ -306,6 +330,20 @@ export async function chatProjectAction(
       gate.project.status === "ready" ||
       gate.project.status === "published" ||
       gate.project.status === "generating";
+
+    if (!hasExistingApp) {
+      const discoveryQuery = [...(priorUserMessages ?? []), trimmed].join("\n");
+      const discovery = evaluateDiscoveryNeeds({ query: discoveryQuery });
+      if (!discovery.isSufficient) {
+        return {
+          ok: true,
+          intent: "discovery",
+          question:
+            discovery.questions[0] ??
+            "Me conte mais sobre o seu negócio para eu montar o projeto certo.",
+        };
+      }
+    }
 
     const { classifyChatIntent } = await import(
       "@/lib/pipeline/chat-intent.server"
@@ -513,8 +551,11 @@ export async function chatProjectAction(
     }
 
     // create (ou edit sem app ainda)
-    const created = await generatePlanAction(projectId, trimmed);
+    const created = await generatePlanAction(projectId, trimmed, priorUserMessages);
     if (!created.ok) return created;
+    if (created.intent === "discovery") {
+      return created;
+    }
     return {
       ok: true,
       intent: "create",
