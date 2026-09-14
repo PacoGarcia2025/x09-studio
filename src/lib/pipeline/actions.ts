@@ -98,7 +98,10 @@ export async function generatePlanAction(
   // Discovery Engine (X09 Core) decide se falta informação essencial ANTES de cobrar
   // créditos e planejar — olha toda a conversa, não só a última mensagem.
   const discoveryQuery = [...(priorUserMessages ?? []), trimmed].join("\n");
-  const discovery = evaluateDiscoveryNeeds({ query: discoveryQuery });
+  const discovery = evaluateDiscoveryNeeds({
+    query: discoveryQuery,
+    roundsSoFar: priorUserMessages?.length ?? 0,
+  });
   if (!discovery.isSufficient) {
     return {
       ok: true,
@@ -335,7 +338,10 @@ export async function chatProjectAction(
 
     if (!hasExistingApp) {
       const discoveryQuery = [...(priorUserMessages ?? []), trimmed].join("\n");
-      const discovery = evaluateDiscoveryNeeds({ query: discoveryQuery });
+      const discovery = evaluateDiscoveryNeeds({
+        query: discoveryQuery,
+        roundsSoFar: priorUserMessages?.length ?? 0,
+      });
       if (!discovery.isSufficient) {
         return {
           ok: true,

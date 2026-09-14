@@ -8,6 +8,9 @@ export type DiscoveryEngineInput = {
   query: string;
   segment?: string;
   constraints?: string[];
+  /** Quantas respostas o usuário já deu nesta conversa. Depois de um limite, o Discovery
+   * desiste de perguntar (evita loop infinito se uma resposta válida não bater em nenhum regex). */
+  roundsSoFar?: number;
 };
 
 export type DiscoveryEvaluation = {
@@ -31,10 +34,12 @@ export function evaluateDiscoveryNeeds(input: DiscoveryEngineInput): DiscoveryEv
       query,
     );
   const hasEmail = /[\w.+-]+@[\w-]+\.[a-z]{2,}/i.test(query);
-  const hasAddress =
-    /\b(?:rua|avenida|av\.?|bairro)\b\s+[\wçãáéíóúâêô]+.*\d|\bcep\b\s*\d|\bcidade\s+de\b/i.test(
-      query,
-    );
+  const BR_UF =
+    "AC|AL|AP|AM|BA|CE|DF|ES|GO|MA|MT|MS|MG|PA|PB|PR|PE|PI|RJ|RN|RS|RO|RR|SC|SP|SE|TO";
+  const hasAddress = new RegExp(
+    `\\b(?:rua|avenida|av\\.?|bairro)\\b\\s+[\\wçãáéíóúâêô]+.*\\d|\\bcep\\b\\s*\\d|\\bcidade\\b\\s*(?:de\\s+)?[a-zà-ú]+|\\b[a-zà-ú]{3,}\\s+(?:${BR_UF})\\b`,
+    "i",
+  ).test(query);
   const hasAssetInstructions =
     /\b(?:minha|minhas|meu|meus|nossa|nossas|nosso|nossos)\b\s+\w*\s*(?:logo|logotipo|foto|fotos|imagem|imagens)|galeria própria|anexei|em anexo|(?:tenho|não tenho|nao tenho|sem)\s+\w*\s*(?:logo|logotipo|foto|fotos|imagem|imagens)|imagens?\s+(?:de refer[eê]ncia|profissionais|de stock)|\bstock\b/i.test(
       query,
@@ -93,6 +98,12 @@ export function evaluateDiscoveryNeeds(input: DiscoveryEngineInput): DiscoveryEv
   }
 
   if (missingFields.length > 0 && !hasExplicitSkip) {
+    // Circuit breaker: depois de várias rodadas sem satisfazer algum campo (lacuna de regex
+    // não prevista), desiste de perguntar em vez de travar o usuário num loop infinito.
+    const MAX_DISCOVERY_ROUNDS = 6;
+    if ((input.roundsSoFar ?? 0) >= MAX_DISCOVERY_ROUNDS) {
+      return { isSufficient: true, missingFields: [], questions: [], prompt: query };
+    }
     return {
       isSufficient: false,
       missingFields,

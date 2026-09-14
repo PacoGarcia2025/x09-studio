@@ -537,7 +537,10 @@ export async function runAgentStream(
           hasExistingApp: req.hasExistingApp,
         });
 
-  const discovery = evaluateDiscoveryNeeds({ query: discoveryQuery });
+  const discovery = evaluateDiscoveryNeeds({
+    query: discoveryQuery,
+    roundsSoFar: req.messages.filter((m) => m.role === "user").length - 1,
+  });
   if (
     !discovery.isSufficient &&
     !req.hasExistingApp &&
