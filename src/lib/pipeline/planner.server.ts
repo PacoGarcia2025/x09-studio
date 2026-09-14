@@ -1,4 +1,4 @@
-import { hasUserAssetConsent } from "@/lib/agent/flow-context";
+import { buildGenerationFlowContext, hasUserAssetConsent } from "@/lib/agent/flow-context";
 import type { LlmProvider } from "@/lib/llm/types";
 import { needsAuthPanel } from "@/lib/pipeline/build-phases";
 import { ensureImobiliaria360Tasks } from "@/lib/pipeline/planner-imobiliaria";
@@ -42,6 +42,12 @@ Regras obrigatórias:
 - database.tables, auth.providers e auth.roles DEVEM ser arrays.
 - auth.providers: ["email"], auth.roles mínimos: ["visitor","user"].
 - Integrações: só o necessário (Supabase).
+- Existe um X09 GENERATION CONTRACT abaixo (Business DNA, Experience DNA, Blueprint, Resource
+  Decision, Creative Direction, Experience Composition) — é a decisão estrutural do X09 Core e
+  TEM PRIORIDADE sobre suas próprias suposições. Respeite EXATAMENTE \`blueprint.productType\`,
+  \`requiredPages\`, \`requiredModules\` e \`requiredEntities\` do contrato: gere uma task por página
+  requerida (nomes de arquivo derivados do \`id\`/\`route\`) e não invente um produto diferente do
+  \`productType\` (ex.: se for "application", não vire uma landing simples de 1 página).
 
 Formato JSON:
 ${PLAN_JSON_SHAPE_HINT}
@@ -96,11 +102,32 @@ export async function runPlanner(
     .join("\n");
 
   const consent = hasUserAssetConsent(prompt);
+  const flowContext = buildGenerationFlowContext({
+    prompt,
+    hasExistingApp: false,
+    projectContext: { goal: prompt, requiresBrandAssets: consent },
+  });
+  const contractSummary = JSON.stringify(
+    {
+      blueprint: flowContext.blueprint,
+      businessDna: flowContext.contract.dna,
+      experienceComposition: {
+        summary: flowContext.experienceComposition.summary,
+        sections: flowContext.experienceComposition.sections,
+      },
+      creativeDirection: flowContext.creativeDirection,
+      resourceDecision: flowContext.contract.resources,
+    },
+    null,
+    2,
+  );
   const userContent = [
     contextLines || null,
     consent ? (input.libraryCatalog?.trim() || null) : null,
     "Pedido do usuário:",
     prompt,
+    "X09 GENERATION CONTRACT (obrigatório respeitar productType/páginas/módulos/entidades):",
+    contractSummary,
   ]
     .filter(Boolean)
     .join("\n\n");

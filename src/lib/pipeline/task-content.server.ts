@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type { LlmProvider } from "@/lib/llm/types";
+import { buildGenerationFlowContext } from "@/lib/agent/flow-context";
 import { resolveCommandPlan } from "@/lib/pipeline/commands.allowlist";
 import type { PlanTaskType } from "@/lib/pipeline/plan-schema";
 import { formatBuilderContext } from "@/lib/pipeline/brief-context";
@@ -69,6 +70,39 @@ async function completeJson(
     maxOutputTokens,
   });
   return extractJson(result.text);
+}
+
+/** Injeta Experience DNA/Creative Direction/Experience Composition (X09 Core) na geração de cada arquivo. */
+function buildX09CreativeContext(briefPrompt?: string | null): string {
+  const prompt = briefPrompt?.trim();
+  if (!prompt) return "";
+  try {
+    const flowContext = buildGenerationFlowContext({ prompt, hasExistingApp: true });
+    return [
+      "X09 EXPERIENCE DNA + CREATIVE DIRECTION (siga o tom visual e a composição definidos):",
+      JSON.stringify(
+        {
+          blueprint: {
+            productType: flowContext.blueprint.productType,
+            industry: flowContext.blueprint.industry,
+          },
+          experienceDna: {
+            tone: flowContext.experienceDna.visual.tone,
+            palette: flowContext.experienceDna.visual.palette,
+          },
+          creativeDirection: flowContext.creativeDirection,
+          experienceComposition: {
+            summary: flowContext.experienceComposition.summary,
+            sections: flowContext.experienceComposition.sections,
+          },
+        },
+        null,
+        2,
+      ),
+    ].join("\n");
+  } catch {
+    return "";
+  }
 }
 
 function skillPromptForPath(
@@ -189,7 +223,7 @@ export async function generateTaskPayload(
   | { kind: "sql"; filename: string; content: string }
   | { kind: "delete" }
 > {
-  const base = formatBuilderContext({
+  const baseRaw = formatBuilderContext({
     projectName: context.projectName,
     briefPrompt: context.briefPrompt,
     libraryCatalog: context.libraryCatalog,
@@ -202,6 +236,9 @@ export async function generateTaskPayload(
       .filter(Boolean)
       .join("\n"),
   });
+  const base = [baseRaw, buildX09CreativeContext(context.briefPrompt)]
+    .filter(Boolean)
+    .join("\n\n");
 
   const skillPrompt = [context.briefPrompt, task.instruction]
     .filter(Boolean)
