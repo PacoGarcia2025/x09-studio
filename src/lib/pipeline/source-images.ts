@@ -1,4 +1,3 @@
-import { stockImagesForBrief } from "@/lib/pipeline/visual-tweaks";
 import { optimizeUnsplashUrlsInSource } from "@/lib/publish/seo-meta";
 
 /** Fotos luxury imobiliárias (Unsplash, uso em preview/publish). */
@@ -48,27 +47,20 @@ export function hasBrokenImageSources(code: string): boolean {
   return false;
 }
 
-/**
- * Substitui src locais/placeholder por URLs Unsplash reais e otimiza CDN.
- * `realStock` (busca real via Unsplash API, se configurada) tem prioridade sobre os
- * conjuntos fixos por tema — mais relevante ao negócio real do usuário.
- */
+const SVG_PLACEHOLDER = "data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100%25' height='100%25'%3E%3Crect width='100%25' height='100%25' fill='%23e4e4e7'/%3E%3Ctext x='50%25' y='50%25' fill='%23a1a1aa' text-anchor='middle' dy='.3em' font-family='sans-serif' font-size='14'%3EAsset Pendente%3C/text%3E%3C/svg%3E";
+
 export function fixBrokenImagesInSource(
   code: string,
   brief?: string | null,
   realStock?: readonly string[],
 ): string {
-  let idx = 0;
-  const stock =
-    realStock && realStock.length > 0 ? realStock : stockImagesForBrief(brief ?? code);
-  const nextUrl = () => stock[idx++ % stock.length]!;
-
+  // FASE 5: Em vez de mascarar com Unsplash, usamos um placeholder SVG neutro 
+  // para preservar layout sem gerar erro visual de ícone quebrado.
   let out = code.replace(
     /<img\b([^>]*?)\ssrc=(["'])([^"']+)\2([^>]*)>/gi,
     (match, before, quote, src, after) => {
       if (!isBrokenImageSrc(src)) return match;
-      const url = nextUrl();
-      return `<img${before} src=${quote}${url}${quote}${after}>`;
+      return `<img${before} src=${quote}${SVG_PLACEHOLDER}${quote}${after}>`;
     },
   );
 
@@ -76,15 +68,14 @@ export function fixBrokenImagesInSource(
     /<img\b([^>]*?)\ssrc=\{?"([^"'`]+)"\}?([^>]*)>/gi,
     (match, before, src, after) => {
       if (!isBrokenImageSrc(src)) return match;
-      const url = nextUrl();
-      return `<img${before} src="${url}"${after}>`;
+      return `<img${before} src="${SVG_PLACEHOLDER}"${after}>`;
     },
   );
 
   out = out.replace(/images:\s*\[([^\]]*)\]/g, (match, inner: string) => {
     const fixed = inner.replace(/"([^"]+)"/g, (quoted, val: string) => {
       if (!isBrokenImageSrc(val)) return quoted;
-      return `"${nextUrl()}"`;
+      return `"${SVG_PLACEHOLDER}"`;
     });
     return `images: [${fixed}]`;
   });

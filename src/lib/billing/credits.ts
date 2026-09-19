@@ -10,6 +10,11 @@ export const CREDIT_COSTS = {
   generation: 3,
 } as const;
 
+export const ASSET_GENERATION_COSTS = {
+  image: 8,
+  video: 20,
+} as const;
+
 export type BillableMode = "ask" | "edit" | "generation" | "skip";
 
 export const STUDIO_ACTION_PRICES = [

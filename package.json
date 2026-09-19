@@ -22,6 +22,7 @@
     "@google/model-viewer": "^4.3.1",
     "@supabase/ssr": "^0.12.3",
     "@supabase/supabase-js": "^2.110.5",
+    "image-size": "^2.0.4",
     "jose": "^6.2.3",
     "mercadopago": "^3.2.0",
     "next": "15.5.20",
@@ -33,6 +34,7 @@
   "devDependencies": {
     "@eslint/eslintrc": "^3",
     "@tailwindcss/postcss": "^4",
+    "@types/image-size": "^0.7.0",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",

@@ -216,6 +216,13 @@ export async function generateTaskPayload(
     briefPrompt?: string | null;
     existingFileContent?: string | null;
     libraryCatalog?: string | null;
+    approvedAssets?: { 
+      asset_request_id: string;
+      purpose: string; 
+      subject: string; 
+      page_relation: string;
+      url: string; 
+    }[];
   },
 ): Promise<
   | { kind: "file"; content: string }
@@ -248,6 +255,12 @@ export async function generateTaskPayload(
     .filter(Boolean)
     .join("\n\n");
 
+  const assetsContext = context.approvedAssets && context.approvedAssets.length > 0
+    ? `\n\n[ASSETS APROVADOS PARA ESTE PROJETO]\nVocê DEVE usar as URLs abaixo exatamente como estão nas tags <img> correspondentes ao contexto, propósito e página exigida.\nAdicione OBRIGATORIAMENTE o atributo data-asset-request-id="ID_AQUI" nas tags <img> que utilizarem estas imagens, para tornar a associação verificável:\n${context.approvedAssets.map(a => `- Request ID: ${a.asset_request_id}\n  Propósito: ${a.purpose}\n  Assunto: ${a.subject}\n  Página Relacionada: ${a.page_relation}\n  -> URL: "${a.url}"`).join("\n\n")}`
+    : "";
+
+  const finalBase = base + assetsContext;
+
   const skillPrompt = [context.briefPrompt, task.instruction]
     .filter(Boolean)
     .join("\n");
@@ -259,7 +272,7 @@ export async function generateTaskPayload(
       if (!task.path) throw new Error("Task de arquivo exige path");
       const { system, maxTokens } = systemForPath(task.path, skillPrompt);
       const user = [
-        base,
+        finalBase,
         task.type === "update_file" && context.existingFileContent != null
           ? `Arquivo atual (pode ignorar se for template fraco):\n\`\`\`\n${context.existingFileContent.slice(0, 4000)}\n\`\`\``
           : null,
@@ -282,7 +295,7 @@ export async function generateTaskPayload(
         // até passar na barra de qualidade ou esgotar as tentativas.
         for (let attempt = 0; attempt < 2 && isWeakHomePage(content, skillPrompt); attempt += 1) {
           const retryUser = [
-            base,
+            finalBase,
             "REJEITADO: abaixo do padrão premium (R$20k). Reescreva HomePage COMPLETA: framer-motion, scroll-reveal (whileInView), tilt 3D no hover, 5+ seções, copy real do brief, CTAs com cor de marca.",
             `Falhas detectadas: ${lacksPremiumQuality(content, skillPrompt).join("; ") || "conteúdo raso"}`,
             'Retorne JSON {"content":"..."} com HomePage.tsx completo.',
@@ -295,7 +308,7 @@ export async function generateTaskPayload(
 
       if (isLogin && isWeakLoginPage(content)) {
         const retryUser = [
-          base,
+          finalBase,
           "A versão anterior é stub/fraca. Reescreva LoginPage COMPLETA com getSupabase().auth (signInWithPassword/signUp), email, senha, toggle cadastro e visual premium cinematográfico.",
           'Retorne JSON {"content":"..."} .',
         ].join("\n\n");
@@ -306,7 +319,7 @@ export async function generateTaskPayload(
 
       if (isDashboard && isWeakDashboardPage(content)) {
         const retryUser = [
-          base,
+          finalBase,
           "A versão anterior é fraca. Reescreva DashboardPage premium COM KPIs, lista CRUD, formulário, loading/empty/error, getSupabase() quando possível.",
           'Retorne JSON {"content":"..."} .',
         ].join("\n\n");
@@ -319,7 +332,7 @@ export async function generateTaskPayload(
         for (let attempt = 0; attempt < 2 && !hasValidTsxSyntax(content, normalizedPath); attempt += 1) {
           const syntaxIssues = getTsxSyntaxIssues(content, normalizedPath);
           const retryUser = [
-            base,
+            finalBase,
             `ERRO DE SINTAXE no arquivo gerado: ${syntaxIssues.join("; ")}`,
             "Reescreva o arquivo TSX COMPLETO do zero. Feche todas as tags JSX e strings. Não trunque no final.",
             'Retorne JSON {"content":"..."} com o arquivo inteiro e válido.',
@@ -353,7 +366,7 @@ export async function generateTaskPayload(
 Comando ÚNICO. Preferir "npm install" se precisar instalar deps.
 NÃO use: migrate, build, typecheck, preview (o Studio previewa via Sandpack).
 Se a task não precisar instalar nada, use "npm install" mesmo assim ou a instrução será ignorada com segurança.`,
-          base,
+          finalBase,
           1024,
         ),
       );
@@ -366,7 +379,7 @@ Se a task não precisar instalar nada, use "npm install" mesmo assim ou a instru
         await completeJson(
           provider,
           'Responda APENAS JSON {"key":"VAR","value":"..."}. Use placeholders se for segredo.',
-          base,
+          finalBase,
           1024,
         ),
       );
@@ -377,7 +390,7 @@ Se a task não precisar instalar nada, use "npm install" mesmo assim ou a instru
         await completeJson(
           provider,
           'Responda APENAS JSON {"filename":"nome_curto.sql","content":"-- sql..."}. filename sem timestamp.',
-          base,
+          finalBase,
           4096,
         ),
       );

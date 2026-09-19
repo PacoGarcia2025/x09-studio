@@ -141,18 +141,15 @@ export function widenHeroCopy(code: string): string {
   return out;
 }
 
-/**
- * Troca /library/foto.png por stock só se o ficheiro não existir.
- * Nunca substitui GLB/GLTF — esses não são fotos.
- */
+const SVG_PLACEHOLDER = "data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100%25' height='100%25'%3E%3Crect width='100%25' height='100%25' fill='%23e4e4e7'/%3E%3Ctext x='50%25' y='50%25' fill='%23a1a1aa' text-anchor='middle' dy='.3em' font-family='sans-serif' font-size='14'%3EAsset Pendente%3C/text%3E%3C/svg%3E";
+
 export function rewriteMissingLibrarySrcs(
   code: string,
   existingFilenames: Set<string>,
   stock: readonly string[] = LUXURY_PROPERTY_IMAGES,
 ): string {
-  let idx = 0;
-  const nextUrl = () => stock[idx++ % stock.length]!;
-
+  // FASE 5: Preservar layout do Preview mas deixar óbvio que o asset não existe ou foi inventado
+  // Usa placeholder estrutural ao invés de stock image genérica
   const out = code.replace(
     /(["'`])(\/library\/[A-Za-z0-9._-]+)\1/g,
     (full, quote: string, src: string) => {
@@ -161,7 +158,7 @@ export function rewriteMissingLibrarySrcs(
       if (MESH_EXT.test(name)) return full;
       if (!IMAGE_EXT.test(name)) return full;
       if (existingFilenames.has(name)) return full;
-      return `${quote}${nextUrl()}${quote}`;
+      return `${quote}${SVG_PLACEHOLDER}${quote}`;
     },
   );
 

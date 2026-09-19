@@ -51,7 +51,7 @@ describe("project library catalog", () => {
         storage_path: "w/image/a/source.png",
         byte_size: 1200,
         meta: {},
-        status: "ready",
+        status: "approved",
       },
       {
         id: "bbbbbbbb-2222-2222-2222-222222222222",
@@ -60,7 +60,7 @@ describe("project library catalog", () => {
         storage_path: "w/mesh/b/source.glb",
         byte_size: 0,
         meta: {},
-        status: "ready",
+        status: "approved",
       },
       {
         id: "cccccccc-3333-3333-3333-333333333333",
@@ -69,7 +69,7 @@ describe("project library catalog", () => {
         storage_path: "w/mesh/c/source.glb",
         byte_size: 8000,
         meta: {},
-        status: "ready",
+        status: "approved",
       },
     ]);
     expect(picked).toHaveLength(3);

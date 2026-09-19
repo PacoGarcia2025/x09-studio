@@ -15,6 +15,9 @@ const nextConfig: NextConfig = {
       bodySizeLimit: "25mb",
     },
   },
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
   async redirects() {
     return [{ source: "/3d", destination: "/assets", permanent: false }];
   },

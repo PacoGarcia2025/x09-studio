@@ -16,10 +16,11 @@ describe("source-images", () => {
     ).toBe(false);
   });
 
-  it("substitui img quebradas por Unsplash", () => {
+  it("substitui img quebradas por placeholder estrutural (SVG neutro) em vez de Unsplash", () => {
     const input = `<img src="/foto.jpg" alt="Imóvel 1" />`;
     const out = fixBrokenImagesInSource(input);
-    expect(out).toMatch(/images\.unsplash\.com/);
+    expect(out).toContain("data:image/svg+xml");
+    expect(out).toContain("Asset Pendente");
     expect(hasBrokenImageSources(out)).toBe(false);
   });
 

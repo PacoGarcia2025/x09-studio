@@ -82,7 +82,7 @@ async function readWorkspaceAssetFile(
     .from("assets")
     .select("id, kind, original_name, storage_path, byte_size, meta, status")
     .eq("workspace_id", workspaceId)
-    .neq("status", "archived")
+    .eq("status", "approved")
     .order("created_at", { ascending: false })
     .limit(40);
 

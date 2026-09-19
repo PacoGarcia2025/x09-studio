@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { ProjectWorkspace } from "@/components/projects/ProjectWorkspace";
-import { getLatestPlan } from "@/lib/pipeline/actions";
+import { getLatestPlan, getChatHistoryAction } from "@/lib/pipeline/actions";
 import { getProjectPublishReadiness } from "@/lib/projects/publish-readiness.server";
 import { getWalletBalance } from "@/lib/billing/credits.server";
 import { createClient } from "@/lib/supabase/server";
@@ -82,6 +82,7 @@ export default async function ProjectDetailPage({ params, searchParams }: Props)
 
   const publishReadiness = await getProjectPublishReadiness(project.id);
   const creditBalance = await getWalletBalance(user.id);
+  const chatHistory = await getChatHistoryAction(project.id);
 
   return (
     <ProjectWorkspace
@@ -96,6 +97,7 @@ export default async function ProjectDetailPage({ params, searchParams }: Props)
       canPublish={publishReadiness.ready}
       publishBlockReason={publishReadiness.reason}
       creditBalance={creditBalance}
+      initialChatLog={chatHistory}
     />
   );
 }

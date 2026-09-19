@@ -29,3 +29,5 @@ export type AssetWithJobs = AssetRow & {
 export type AssetActionResult =
   | { ok: true; assetId?: string; jobId?: string }
   | { ok: false; error: string };
+
+export * from "./intelligence.types";

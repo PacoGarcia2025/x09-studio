@@ -68,6 +68,7 @@ type Props = {
   canPublish?: boolean;
   publishBlockReason?: string;
   creditBalance?: number;
+  initialChatLog?: { id: string; role: string; content: string; payload?: any }[];
 };
 
 function plainPlanBlurb(plan: StudioPlan): string {
@@ -96,6 +97,7 @@ export function ProjectWorkspace({
   canPublish = true,
   publishBlockReason,
   creditBalance = 0,
+  initialChatLog = [],
 }: Props) {
   const router = useRouter();
   const [mainTab, setMainTab] = useState<MainTab>("preview");
@@ -115,6 +117,16 @@ export function ProjectWorkspace({
   const [buildToken, setBuildToken] = useState(0);
   const lastDoneTasksRef = useRef(0);
   const [chatLog, setChatLog] = useState<ChatItem[]>(() => {
+    if (initialChatLog && initialChatLog.length > 0) {
+      return initialChatLog.map((m) => {
+        if (m.role === "plan") {
+          return { kind: "plan", planId: planId ?? "", plan: m.payload as StudioPlan, approved: project.status !== "generating" && project.status !== "draft" };
+        }
+        if (m.role === "building") return { kind: "building" };
+        return { kind: m.role as any, text: m.content };
+      });
+    }
+    
     if (!initialPrompt) return [];
     const items: ChatItem[] = [{ kind: "user", text: initialPrompt }];
 

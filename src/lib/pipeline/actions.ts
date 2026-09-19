@@ -122,10 +122,27 @@ export async function generatePlanAction(
 
   try {
     const provider = getLlmProvider("resilient-fast");
+    
+    // FASE 2: Visual Intelligence (Brief & Assets Requests)
+    try {
+      const { runVisualIntelligence } = await import("@/lib/pipeline/visual-intelligence.server");
+      await runVisualIntelligence(provider, {
+        projectId,
+        workspaceId: gate.project.workspace_id,
+        prompt: trimmed,
+        supabase: gate.supabase,
+      });
+      console.log(`[Visual Intelligence] Fase 2 concluída com sucesso para o projeto ${projectId}`);
+    } catch (viError) {
+      console.error(`[Visual Intelligence] FALHA na Fase 2 para o projeto ${projectId}:`, viError);
+      // Não retorna erro, permite que o fluxo legado continue.
+    }
+
     let libraryCatalog: string | null = null;
     try {
       await ensureProjectScaffold(projectId, { briefPrompt: discoveryQuery });
       const items = await syncWorkspaceLibraryIntoProject({
+
         projectId,
         workspaceId: gate.project.workspace_id,
         supabase: gate.supabase,
@@ -185,6 +202,12 @@ export async function generatePlanAction(
         error: tasksError.message ?? "Falha ao salvar as tasks",
       };
     }
+
+    await gate.supabase.from("project_chat_messages").insert([
+      { project_id: projectId, role: "user", content: trimmed },
+      { project_id: projectId, role: "ai", content: "Entendi seu pedido. Estou preparando a estrutura do app…" },
+      { project_id: projectId, role: "plan", content: result.plan.summary, payload: result.plan as any }
+    ]);
 
     // Guarda o prompt no projeto para reabrir o chat sem digitar de novo.
     const briefUpdate = await gate.supabase
@@ -267,6 +290,19 @@ export async function getLatestPlan(
   };
 }
 
+export async function getChatHistoryAction(projectId: string) {
+  const gate = await assertProjectOwner(projectId);
+  if (gate.error || !gate.project) return [];
+
+  const { data } = await gate.supabase
+    .from("project_chat_messages")
+    .select("id, role, content, payload, created_at")
+    .eq("project_id", projectId)
+    .order("created_at", { ascending: true });
+
+  return data ?? [];
+}
+
 export type ChatTurnResult =
   | {
       ok: true;
@@ -328,6 +364,12 @@ export async function chatProjectAction(
     return { ok: false, error: "Escreva uma mensagem." };
   }
 
+  await gate.supabase.from("project_chat_messages").insert({
+    project_id: projectId,
+    role: "user",
+    content: trimmed
+  });
+
   try {
     const provider = getLlmProvider("resilient-fast");
     const latest = await getLatestPlan(projectId);
@@ -374,6 +416,13 @@ export async function chatProjectAction(
           return { ok: false, error: cont.error };
         }
         revalidatePath(`/projects/${projectId}`);
+        
+        await gate.supabase.from("project_chat_messages").insert({
+          project_id: projectId,
+          role: "ai",
+          content: "Perfeito — vou criar login e painel agora. Acompanhe no preview."
+        });
+
         return {
           ok: true,
           intent: "continue_full_build",
@@ -439,6 +488,12 @@ export async function chatProjectAction(
         .update({ status: "generating" })
         .eq("id", projectId);
 
+      await gate.supabase.from("project_chat_messages").insert({
+        project_id: projectId,
+        role: "building",
+        content: "Aguarde a geração..."
+      });
+
       revalidatePath(`/projects/${projectId}`);
 
       return {
@@ -467,6 +522,11 @@ export async function chatProjectAction(
         ],
         temperature: 0.4,
         maxOutputTokens: 800,
+      });
+      await gate.supabase.from("project_chat_messages").insert({
+        project_id: projectId,
+        role: "ai",
+        content: answer.text.trim()
       });
       return {
         ok: true,
@@ -506,6 +566,13 @@ export async function chatProjectAction(
             .update({ status: keepStatus })
             .eq("id", projectId);
           revalidatePath(`/projects/${projectId}`);
+          
+          await gate.supabase.from("project_chat_messages").insert({
+            project_id: projectId,
+            role: "ai",
+            content: `${visual.summary}\n\nPronto — suas alterações já estão no preview.`
+          });
+
           return {
             ok: true,
             intent: "edit",
@@ -552,6 +619,13 @@ export async function chatProjectAction(
         .eq("id", projectId);
 
       revalidatePath(`/projects/${projectId}`);
+      
+      await gate.supabase.from("project_chat_messages").insert({
+        project_id: projectId,
+        role: "ai",
+        content: `${patch.summary}\n\nPronto — suas alterações já estão no preview.`
+      });
+
       return {
         ok: true,
         intent: "edit",
@@ -567,6 +641,9 @@ export async function chatProjectAction(
     if (created.intent === "discovery") {
       return created;
     }
+
+    // generatePlanAction already inserted the user message and the plan response,
+    // so we don't need to insert here again.
     return {
       ok: true,
       intent: "create",

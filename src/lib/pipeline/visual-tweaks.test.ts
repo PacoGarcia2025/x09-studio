@@ -33,15 +33,16 @@ describe("visual-tweaks", () => {
     expect(widenHeroCopy(src)).toContain("max-w-5xl mx-auto");
   });
 
-  it("mantém /library/ existente e GLB; só troca foto em falta", () => {
+  it("substitui fotos em falta com placeholder estrutural em vez de stock image", () => {
     const src = `src:"/library/logo-aaaa-marca.png" src:"/library/missing.png" src:"/library/mesh-bbbb-nave.glb"`;
     const out = rewriteMissingLibrarySrcs(
       src,
       new Set(["logo-aaaa-marca.png"]),
     );
     expect(out).toContain("/library/logo-aaaa-marca.png");
-    expect(out).toMatch(/images\.unsplash\.com/);
-    expect(out).not.toContain("/library/missing.png");
+    expect(out).not.toMatch(/images\.unsplash\.com/);
+    expect(out).toContain("data:image/svg+xml");
+    expect(out).toContain("Asset Pendente");
     expect(out).toContain("/library/mesh-bbbb-nave.glb");
   });
 

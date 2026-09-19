@@ -137,7 +137,7 @@ export function pickLibraryAssets(rows: LibraryAssetRow[]): LibraryBuildItem[] {
   const picked: LibraryBuildItem[] = [];
 
   for (const row of rows) {
-    if (row.status === "archived" || !row.storage_path) {
+    if (row.status !== "approved" || !row.storage_path) {
       continue;
     }
     const role = classifyLibraryRole(row);

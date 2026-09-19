@@ -22,6 +22,7 @@ import { ensureProjectScaffold } from "@/lib/projects/scaffold.server";
 import { fixBrokenImagesInSource } from "@/lib/pipeline/source-images";
 import { repairKnownRuntimeImportsInSource } from "@/lib/projects/jsx-scope";
 import { repairInvalidLucideImportsInSource } from "@/lib/projects/lucide-validate";
+import { createServiceClient } from "@/lib/supabase/service-client";
 
 export type BuilderTaskInput = {
   type: PlanTaskType;
@@ -164,6 +165,40 @@ export async function applyBuilderTask(
 ): Promise<BuilderApplyResult> {
   await ensureProjectScaffold(projectId, { briefPrompt: options?.briefPrompt });
 
+  let approvedAssets: { 
+    asset_request_id: string;
+    purpose: string; 
+    subject: string; 
+    page_relation: string;
+    url: string; 
+  }[] = [];
+  try {
+    const supabase = createServiceClient();
+    const { data: candidates } = await supabase
+      .from("asset_candidates")
+      .select("*, asset_requests(*), assets:final_asset_id(*)")
+      .eq("project_id", projectId)
+      .eq("status", "approved");
+
+    if (candidates && candidates.length > 0) {
+      approvedAssets = candidates
+        .filter((c: any) => c.asset_requests && c.assets)
+        .map((c: any) => {
+          let url = c.assets.storage_path;
+          if (!url.startsWith("http") && !url.startsWith("/")) url = "/" + url;
+          return {
+            asset_request_id: c.asset_requests.id || "",
+            purpose: c.asset_requests.purpose || "",
+            subject: c.asset_requests.subject || "",
+            page_relation: c.asset_requests.page_relation || "",
+            url
+          };
+        });
+    }
+  } catch (err) {
+    // Ignore and fallback
+  }
+
   const existing =
     task.path && (task.type === "update_file" || task.type === "create_file")
       ? (await fileExists(projectId, task.path))
@@ -176,6 +211,7 @@ export async function applyBuilderTask(
     briefPrompt: options?.briefPrompt,
     existingFileContent: existing,
     libraryCatalog: options?.libraryCatalog,
+    approvedAssets,
   });
 
   switch (payload.kind) {
